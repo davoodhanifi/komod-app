@@ -1,34 +1,19 @@
-# Kotlin / Gradle
-.gradle/
-build/
-**/build/
-out/
-.kotlin/
-
-# Android
-local.properties
 *.iml
-.idea/
-.cxx/
-captures/
-*.apk
-*.aab
-
-# iOS / Xcode
-DerivedData/
-*.xcworkspace
-*.xcodeproj/project.xcworkspace/
-*.xcodeproj/xcuserdata/
-*.xcuserdatad/
-*.xcuserstate
-
-# CocoaPods / SPM
-Pods/
-.build/
-Package.resolved
-
-# macOS
+.kotlin
+.gradle
+**/build/
+xcuserdata
+!src/**/build/
+local.properties
+.idea
 .DS_Store
-
-# Logs
-*.log
+captures
+.externalNativeBuild
+.cxx
+*.xcodeproj/*
+!*.xcodeproj/project.pbxproj
+!*.xcodeproj/xcshareddata/
+!*.xcodeproj/project.xcworkspace/
+!*.xcworkspace/contents.xcworkspacedata
+**/xcshareddata/WorkspaceSettings.xcsettings
+node_modules/
