@@ -1,0 +1,34 @@
+# Kotlin / Gradle
+.gradle/
+build/
+**/build/
+out/
+.kotlin/
+
+# Android
+local.properties
+*.iml
+.idea/
+.cxx/
+captures/
+*.apk
+*.aab
+
+# iOS / Xcode
+DerivedData/
+*.xcworkspace
+*.xcodeproj/project.xcworkspace/
+*.xcodeproj/xcuserdata/
+*.xcuserdatad/
+*.xcuserstate
+
+# CocoaPods / SPM
+Pods/
+.build/
+Package.resolved
+
+# macOS
+.DS_Store
+
+# Logs
+*.log
