@@ -15,6 +15,16 @@ class LoginViewModel(
     private val _uiState = MutableStateFlow(LoginUiState())
     val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
 
+    init {
+        viewModelScope.launch {
+            authRepository.callbackError.collect { error ->
+                _uiState.value = LoginUiState(
+                    error = error.message ?: "Sign-in failed. Please try again.",
+                )
+            }
+        }
+    }
+
     fun signInWithGoogle() {
         if (_uiState.value.isLoading) return
 

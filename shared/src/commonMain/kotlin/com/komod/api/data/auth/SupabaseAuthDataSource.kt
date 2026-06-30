@@ -18,7 +18,19 @@ class SupabaseAuthDataSource(
     }
 
     suspend fun handleOAuthCallback(url: String) {
-        supabaseClient.auth.parseSessionFromUrl(url)
+        // Extract PKCE authorization code from query params (supabase-kt v3 uses PKCE by default)
+        val code = url.substringAfter("?", "")
+            .split("&")
+            .firstOrNull { it.startsWith("code=") }
+            ?.substringAfter("code=")
+
+        if (code != null) {
+            supabaseClient.auth.exchangeCodeForSession(code)
+        } else {
+            // Fallback: implicit flow — parse fragment and import session
+            val session = supabaseClient.auth.parseSessionFromUrl(url)
+            supabaseClient.auth.importSession(session)
+        }
     }
 
     fun currentAccessToken(): String? = supabaseClient.auth.currentSessionOrNull()?.accessToken
