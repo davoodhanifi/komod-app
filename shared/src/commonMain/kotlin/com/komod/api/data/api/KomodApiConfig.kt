@@ -1,6 +1,7 @@
 package com.komod.api.data.api
 
 object KomodApiConfig {
-    // For Android emulator: host machine is 10.0.2.2 (not localhost)
-    const val BASE_URL = "http://10.0.2.2:7250/api/v1/"
+    // Uses adb reverse tcp:7250 tcp:7250 to tunnel the emulator's localhost to the host machine.
+    // Run: adb reverse tcp:7250 tcp:7250 before launching the app.
+    const val BASE_URL = "https://localhost:7250/api/v1/"
 }

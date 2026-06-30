@@ -8,7 +8,7 @@ import com.komod.api.data.repository.AddItemRepository
 import com.komod.api.data.repository.AddItemRepositoryImpl
 import com.komod.api.data.repository.AuthRepository
 import com.komod.api.data.repository.AuthRepositoryImpl
-import com.komod.api.data.upload.UploadService
+import com.komod.api.data.storage.StorageService
 import com.komod.api.presentation.additem.AddItemViewModel
 import com.komod.api.presentation.auth.LoginViewModel
 import io.github.jan.supabase.auth.Auth
@@ -33,7 +33,7 @@ fun appModule(config: AppConfig) = module {
     single<AuthRepository> { AuthRepositoryImpl(get()) }
     single { provideKtorClient(get()) }
     single { WardrobeApiService(get()) }
-    single { UploadService(supabaseUrl = config.supabaseUrl, authDataSource = get()) }
+    single { StorageService(supabaseUrl = config.supabaseUrl, supabaseClient = get()) }
     single<AddItemRepository> { AddItemRepositoryImpl(get(), get()) }
     viewModel { LoginViewModel(get()) }
     viewModel { AddItemViewModel(get()) }

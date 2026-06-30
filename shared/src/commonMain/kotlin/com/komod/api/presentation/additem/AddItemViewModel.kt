@@ -34,6 +34,7 @@ class AddItemViewModel(
 
     private fun processImage(bytes: ByteArray, mimeType: String) {
         viewModelScope.launch {
+            // Step 1: Create image record — shown as upload in-progress (fast backend call)
             _uiState.value = AddItemUiState.Uploading(
                 imageThumbnail = bytes,
                 storagePath = "",
@@ -52,11 +53,11 @@ class AddItemViewModel(
                     copy(storagePath = imageInfo.storagePath)
                 }
 
+                // Step 2: Upload bytes to Supabase Storage
                 addItemRepository.uploadImage(imageInfo.storagePath, bytes, mimeType) { fraction ->
                     updateUploadingState {
                         copy(
-                            storagePath = imageInfo.storagePath,
-                            overallProgress = fraction.coerceIn(0f, 1f) * 0.45f,
+                            overallProgress = fraction.coerceIn(0f, 1f) * 0.5f,
                             steps = steps(
                                 upload = StepStatus.InProgress,
                                 analyze = StepStatus.Pending,
@@ -66,18 +67,32 @@ class AddItemViewModel(
                     }
                 }
 
-                _uiState.value = AddItemUiState.Uploading(
-                    imageThumbnail = bytes,
-                    storagePath = imageInfo.storagePath,
-                    overallProgress = 0.5f,
-                    steps = steps(
-                        upload = StepStatus.Completed,
-                        analyze = StepStatus.InProgress,
-                        create = StepStatus.Pending,
-                    ),
-                )
+                // Step 3: Trigger AI analysis (backend also creates the wardrobe item)
+                updateUploadingState {
+                    copy(
+                        overallProgress = 0.5f,
+                        steps = steps(
+                            upload = StepStatus.Completed,
+                            analyze = StepStatus.InProgress,
+                            create = StepStatus.Pending,
+                        ),
+                    )
+                }
 
                 addItemRepository.analyzeWardrobeItems(imageInfo.imageId)
+
+                // Step 4: Analysis complete — backend has created the wardrobe item
+                updateUploadingState {
+                    copy(
+                        overallProgress = 1f,
+                        steps = steps(
+                            upload = StepStatus.Completed,
+                            analyze = StepStatus.Completed,
+                            create = StepStatus.Completed,
+                        ),
+                    )
+                }
+
                 _uiState.value = AddItemUiState.Success
             }.onFailure { throwable ->
                 _uiState.value = AddItemUiState.Error(

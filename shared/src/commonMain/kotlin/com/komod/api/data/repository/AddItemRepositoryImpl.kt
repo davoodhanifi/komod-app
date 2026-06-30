@@ -2,11 +2,11 @@ package com.komod.api.data.repository
 
 import com.komod.api.data.api.WardrobeApiService
 import com.komod.api.data.api.model.CreateImageResponse
-import com.komod.api.data.upload.UploadService
+import com.komod.api.data.storage.StorageService
 
 class AddItemRepositoryImpl(
     private val wardrobeApiService: WardrobeApiService,
-    private val uploadService: UploadService,
+    private val storageService: StorageService,
 ) : AddItemRepository {
     override suspend fun createImage(): CreateImageResponse = wardrobeApiService.createImage()
 
@@ -16,7 +16,7 @@ class AddItemRepositoryImpl(
         mimeType: String,
         onProgress: (Float) -> Unit,
     ) {
-        uploadService.upload(
+        storageService.upload(
             storagePath = storagePath,
             bytes = bytes,
             mimeType = mimeType,
