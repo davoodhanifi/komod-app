@@ -13,6 +13,7 @@ import com.komod.api.presentation.additem.AddItemViewModel
 import com.komod.api.presentation.auth.LoginViewModel
 import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.createSupabaseClient
+import io.github.jan.supabase.storage.Storage
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
@@ -27,13 +28,14 @@ fun appModule(config: AppConfig) = module {
                 host = "login-callback"
                 // sessionManager defaults to SettingsSessionManager — sessions are persisted automatically
             }
+            install(Storage)
         }
     }
     single { SupabaseAuthDataSource(get()) }
     single<AuthRepository> { AuthRepositoryImpl(get()) }
     single { provideKtorClient(get()) }
     single { WardrobeApiService(get()) }
-    single { StorageService(supabaseUrl = config.supabaseUrl, supabaseClient = get()) }
+    single { StorageService(supabaseClient = get()) }
     single<AddItemRepository> { AddItemRepositoryImpl(get(), get()) }
     viewModel { LoginViewModel(get()) }
     viewModel { AddItemViewModel(get()) }
