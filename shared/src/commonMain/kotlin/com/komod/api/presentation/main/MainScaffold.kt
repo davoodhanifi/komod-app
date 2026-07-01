@@ -1,0 +1,212 @@
+package com.komod.api.presentation.main
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Checkroom
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material.icons.outlined.Checkroom
+import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavType
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import com.komod.api.presentation.additem.AddItemScreen
+import com.komod.api.presentation.wardrobe.WardrobeItemDetailScreen
+import com.komod.api.presentation.wardrobe.WardrobeScreen
+
+private const val WardrobeItemIdArg = "wardrobeItemId"
+private const val WardrobeRefreshArg = "wardrobe_refresh_required"
+
+private sealed class MainRoute(val route: String) {
+    data object Home : MainRoute("home")
+    data object Wardrobe : MainRoute("wardrobe")
+    data object Outfits : MainRoute("outfits")
+    data object Profile : MainRoute("profile")
+    data object AddItem : MainRoute("wardrobe/add-item")
+    data object WardrobeItemDetail : MainRoute("wardrobe/item/{$WardrobeItemIdArg}") {
+        fun createRoute(itemId: String): String = "wardrobe/item/$itemId"
+    }
+}
+
+private val MainTabs = listOf(
+    BottomNavItemUi(
+        route = MainRoute.Home.route,
+        label = "Home",
+        activeIcon = Icons.Filled.Home,
+        inactiveIcon = Icons.Outlined.Home,
+    ),
+    BottomNavItemUi(
+        route = MainRoute.Wardrobe.route,
+        label = "Wardrobe",
+        activeIcon = Icons.Filled.Checkroom,
+        inactiveIcon = Icons.Outlined.Checkroom,
+    ),
+    BottomNavItemUi(
+        route = MainRoute.Outfits.route,
+        label = "Outfits",
+        activeIcon = Icons.Filled.AutoAwesome,
+        inactiveIcon = Icons.Outlined.AutoAwesome,
+    ),
+    BottomNavItemUi(
+        route = MainRoute.Profile.route,
+        label = "Profile",
+        activeIcon = Icons.Filled.Person,
+        inactiveIcon = Icons.Outlined.Person,
+    ),
+)
+
+@Composable
+fun MainScaffold() {
+    val navController = rememberNavController()
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
+    val showBottomBar = MainTabs.any { it.route == currentRoute }
+    var wardrobeRefreshKey by rememberSaveable { mutableIntStateOf(0) }
+
+    Scaffold(
+        containerColor = Color.White,
+        bottomBar = {
+            if (showBottomBar) {
+                BottomNavigationBar(
+                    items = MainTabs,
+                    selectedRoute = currentRoute,
+                    onItemSelected = { item ->
+                        navController.navigate(item.route) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                )
+            }
+        },
+    ) { contentPadding ->
+        NavHost(
+            navController = navController,
+            startDestination = MainRoute.Home.route,
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(contentPadding),
+        ) {
+            composable(MainRoute.Home.route) {
+                MainTabPlaceholder(
+                    title = "Home",
+                    subtitle = "Your style dashboard and AI highlights.",
+                )
+            }
+
+            composable(MainRoute.Wardrobe.route) { backStackEntry ->
+                val shouldRefresh by backStackEntry.savedStateHandle
+                    .getStateFlow(WardrobeRefreshArg, false)
+                    .collectAsState()
+
+                LaunchedEffect(shouldRefresh) {
+                    if (shouldRefresh) {
+                        wardrobeRefreshKey += 1
+                        backStackEntry.savedStateHandle[WardrobeRefreshArg] = false
+                    }
+                }
+
+                WardrobeScreen(
+                    refreshKey = wardrobeRefreshKey,
+                    onAddItem = { navController.navigate(MainRoute.AddItem.route) },
+                    onItemClick = { itemId ->
+                        navController.navigate(MainRoute.WardrobeItemDetail.createRoute(itemId))
+                    },
+                )
+            }
+
+            composable(MainRoute.Outfits.route) {
+                MainTabPlaceholder(
+                    title = "Outfits",
+                    subtitle = "Curated combinations and recommendations.",
+                )
+            }
+
+            composable(MainRoute.Profile.route) {
+                MainTabPlaceholder(
+                    title = "Profile",
+                    subtitle = "Manage your account and preferences.",
+                )
+            }
+
+            composable(MainRoute.AddItem.route) {
+                AddItemScreen(
+                    onNavigateBack = {
+                        navController.previousBackStackEntry?.savedStateHandle?.set(WardrobeRefreshArg, true)
+                        navController.popBackStack()
+                    },
+                )
+            }
+
+            composable(
+                route = MainRoute.WardrobeItemDetail.route,
+                arguments = listOf(
+                    navArgument(WardrobeItemIdArg) { type = NavType.StringType },
+                ),
+            ) { backStackEntry ->
+                val itemId = backStackEntry.savedStateHandle.get<String>(WardrobeItemIdArg).orEmpty()
+                WardrobeItemDetailScreen(
+                    wardrobeItemId = itemId,
+                    onNavigateBack = { navController.navigateUp() },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun MainTabPlaceholder(
+    title: String,
+    subtitle: String,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+        )
+        Text(
+            text = subtitle,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(top = 10.dp),
+        )
+    }
+}
