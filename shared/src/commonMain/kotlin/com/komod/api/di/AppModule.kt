@@ -8,9 +8,12 @@ import com.komod.api.data.repository.AddItemRepository
 import com.komod.api.data.repository.AddItemRepositoryImpl
 import com.komod.api.data.repository.AuthRepository
 import com.komod.api.data.repository.AuthRepositoryImpl
+import com.komod.api.data.repository.WardrobeRepository
+import com.komod.api.data.repository.WardrobeRepositoryImpl
 import com.komod.api.data.storage.StorageService
 import com.komod.api.presentation.additem.AddItemViewModel
 import com.komod.api.presentation.auth.LoginViewModel
+import com.komod.api.presentation.wardrobe.WardrobeViewModel
 import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.storage.Storage
@@ -37,6 +40,8 @@ fun appModule(config: AppConfig) = module {
     single { WardrobeApiService(get()) }
     single { StorageService(supabaseClient = get()) }
     single<AddItemRepository> { AddItemRepositoryImpl(get(), get()) }
+    single<WardrobeRepository> { WardrobeRepositoryImpl(wardrobeApiService = get(), supabaseClient = get()) }
     viewModel { LoginViewModel(get()) }
     viewModel { AddItemViewModel(get()) }
+    viewModel { WardrobeViewModel(get()) }
 }

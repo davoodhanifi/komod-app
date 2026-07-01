@@ -36,3 +36,16 @@ fun provideKtorClient(authDataSource: SupabaseAuthDataSource): HttpClient = Http
         }
     }
 }
+
+fun provideImageHttpClient(authDataSource: SupabaseAuthDataSource): HttpClient = HttpClient(httpClientEngine()) {
+    install(HttpTimeout) {
+        connectTimeoutMillis = 30_000
+        requestTimeoutMillis = 60_000
+        socketTimeoutMillis = 60_000
+    }
+    defaultRequest {
+        authDataSource.currentAccessToken()?.let { token ->
+            headers.append(HttpHeaders.Authorization, "Bearer $token")
+        }
+    }
+}

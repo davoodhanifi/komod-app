@@ -12,6 +12,7 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -23,7 +24,8 @@ import androidx.compose.ui.unit.dp
 import com.komod.api.data.repository.AuthRepository
 import com.komod.api.presentation.additem.AddItemScreen
 import com.komod.api.presentation.auth.LoginScreen
-import com.komod.api.presentation.main.MainScreen
+import com.komod.api.presentation.wardrobe.WardrobeItemDetailScreen
+import com.komod.api.presentation.wardrobe.WardrobeScreen
 import io.github.jan.supabase.auth.status.SessionStatus
 import org.koin.compose.koinInject
 
@@ -39,8 +41,9 @@ private val KomodLightColorScheme = lightColorScheme(
 )
 
 private sealed class AppDestination {
-    data object Main : AppDestination()
+    data object Wardrobe : AppDestination()
     data object AddItem : AppDestination()
+    data class WardrobeItemDetail(val wardrobeItemId: String) : AppDestination()
 }
 
 @Composable
@@ -57,15 +60,26 @@ fun App(
             when (sessionStatus) {
                 SessionStatus.Initializing -> LoadingScreen()
                 is SessionStatus.Authenticated -> {
-                    var destination by remember { mutableStateOf<AppDestination>(AppDestination.Main) }
-                    when (destination) {
-                        AppDestination.Main -> MainScreen(
-                            user = authRepository.currentUserOrNull(),
+                    var destination by remember { mutableStateOf<AppDestination>(AppDestination.Wardrobe) }
+                    var wardrobeRefreshKey by remember { mutableIntStateOf(0) }
+
+                    when (val dest = destination) {
+                        AppDestination.Wardrobe -> WardrobeScreen(
+                            refreshKey = wardrobeRefreshKey,
                             onAddItem = { destination = AppDestination.AddItem },
+                            onItemClick = { id -> destination = AppDestination.WardrobeItemDetail(id) },
                         )
 
                         AppDestination.AddItem -> AddItemScreen(
-                            onNavigateBack = { destination = AppDestination.Main },
+                            onNavigateBack = {
+                                wardrobeRefreshKey++
+                                destination = AppDestination.Wardrobe
+                            },
+                        )
+
+                        is AppDestination.WardrobeItemDetail -> WardrobeItemDetailScreen(
+                            wardrobeItemId = dest.wardrobeItemId,
+                            onNavigateBack = { destination = AppDestination.Wardrobe },
                         )
                     }
                 }
