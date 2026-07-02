@@ -2,6 +2,7 @@ package com.komod.api.data.repository
 
 import com.komod.api.data.api.WardrobeApiService
 import com.komod.api.domain.model.WardrobeItemDetail
+import com.komod.api.domain.model.WardrobeItem
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.storage.storage
 import kotlin.time.Duration.Companion.hours
@@ -11,6 +12,7 @@ private const val WARDROBE_BUCKET = "wardrobe"
 class WardrobeItemRepositoryImpl(
     private val wardrobeApiService: WardrobeApiService,
     private val supabaseClient: SupabaseClient,
+    private val wardrobeItemCache: WardrobeItemCache,
 ) : WardrobeItemRepository {
 
     override suspend fun getWardrobeItem(id: String): WardrobeItemDetail {
@@ -65,6 +67,25 @@ class WardrobeItemRepositoryImpl(
             embeddingDescription = dto.embeddingDescription,
             confidence = dto.confidence,
             createdAt = dto.createdAt,
-        )
+        ).also { wardrobeItemCache.putAll(listOf(it.toWardrobeItem())) }
     }
+}
+
+private fun WardrobeItemDetail.toWardrobeItem(): WardrobeItem {
+    return WardrobeItem(
+        id = id,
+        imageId = imageId,
+        itemName = itemName,
+        category = category,
+        subcategory = subcategory,
+        primaryColor = primaryColor,
+        dominantColorHex = null,
+        style = style,
+        season = season,
+        occasion = occasion,
+        material = material,
+        formality = formality,
+        imageUrl = imageUrl,
+        createdAt = createdAt,
+    )
 }

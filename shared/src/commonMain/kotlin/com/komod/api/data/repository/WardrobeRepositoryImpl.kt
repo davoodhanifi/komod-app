@@ -11,9 +11,10 @@ private const val WARDROBE_BUCKET = "wardrobe"
 class WardrobeRepositoryImpl(
     private val wardrobeApiService: WardrobeApiService,
     private val supabaseClient: SupabaseClient,
+    private val wardrobeItemCache: WardrobeItemCache,
 ) : WardrobeRepository {
     override suspend fun getWardrobeItems(): List<WardrobeItem> {
-        return wardrobeApiService.getWardrobeItems().map { dto ->
+        val items = wardrobeApiService.getWardrobeItems().map { dto ->
             val imageUrl = dto.croppedImageStoragePath
                 ?.takeIf { it.isNotBlank() }
                 ?.let { path ->
@@ -39,5 +40,8 @@ class WardrobeRepositoryImpl(
                 createdAt = dto.createdAt,
             )
         }
+
+        wardrobeItemCache.putAll(items)
+        return items
     }
 }

@@ -2,12 +2,16 @@ package com.komod.api.di
 
 import com.komod.api.AppConfig
 import com.komod.api.data.api.WardrobeApiService
+import com.komod.api.data.api.OutfitApiService
 import com.komod.api.data.api.provideKtorClient
 import com.komod.api.data.auth.SupabaseAuthDataSource
 import com.komod.api.data.repository.AddItemRepository
 import com.komod.api.data.repository.AddItemRepositoryImpl
 import com.komod.api.data.repository.AuthRepository
 import com.komod.api.data.repository.AuthRepositoryImpl
+import com.komod.api.data.repository.OutfitRepository
+import com.komod.api.data.repository.OutfitRepositoryImpl
+import com.komod.api.data.repository.WardrobeItemCache
 import com.komod.api.data.repository.WardrobeItemRepository
 import com.komod.api.data.repository.WardrobeItemRepositoryImpl
 import com.komod.api.data.repository.WardrobeRepository
@@ -15,6 +19,7 @@ import com.komod.api.data.repository.WardrobeRepositoryImpl
 import com.komod.api.data.storage.StorageService
 import com.komod.api.presentation.additem.AddItemViewModel
 import com.komod.api.presentation.auth.LoginViewModel
+import com.komod.api.presentation.outfits.OutfitViewModel
 import com.komod.api.presentation.wardrobe.WardrobeItemDetailViewModel
 import com.komod.api.presentation.wardrobe.WardrobeViewModel
 import io.github.jan.supabase.auth.Auth
@@ -41,12 +46,16 @@ fun appModule(config: AppConfig) = module {
     single<AuthRepository> { AuthRepositoryImpl(get()) }
     single { provideKtorClient(get()) }
     single { WardrobeApiService(get()) }
+    single { OutfitApiService(get()) }
+    single { WardrobeItemCache() }
     single { StorageService(supabaseClient = get()) }
     single<AddItemRepository> { AddItemRepositoryImpl(get(), get()) }
-    single<WardrobeRepository> { WardrobeRepositoryImpl(wardrobeApiService = get(), supabaseClient = get()) }
-    single<WardrobeItemRepository> { WardrobeItemRepositoryImpl(wardrobeApiService = get(), supabaseClient = get()) }
+    single<WardrobeRepository> { WardrobeRepositoryImpl(wardrobeApiService = get(), supabaseClient = get(), wardrobeItemCache = get()) }
+    single<WardrobeItemRepository> { WardrobeItemRepositoryImpl(wardrobeApiService = get(), supabaseClient = get(), wardrobeItemCache = get()) }
+    single<OutfitRepository> { OutfitRepositoryImpl(outfitApiService = get(), supabaseClient = get(), wardrobeItemRepository = get(), wardrobeItemCache = get()) }
     viewModel { LoginViewModel(get()) }
     viewModel { AddItemViewModel(get()) }
+    viewModel { OutfitViewModel(get()) }
     viewModel { WardrobeViewModel(get()) }
     viewModel { params -> WardrobeItemDetailViewModel(params.get(), get()) }
 }

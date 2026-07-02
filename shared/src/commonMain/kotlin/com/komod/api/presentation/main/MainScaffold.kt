@@ -37,11 +37,16 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.komod.api.presentation.additem.AddItemScreen
+import com.komod.api.presentation.outfits.OutfitScreen
 import com.komod.api.presentation.wardrobe.WardrobeItemDetailScreen
 import com.komod.api.presentation.wardrobe.WardrobeScreen
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 private const val WardrobeItemIdArg = "wardrobeItemId"
 private const val WardrobeRefreshArg = "wardrobe_refresh_required"
+private const val SelectedOutfitKey = "selected_outfit"
 
 private sealed class MainRoute(val route: String) {
     data object Home : MainRoute("home")
@@ -52,6 +57,7 @@ private sealed class MainRoute(val route: String) {
     data object WardrobeItemDetail : MainRoute("wardrobe/item/{$WardrobeItemIdArg}") {
         fun createRoute(itemId: String): String = "wardrobe/item/$itemId"
     }
+    data object OutfitDetails : MainRoute("outfits/details")
 }
 
 private val MainTabs = listOf(
@@ -145,9 +151,14 @@ fun MainScaffold() {
             }
 
             composable(MainRoute.Outfits.route) {
-                MainTabPlaceholder(
-                    title = "Outfits",
-                    subtitle = "Curated combinations and recommendations.",
+                OutfitScreen(
+                    onOpenDetails = { outfit ->
+                        navController.currentBackStackEntry?.savedStateHandle?.set(
+                            SelectedOutfitKey,
+                            Json.encodeToString(outfit.toNavigationPayload()),
+                        )
+                        navController.navigate(MainRoute.OutfitDetails.route)
+                    },
                 )
             }
 
@@ -179,8 +190,30 @@ fun MainScaffold() {
                     onNavigateBack = { navController.navigateUp() },
                 )
             }
+
+            composable(MainRoute.OutfitDetails.route) { backStackEntry ->
+                backStackEntry.savedStateHandle.get<String>(SelectedOutfitKey)
+                OutfitDetailsPlaceholder()
+            }
         }
     }
+}
+
+@Serializable
+private data class OutfitNavigationPayload(
+    val name: String,
+    val reason: String,
+    val matchScore: Int,
+    val wardrobeItemIds: List<String>,
+)
+
+private fun com.komod.api.domain.model.Outfit.toNavigationPayload(): OutfitNavigationPayload {
+    return OutfitNavigationPayload(
+        name = name,
+        reason = reason,
+        matchScore = matchScore,
+        wardrobeItemIds = wardrobeItemIds,
+    )
 }
 
 @Composable
@@ -207,6 +240,26 @@ private fun MainTabPlaceholder(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(top = 10.dp),
+        )
+    }
+}
+
+@Composable
+private fun OutfitDetailsPlaceholder() {
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Text(
+            text = "Outfit Details",
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+        )
+        Text(
+            text = "Coming soon",
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 8.dp),
         )
     }
 }

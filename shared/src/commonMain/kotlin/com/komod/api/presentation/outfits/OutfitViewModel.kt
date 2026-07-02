@@ -1,0 +1,58 @@
+package com.komod.api.presentation.outfits
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.komod.api.data.repository.OutfitRepository
+import com.komod.api.domain.model.OutfitOccasion
+import com.komod.api.domain.model.OutfitStyle
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+
+class OutfitViewModel(
+    private val outfitRepository: OutfitRepository,
+) : ViewModel() {
+    private val _uiState = MutableStateFlow(OutfitUiState())
+    val uiState: StateFlow<OutfitUiState> = _uiState.asStateFlow()
+
+    fun selectOccasion(occasion: OutfitOccasion) {
+        _uiState.value = _uiState.value.copy(
+            selectedOccasion = occasion,
+            errorMessage = null,
+        )
+    }
+
+    fun selectStyle(style: OutfitStyle) {
+        _uiState.value = _uiState.value.copy(
+            selectedStyle = style,
+            errorMessage = null,
+        )
+    }
+
+    fun generateOutfits() {
+        viewModelScope.launch {
+            if (_uiState.value.isGenerating) return@launch
+
+            _uiState.value = _uiState.value.copy(isGenerating = true, errorMessage = null)
+            runCatching {
+                val state = _uiState.value
+                outfitRepository.generateOutfits(
+                    occasion = state.selectedOccasion.apiValue,
+                    style = state.selectedStyle.apiValue,
+                )
+            }.onSuccess { outfits ->
+                _uiState.value = _uiState.value.copy(
+                    outfits = outfits,
+                    isGenerating = false,
+                    errorMessage = null,
+                )
+            }.onFailure { throwable ->
+                _uiState.value = _uiState.value.copy(
+                    isGenerating = false,
+                    errorMessage = throwable.message ?: "Something went wrong. Please try again.",
+                )
+            }
+        }
+    }
+}
