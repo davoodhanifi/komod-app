@@ -8,16 +8,9 @@ import kotlinx.coroutines.launch
 import org.koin.core.context.startKoin
 import org.koin.mp.KoinPlatform
 
-fun initKoin(supabaseUrl: String, supabasePublishableKey: String) {
+fun initKoin() {
     startKoin {
-        modules(
-            appModule(
-                AppConfig(
-                    supabaseUrl = supabaseUrl,
-                    supabasePublishableKey = supabasePublishableKey,
-                )
-            )
-        )
+        modules(appModule())
     }
 }
 

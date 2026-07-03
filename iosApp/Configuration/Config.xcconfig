@@ -7,9 +7,8 @@ TEAM_ID=
 PRODUCT_NAME=Komod
 PRODUCT_BUNDLE_IDENTIFIER=com.komod.api.Komod$(TEAM_ID)
 
-// Default placeholder values — override in Secrets.xcconfig
-SUPABASE_URL=YOUR_SUPABASE_PROJECT_URL
-SUPABASE_PUBLISHABLE_KEY=YOUR_SUPABASE_PUBLISHABLE_KEY
+// Supabase credentials are now baked into the shared Kotlin binary via BuildKonfig.
+// No need to set them here. See local.properties for the source of truth.
 
 CURRENT_PROJECT_VERSION=1
 MARKETING_VERSION=1.0

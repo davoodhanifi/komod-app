@@ -10,14 +10,7 @@ class KomodApplication : Application() {
         super.onCreate()
         startKoin {
             androidContext(this@KomodApplication)
-            modules(
-                appModule(
-                    AppConfig(
-                        supabaseUrl = BuildConfig.SUPABASE_URL,
-                        supabasePublishableKey = BuildConfig.SUPABASE_PUBLISHABLE_KEY,
-                    )
-                )
-            )
+            modules(appModule())
         }
     }
 }

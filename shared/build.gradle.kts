@@ -1,14 +1,26 @@
+import com.codingfeline.buildkonfig.compiler.FieldSpec.Type.STRING
+import java.util.Properties
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidMultiplatformLibrary)
+    alias(libs.plugins.buildkonfig)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.kotlinSerialization)
 }
 
+val localProps = Properties().apply {
+    val f = rootProject.file("local.properties")
+    if (f.exists()) load(f.inputStream())
+}
+
 kotlin {
+    compilerOptions {
+        freeCompilerArgs.add("-Xexpect-actual-classes")
+    }
+
     listOf(
         iosArm64(),
         iosSimulatorArm64()
@@ -78,4 +90,16 @@ kotlin {
 
 dependencies {
     androidRuntimeClasspath(libs.compose.uiTooling)
+}
+
+buildkonfig {
+    packageName = "com.komod.api"
+
+    // Default config — values come from local.properties at build time.
+    // To support multiple environments, add targetConfigs blocks here, e.g.:
+    //   targetConfigs("staging") { buildConfigField(STRING, "SUPABASE_URL", "https://staging.supabase.co") }
+    defaultConfigs {
+        buildConfigField(STRING, "SUPABASE_URL", localProps["SUPABASE_URL"]?.toString() ?: "")
+        buildConfigField(STRING, "SUPABASE_PUBLISHABLE_KEY", localProps["SUPABASE_PUBLISHABLE_KEY"]?.toString() ?: "")
+    }
 }

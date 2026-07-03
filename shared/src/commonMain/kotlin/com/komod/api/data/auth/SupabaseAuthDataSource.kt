@@ -3,7 +3,6 @@ package com.komod.api.data.auth
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.parseSessionFromUrl
-import io.github.jan.supabase.auth.providers.Google
 import io.github.jan.supabase.auth.status.SessionStatus
 import io.github.jan.supabase.auth.user.UserInfo
 import kotlinx.coroutines.flow.StateFlow
@@ -11,10 +10,12 @@ import kotlinx.coroutines.flow.StateFlow
 class SupabaseAuthDataSource(
     val supabaseClient: SupabaseClient,
 ) {
+    private val platformGoogleAuthHandler = PlatformGoogleAuthHandler()
+
     val sessionStatus: StateFlow<SessionStatus> = supabaseClient.auth.sessionStatus
 
     suspend fun signInWithGoogle() {
-        supabaseClient.auth.signInWith(Google)
+        platformGoogleAuthHandler.signInWithGoogle(supabaseClient)
     }
 
     suspend fun handleOAuthCallback(url: String) {

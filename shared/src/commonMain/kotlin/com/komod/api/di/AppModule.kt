@@ -1,6 +1,6 @@
 package com.komod.api.di
 
-import com.komod.api.AppConfig
+import com.komod.api.BuildKonfig
 import com.komod.api.data.api.WardrobeApiService
 import com.komod.api.data.api.OutfitApiService
 import com.komod.api.data.api.provideKtorClient
@@ -28,16 +28,15 @@ import io.github.jan.supabase.storage.Storage
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
-fun appModule(config: AppConfig) = module {
+fun appModule() = module {
     single {
         createSupabaseClient(
-            supabaseUrl = config.supabaseUrl,
-            supabaseKey = config.supabasePublishableKey,
+            supabaseUrl = BuildKonfig.SUPABASE_URL,
+            supabaseKey = BuildKonfig.SUPABASE_PUBLISHABLE_KEY,
         ) {
             install(Auth) {
                 scheme = "komod"
                 host = "login-callback"
-                // sessionManager defaults to SettingsSessionManager — sessions are persisted automatically
             }
             install(Storage)
         }
