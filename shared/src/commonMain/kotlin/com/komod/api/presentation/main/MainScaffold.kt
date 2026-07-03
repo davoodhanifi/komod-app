@@ -69,7 +69,7 @@ private val MainTabs = listOf(
     ),
     BottomNavItemUi(
         route = MainRoute.Wardrobe.route,
-        label = "Wardrobe",
+        label = "My Komod",
         activeIcon = Icons.Filled.Checkroom,
         inactiveIcon = Icons.Outlined.Checkroom,
     ),
