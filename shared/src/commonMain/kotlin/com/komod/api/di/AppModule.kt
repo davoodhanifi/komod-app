@@ -9,6 +9,8 @@ import com.komod.api.data.repository.AddItemRepository
 import com.komod.api.data.repository.AddItemRepositoryImpl
 import com.komod.api.data.repository.AuthRepository
 import com.komod.api.data.repository.AuthRepositoryImpl
+import com.komod.api.data.repository.HomeRepository
+import com.komod.api.data.repository.HomeRepositoryImpl
 import com.komod.api.data.repository.OutfitRepository
 import com.komod.api.data.repository.OutfitRepositoryImpl
 import com.komod.api.data.repository.WardrobeItemCache
@@ -19,6 +21,7 @@ import com.komod.api.data.repository.WardrobeRepositoryImpl
 import com.komod.api.data.storage.StorageService
 import com.komod.api.presentation.additem.AddItemViewModel
 import com.komod.api.presentation.auth.LoginViewModel
+import com.komod.api.presentation.home.HomeViewModel
 import com.komod.api.presentation.outfits.OutfitViewModel
 import com.komod.api.presentation.wardrobe.WardrobeItemDetailViewModel
 import com.komod.api.presentation.wardrobe.WardrobeViewModel
@@ -52,9 +55,11 @@ fun appModule() = module {
     single<WardrobeRepository> { WardrobeRepositoryImpl(wardrobeApiService = get(), supabaseClient = get(), wardrobeItemCache = get()) }
     single<WardrobeItemRepository> { WardrobeItemRepositoryImpl(wardrobeApiService = get(), supabaseClient = get(), wardrobeItemCache = get()) }
     single<OutfitRepository> { OutfitRepositoryImpl(outfitApiService = get(), supabaseClient = get(), wardrobeItemRepository = get(), wardrobeItemCache = get()) }
+    single<HomeRepository> { HomeRepositoryImpl(wardrobeApiService = get(), supabaseClient = get()) }
     viewModel { LoginViewModel(get()) }
     viewModel { AddItemViewModel(get()) }
     viewModel { OutfitViewModel(get()) }
     viewModel { WardrobeViewModel(get()) }
+    viewModel { HomeViewModel(get()) }
     viewModel { params -> WardrobeItemDetailViewModel(params.get(), get()) }
 }
