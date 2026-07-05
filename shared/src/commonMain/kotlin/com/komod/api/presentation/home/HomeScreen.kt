@@ -28,17 +28,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.outlined.CheckCircle
-import androidx.compose.material.icons.outlined.Checkroom
-import androidx.compose.material.icons.outlined.Circle
-import androidx.compose.material.icons.outlined.Diamond
-import androidx.compose.material.icons.outlined.FavoriteBorder
-import androidx.compose.material.icons.outlined.LocalMall
-import androidx.compose.material.icons.outlined.Square
-import androidx.compose.material.icons.outlined.Star
-import androidx.compose.material.icons.outlined.Visibility
-import androidx.compose.material.icons.outlined.Watch
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -310,42 +299,18 @@ fun WardrobeSummarySection(
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         ) {
             Column(
                 modifier = Modifier.padding(20.dp),
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column {
                         Text(
-                            text = "${summary.totalItems}",
-                            fontSize = 40.sp,
                             fontWeight = FontWeight.Bold,
                             color = DarkText,
                         )
-                        Text(
-                            text = "Items",
-                            fontSize = 16.sp,
-                            color = GrayText,
-                        )
-                    }
 
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        val displayCategories = summary.categories
                             .sortedByDescending { it.count }
-                            .take(4)
 
-                        displayCategories.forEach { category ->
-                            CategoryIcon(category = category)
-                        }
                     }
                 }
             }
@@ -354,43 +319,21 @@ fun WardrobeSummarySection(
 }
 
 @Composable
-fun CategoryIcon(
     category: CategoryCount,
     modifier: Modifier = Modifier,
 ) {
-    Column(
         modifier = modifier,
-        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Box(
             modifier = Modifier
-                .size(56.dp)
-                .clip(RoundedCornerShape(16.dp))
-                .background(getCategoryColor(category.category)),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(
-                imageVector = getCategoryIcon(category.category),
-                contentDescription = category.category,
-                tint = getCategoryIconColor(category.category),
-                modifier = Modifier.size(28.dp),
             )
         }
 
-        Spacer(modifier = Modifier.height(6.dp))
 
         Text(
-            text = "${category.count}",
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold,
             color = DarkText,
-        )
-
-        Text(
-            text = category.category.capitalize().take(8),
-            fontSize = 13.sp,
-            color = GrayText,
-            maxLines = 1,
         )
     }
 }
@@ -521,51 +464,18 @@ fun WardrobeSummarySkeleton(modifier: Modifier = Modifier) {
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
         ) {
             Column(modifier = Modifier.padding(20.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column {
                         ShimmerBox(
                             modifier = Modifier
-                                .width(80.dp)
-                                .height(48.dp),
                         )
-                        Spacer(modifier = Modifier.height(4.dp))
                         ShimmerBox(
                             modifier = Modifier
-                                .width(60.dp)
-                                .height(20.dp),
                         )
-                    }
-
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        repeat(4) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 ShimmerBox(
                                     modifier = Modifier
-                                        .size(56.dp)
-                                        .clip(RoundedCornerShape(16.dp)),
-                                )
-                                Spacer(modifier = Modifier.height(6.dp))
-                                ShimmerBox(
-                                    modifier = Modifier
-                                        .width(40.dp)
-                                        .height(18.dp),
-                                )
-                                Spacer(modifier = Modifier.height(2.dp))
-                                ShimmerBox(
-                                    modifier = Modifier
-                                        .width(50.dp)
-                                        .height(13.dp),
                                 )
                             }
-                        }
-                    }
                 }
             }
         }
@@ -738,51 +648,7 @@ fun ShimmerBox(modifier: Modifier = Modifier) {
     )
 }
 
-fun getCategoryIcon(category: String): ImageVector {
     return when (category.lowercase()) {
-        "watch", "watches" -> Icons.Outlined.Watch
-        "shirt", "shirts" -> Icons.Outlined.Checkroom
-        "shoe", "shoes" -> Icons.Outlined.Star
-        "jacket", "jackets" -> Icons.Outlined.Square
-        "pant", "pants", "trouser", "trousers" -> Icons.Outlined.Circle
-        "dress", "dresses" -> Icons.Outlined.FavoriteBorder
-        "hat", "hats" -> Icons.Outlined.CheckCircle
-        "bag", "bags" -> Icons.Outlined.LocalMall
-        "accessory", "accessories" -> Icons.Outlined.Diamond
-        "glasses", "sunglasses" -> Icons.Outlined.Visibility
-        else -> Icons.Outlined.Checkroom
-    }
-}
-
-fun getCategoryIconColor(category: String): Color {
-    return when (category.lowercase()) {
-        "watch", "watches" -> Color(0xFF4CAF50)
-        "shirt", "shirts" -> Color(0xFF2196F3)
-        "shoe", "shoes" -> Color(0xFFFF9800)
-        "jacket", "jackets" -> Color(0xFF9C27B0)
-        "pant", "pants", "trouser", "trousers" -> Color(0xFF009688)
-        "dress", "dresses" -> Color(0xFFE91E63)
-        "hat", "hats" -> Color(0xFFFFC107)
-        "bag", "bags" -> Color(0xFFFF6F00)
-        "accessory", "accessories" -> Color(0xFFF06292)
-        "glasses", "sunglasses" -> Color(0xFF03A9F4)
-        else -> Color(0xFF7C5CFC)
-    }
-}
-
-fun getCategoryColor(category: String): Color {
-    return when (category.lowercase()) {
-        "watch", "watches" -> Color(0xFFE8F5E9)
-        "shirt", "shirts" -> Color(0xFFE3F2FD)
-        "shoe", "shoes" -> Color(0xFFFFF3E0)
-        "jacket", "jackets" -> Color(0xFFF3E5F5)
-        "pant", "pants", "trouser", "trousers" -> Color(0xFFE0F2F1)
-        "dress", "dresses" -> Color(0xFFFCE4EC)
-        "hat", "hats" -> Color(0xFFFFF9C4)
-        "bag", "bags" -> Color(0xFFFFECB3)
-        "accessory", "accessories" -> Color(0xFFF8BBD0)
-        "glasses", "sunglasses" -> Color(0xFFE1F5FE)
-        else -> Color(0xFFF0EDFF)
     }
 }
 
