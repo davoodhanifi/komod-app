@@ -36,13 +36,16 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.komod.api.data.repository.AuthRepository
 import com.komod.api.presentation.additem.AddItemScreen
+import com.komod.api.presentation.home.HomeScreen
 import com.komod.api.presentation.outfits.OutfitScreen
 import com.komod.api.presentation.wardrobe.WardrobeItemDetailScreen
 import com.komod.api.presentation.wardrobe.WardrobeScreen
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import org.koin.compose.koinInject
 
 private const val WardrobeItemIdArg = "wardrobeItemId"
 private const val WardrobeRefreshArg = "wardrobe_refresh_required"
@@ -88,12 +91,16 @@ private val MainTabs = listOf(
 )
 
 @Composable
-fun MainScaffold() {
+fun MainScaffold(
+    authRepository: AuthRepository = koinInject(),
+) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
     val showBottomBar = MainTabs.any { it.route == currentRoute }
     var wardrobeRefreshKey by rememberSaveable { mutableIntStateOf(0) }
+
+    val currentUser = authRepository.currentUserOrNull()
 
     Scaffold(
         containerColor = Color.White,
@@ -123,9 +130,18 @@ fun MainScaffold() {
                 .padding(contentPadding),
         ) {
             composable(MainRoute.Home.route) {
-                MainTabPlaceholder(
-                    title = "Home",
-                    subtitle = "Your style dashboard and AI highlights.",
+                HomeScreen(
+                    user = currentUser,
+                    onGenerateOutfit = { occasion ->
+                        // TODO: Navigate to outfit generation flow
+                        navController.navigate(MainRoute.Outfits.route)
+                    },
+                    onViewWardrobe = {
+                        navController.navigate(MainRoute.Wardrobe.route)
+                    },
+                    onItemClick = { itemId ->
+                        navController.navigate(MainRoute.WardrobeItemDetail.createRoute(itemId))
+                    },
                 )
             }
 

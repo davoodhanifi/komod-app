@@ -3,8 +3,10 @@ package com.komod.api.data.api
 import com.komod.api.data.api.model.AnalyzeWardrobeRequest
 import com.komod.api.data.api.model.CreateImageResponse
 import com.komod.api.data.api.model.ImageDto
+import com.komod.api.data.api.model.RecentItemDto
 import com.komod.api.data.api.model.ResponseData
 import com.komod.api.data.api.model.WardrobeItemDto
+import com.komod.api.data.api.model.WardrobeSummaryDto
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.delete
@@ -47,5 +49,15 @@ class WardrobeApiService(
     suspend fun getImage(imageId: String): ImageDto {
         return httpClient.get("images/$imageId")
             .body<ResponseData<ImageDto>>().data
+    }
+
+    suspend fun getWardrobeSummary(): WardrobeSummaryDto {
+        return httpClient.get("wardrobe-items/summary")
+            .body<ResponseData<WardrobeSummaryDto>>().data
+    }
+
+    suspend fun getRecentItems(): List<RecentItemDto> {
+        return httpClient.get("wardrobe-items/recent")
+            .body<ResponseData<List<RecentItemDto>>>().data
     }
 }
