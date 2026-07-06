@@ -97,7 +97,25 @@ fun MainScaffold(
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
-    val showBottomBar = MainTabs.any { it.route == currentRoute }
+    
+    // Hide bottom bar only for specific full-screen flows
+    val hideBottomBarRoutes = setOf(
+        MainRoute.AddItem.route,
+        MainRoute.OutfitDetails.route,
+    )
+    val showBottomBar = currentRoute !in hideBottomBarRoutes
+    
+    // Determine which tab should be selected based on current route
+    val selectedTabRoute = when {
+        currentRoute == MainRoute.Home.route -> MainRoute.Home.route
+        currentRoute == MainRoute.Wardrobe.route -> MainRoute.Wardrobe.route
+        currentRoute?.startsWith("wardrobe/") == true -> MainRoute.Wardrobe.route
+        currentRoute == MainRoute.Outfits.route -> MainRoute.Outfits.route
+        currentRoute?.startsWith("outfits/") == true -> MainRoute.Outfits.route
+        currentRoute == MainRoute.Profile.route -> MainRoute.Profile.route
+        else -> null
+    }
+    
     var wardrobeRefreshKey by rememberSaveable { mutableIntStateOf(0) }
 
     val currentUser = authRepository.currentUserOrNull()
@@ -108,13 +126,16 @@ fun MainScaffold(
             if (showBottomBar) {
                 BottomNavigationBar(
                     items = MainTabs,
-                    selectedRoute = currentRoute,
+                    selectedRoute = selectedTabRoute,
                     onItemSelected = { item ->
                         navController.navigate(item.route) {
+                            // Pop up to the start destination (Home) and save state
                             popUpTo(navController.graph.findStartDestination().id) {
                                 saveState = true
                             }
+                            // Avoid multiple copies of the same destination
                             launchSingleTop = true
+                            // Restore state when reselecting a previously selected item
                             restoreState = true
                         }
                     },
@@ -134,10 +155,24 @@ fun MainScaffold(
                     user = currentUser,
                     onGenerateOutfit = { occasion ->
                         // TODO: Navigate to outfit generation flow
-                        navController.navigate(MainRoute.Outfits.route)
+                        // Navigate to Outfits using the same pattern as bottom nav
+                        navController.navigate(MainRoute.Outfits.route) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
                     },
                     onViewWardrobe = {
-                        navController.navigate(MainRoute.Wardrobe.route)
+                        // Navigate to Wardrobe using the same pattern as bottom nav
+                        navController.navigate(MainRoute.Wardrobe.route) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
                     },
                     onItemClick = { itemId ->
                         navController.navigate(MainRoute.WardrobeItemDetail.createRoute(itemId))
