@@ -143,7 +143,7 @@ fun GreetingSection(
     user: User?,
     modifier: Modifier = Modifier,
 ) {
-    val greeting = "Good evening" // Simplified for now - can be enhanced later
+    val greeting = "Hi" // Simplified for now - can be enhanced later
 
     val firstName = user?.displayName?.split(" ")?.firstOrNull() ?: "there"
 
@@ -156,7 +156,7 @@ fun GreetingSection(
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = "$greeting, $firstName 👋",
+                text = "$greeting, $firstName",
                 fontSize = 28.sp,
                 fontWeight = FontWeight.Bold,
                 color = DarkText,
@@ -288,7 +288,7 @@ fun WardrobeSummarySection(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "Your Wardrobe",
+                text = "Your Komod",
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
                 color = DarkText,
@@ -490,7 +490,7 @@ fun WardrobeSummarySkeleton(modifier: Modifier = Modifier) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "Your Wardrobe",
+                text = "Your Komod",
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
                 color = DarkText,
@@ -584,7 +584,7 @@ fun WardrobeSummaryError(
 ) {
     Column(modifier = modifier.padding(horizontal = 24.dp)) {
         Text(
-            text = "Your Wardrobe",
+            text = "Your Komod",
             fontSize = 22.sp,
             fontWeight = FontWeight.Bold,
             color = DarkText,
