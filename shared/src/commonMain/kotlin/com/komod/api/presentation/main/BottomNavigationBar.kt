@@ -4,6 +4,7 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -56,26 +57,31 @@ fun BottomNavigationBar(
         modifier = modifier
             .fillMaxWidth()
             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom))
-            .padding(horizontal = 16.dp, vertical = 10.dp),
+            .padding(horizontal = 10.dp, vertical = 10.dp),
     ) {
         val containerShape = RoundedCornerShape(
-            topStart = 34.dp,
-            topEnd = 34.dp,
-            bottomStart = 28.dp,
-            bottomEnd = 28.dp,
+            topStart = 25.dp,
+            topEnd = 25.dp,
+            bottomStart = 25.dp,
+            bottomEnd = 25.dp,
         )
 
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .shadow(
-                    elevation = 18.dp,
+                    elevation = 8.dp,
                     shape = containerShape,
-                    ambientColor = ContainerShadow,
-                    spotColor = ContainerShadow,
+                    ambientColor = Color.Black.copy(alpha = 0.08f),
+                    spotColor = Color.Black.copy(alpha = 0.08f),
                 )
                 .background(
                     color = Color.White,
+                    shape = containerShape,
+                )
+                .border(
+                    width = 1.dp,
+                    color = Color(0xFFE5E7EB),
                     shape = containerShape,
                 )
                 .padding(horizontal = 8.dp, vertical = 8.dp),
@@ -136,7 +142,7 @@ fun BottomNavigationItem(
         Text(
             text = label,
             color = tint.value,
-            fontSize = 13.sp,
+            fontSize = 10.sp,
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
             modifier = Modifier.padding(top = 4.dp),
         )
