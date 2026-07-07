@@ -50,6 +50,7 @@ import org.koin.compose.koinInject
 private const val WardrobeItemIdArg = "wardrobeItemId"
 private const val WardrobeRefreshArg = "wardrobe_refresh_required"
 private const val SelectedOutfitKey = "selected_outfit"
+private const val OccasionArg = "occasion"
 
 private sealed class MainRoute(val route: String) {
     data object Home : MainRoute("home")
@@ -111,7 +112,7 @@ fun MainScaffold(
         currentRoute == MainRoute.Wardrobe.route -> MainRoute.Wardrobe.route
         currentRoute?.startsWith("wardrobe/") == true -> MainRoute.Wardrobe.route
         currentRoute == MainRoute.Outfits.route -> MainRoute.Outfits.route
-        currentRoute?.startsWith("outfits/") == true -> MainRoute.Outfits.route
+        currentRoute?.startsWith("outfits") == true -> MainRoute.Outfits.route  // Matches "outfits" and "outfits?..."
         currentRoute == MainRoute.Profile.route -> MainRoute.Profile.route
         else -> null
     }
@@ -154,9 +155,8 @@ fun MainScaffold(
                 HomeScreen(
                     user = currentUser,
                     onGenerateOutfit = { occasion ->
-                        // TODO: Navigate to outfit generation flow
-                        // Navigate to Outfits using the same pattern as bottom nav
-                        navController.navigate(MainRoute.Outfits.route) {
+                        // Navigate to Outfits with the selected occasion
+                        navController.navigate("${MainRoute.Outfits.route}?occasion=$occasion") {
                             popUpTo(navController.graph.findStartDestination().id) {
                                 saveState = true
                             }
@@ -201,8 +201,19 @@ fun MainScaffold(
                 )
             }
 
-            composable(MainRoute.Outfits.route) {
+            composable(
+                route = "${MainRoute.Outfits.route}?occasion={occasion}",
+                arguments = listOf(
+                    navArgument("occasion") {
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null
+                    }
+                )
+            ) { backStackEntry ->
+                val occasion = backStackEntry.savedStateHandle.get<String>("occasion")
                 OutfitScreen(
+                    initialOccasion = occasion,
                     onOpenDetails = { outfit ->
                         navController.currentBackStackEntry?.savedStateHandle?.set(
                             SelectedOutfitKey,

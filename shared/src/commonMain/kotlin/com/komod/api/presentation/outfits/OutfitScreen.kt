@@ -46,6 +46,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -85,12 +86,27 @@ private val OutfitSkeleton = Color(0xFFE5E7EB)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OutfitScreen(
+    initialOccasion: String? = null,
     viewModel: OutfitViewModel = koinViewModel(),
     onOpenDetails: (Outfit) -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showStyleSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    // Handle initial occasion and auto-generate (only once)
+    LaunchedEffect(initialOccasion) {
+        if (initialOccasion != null) {
+            // Find the matching OutfitOccasion enum
+            val occasion = OutfitOccasion.entries.find { 
+                it.label.equals(initialOccasion, ignoreCase = true) || 
+                it.apiValue.equals(initialOccasion, ignoreCase = true)
+            }
+            if (occasion != null) {
+                viewModel.autoGenerateOutfits(occasion)
+            }
+        }
+    }
 
     if (showStyleSheet) {
         ModalBottomSheet(
@@ -136,7 +152,7 @@ fun OutfitScreen(
             }
 
             uiState.outfits.isEmpty() -> {
-                item { EmptyState(onGenerate = viewModel::generateOutfits) }
+                item { EmptyState(isGenerating = uiState.isGenerating, onGenerate = viewModel::generateOutfits) }
             }
 
             else -> {
@@ -275,7 +291,10 @@ private fun GeneratingTitle() {
 }
 
 @Composable
-private fun EmptyState(onGenerate: () -> Unit) {
+private fun EmptyState(
+    isGenerating: Boolean = false,
+    onGenerate: () -> Unit,
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -321,13 +340,14 @@ private fun EmptyState(onGenerate: () -> Unit) {
         Spacer(modifier = Modifier.height(20.dp))
         Button(
             onClick = onGenerate,
+            enabled = !isGenerating,
             colors = ButtonDefaults.buttonColors(containerColor = OutfitPurple),
             shape = RoundedCornerShape(18.dp),
             contentPadding = PaddingValues(horizontal = 28.dp, vertical = 16.dp),
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text(
-                text = "Generate Outfits",
+                text = if (isGenerating) "Generating..." else "Generate Outfits",
                 fontSize = 16.sp,
                 fontWeight = FontWeight.SemiBold,
             )
