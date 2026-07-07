@@ -1,6 +1,7 @@
 package com.komod.api.presentation.main
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -121,142 +122,146 @@ fun MainScaffold(
 
     val currentUser = authRepository.currentUserOrNull()
 
-    Scaffold(
-        containerColor = Color.White,
-        bottomBar = {
-            if (showBottomBar) {
-                BottomNavigationBar(
-                    items = MainTabs,
-                    selectedRoute = selectedTabRoute,
-                    onItemSelected = { item ->
-                        navController.navigate(item.route) {
-                            // Pop up to the start destination (Home) and save state
-                            popUpTo(navController.graph.findStartDestination().id) {
-                                saveState = true
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scaffold(
+            containerColor = Color.White,
+        ) { contentPadding ->
+            NavHost(
+                navController = navController,
+                startDestination = MainRoute.Home.route,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(contentPadding)
+                    .padding(bottom = if (showBottomBar) 0.dp else 0.dp),
+            ) {
+                composable(MainRoute.Home.route) {
+                    HomeScreen(
+                        user = currentUser,
+                        onGenerateOutfit = { occasion ->
+                            // Navigate to Outfits with the selected occasion
+                            navController.navigate("${MainRoute.Outfits.route}?occasion=$occasion") {
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
                             }
-                            // Avoid multiple copies of the same destination
-                            launchSingleTop = true
-                            // Restore state when reselecting a previously selected item
-                            restoreState = true
-                        }
-                    },
-                )
-            }
-        },
-    ) { contentPadding ->
-        NavHost(
-            navController = navController,
-            startDestination = MainRoute.Home.route,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(contentPadding),
-        ) {
-            composable(MainRoute.Home.route) {
-                HomeScreen(
-                    user = currentUser,
-                    onGenerateOutfit = { occasion ->
-                        // Navigate to Outfits with the selected occasion
-                        navController.navigate("${MainRoute.Outfits.route}?occasion=$occasion") {
-                            popUpTo(navController.graph.findStartDestination().id) {
-                                saveState = true
+                        },
+                        onViewWardrobe = {
+                            // Navigate to Wardrobe using the same pattern as bottom nav
+                            navController.navigate(MainRoute.Wardrobe.route) {
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
                             }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    },
-                    onViewWardrobe = {
-                        // Navigate to Wardrobe using the same pattern as bottom nav
-                        navController.navigate(MainRoute.Wardrobe.route) {
-                            popUpTo(navController.graph.findStartDestination().id) {
-                                saveState = true
-                            }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    },
-                    onItemClick = { itemId ->
-                        navController.navigate(MainRoute.WardrobeItemDetail.createRoute(itemId))
-                    },
-                )
-            }
-
-            composable(MainRoute.Wardrobe.route) { backStackEntry ->
-                val shouldRefresh by backStackEntry.savedStateHandle
-                    .getStateFlow(WardrobeRefreshArg, false)
-                    .collectAsState()
-
-                LaunchedEffect(shouldRefresh) {
-                    if (shouldRefresh) {
-                        wardrobeRefreshKey += 1
-                        backStackEntry.savedStateHandle[WardrobeRefreshArg] = false
-                    }
+                        },
+                        onItemClick = { itemId ->
+                            navController.navigate(MainRoute.WardrobeItemDetail.createRoute(itemId))
+                        },
+                    )
                 }
 
-                WardrobeScreen(
-                    refreshKey = wardrobeRefreshKey,
-                    onAddItem = { navController.navigate(MainRoute.AddItem.route) },
-                    onItemClick = { itemId ->
-                        navController.navigate(MainRoute.WardrobeItemDetail.createRoute(itemId))
-                    },
-                )
-            }
+                composable(MainRoute.Wardrobe.route) { backStackEntry ->
+                    val shouldRefresh by backStackEntry.savedStateHandle
+                        .getStateFlow(WardrobeRefreshArg, false)
+                        .collectAsState()
 
-            composable(
-                route = "${MainRoute.Outfits.route}?occasion={occasion}",
-                arguments = listOf(
-                    navArgument("occasion") {
-                        type = NavType.StringType
-                        nullable = true
-                        defaultValue = null
+                    LaunchedEffect(shouldRefresh) {
+                        if (shouldRefresh) {
+                            wardrobeRefreshKey += 1
+                            backStackEntry.savedStateHandle[WardrobeRefreshArg] = false
+                        }
                     }
-                )
-            ) { backStackEntry ->
-                val occasion = backStackEntry.savedStateHandle.get<String>("occasion")
-                OutfitScreen(
-                    initialOccasion = occasion,
-                    onOpenDetails = { outfit ->
-                        navController.currentBackStackEntry?.savedStateHandle?.set(
-                            SelectedOutfitKey,
-                            Json.encodeToString(outfit.toNavigationPayload()),
-                        )
-                        navController.navigate(MainRoute.OutfitDetails.route)
-                    },
-                )
-            }
 
-            composable(MainRoute.Profile.route) {
-                MainTabPlaceholder(
-                    title = "Profile",
-                    subtitle = "Manage your account and preferences.",
-                )
-            }
+                    WardrobeScreen(
+                        refreshKey = wardrobeRefreshKey,
+                        onAddItem = { navController.navigate(MainRoute.AddItem.route) },
+                        onItemClick = { itemId ->
+                            navController.navigate(MainRoute.WardrobeItemDetail.createRoute(itemId))
+                        },
+                    )
+                }
 
-            composable(MainRoute.AddItem.route) {
-                AddItemScreen(
-                    onNavigateBack = {
-                        navController.previousBackStackEntry?.savedStateHandle?.set(WardrobeRefreshArg, true)
-                        navController.popBackStack()
-                    },
-                )
-            }
+                composable(
+                    route = "${MainRoute.Outfits.route}?occasion={occasion}",
+                    arguments = listOf(
+                        navArgument("occasion") {
+                            type = NavType.StringType
+                            nullable = true
+                            defaultValue = null
+                        }
+                    )
+                ) { backStackEntry ->
+                    val occasion = backStackEntry.savedStateHandle.get<String>("occasion")
+                    OutfitScreen(
+                        initialOccasion = occasion,
+                        onOpenDetails = { outfit ->
+                            navController.currentBackStackEntry?.savedStateHandle?.set(
+                                SelectedOutfitKey,
+                                Json.encodeToString(outfit.toNavigationPayload()),
+                            )
+                            navController.navigate(MainRoute.OutfitDetails.route)
+                        },
+                    )
+                }
 
-            composable(
-                route = MainRoute.WardrobeItemDetail.route,
-                arguments = listOf(
-                    navArgument(WardrobeItemIdArg) { type = NavType.StringType },
-                ),
-            ) { backStackEntry ->
-                val itemId = backStackEntry.savedStateHandle.get<String>(WardrobeItemIdArg).orEmpty()
-                WardrobeItemDetailScreen(
-                    wardrobeItemId = itemId,
-                    onNavigateBack = { navController.navigateUp() },
-                )
-            }
+                composable(MainRoute.Profile.route) {
+                    MainTabPlaceholder(
+                        title = "Profile",
+                        subtitle = "Manage your account and preferences.",
+                    )
+                }
 
-            composable(MainRoute.OutfitDetails.route) { backStackEntry ->
-                backStackEntry.savedStateHandle.get<String>(SelectedOutfitKey)
-                OutfitDetailsPlaceholder()
+                composable(MainRoute.AddItem.route) {
+                    AddItemScreen(
+                        onNavigateBack = {
+                            navController.previousBackStackEntry?.savedStateHandle?.set(WardrobeRefreshArg, true)
+                            navController.popBackStack()
+                        },
+                    )
+                }
+
+                composable(
+                    route = MainRoute.WardrobeItemDetail.route,
+                    arguments = listOf(
+                        navArgument(WardrobeItemIdArg) { type = NavType.StringType },
+                    ),
+                ) { backStackEntry ->
+                    val itemId = backStackEntry.savedStateHandle.get<String>(WardrobeItemIdArg).orEmpty()
+                    WardrobeItemDetailScreen(
+                        wardrobeItemId = itemId,
+                        onNavigateBack = { navController.navigateUp() },
+                    )
+                }
+
+                composable(MainRoute.OutfitDetails.route) { backStackEntry ->
+                    backStackEntry.savedStateHandle.get<String>(SelectedOutfitKey)
+                    OutfitDetailsPlaceholder()
+                }
             }
+        }
+        
+        // Floating bottom navigation bar
+        if (showBottomBar) {
+            BottomNavigationBar(
+                items = MainTabs,
+                selectedRoute = selectedTabRoute,
+                onItemSelected = { item ->
+                    navController.navigate(item.route) {
+                        // Pop up to the start destination (Home) and save state
+                        popUpTo(navController.graph.findStartDestination().id) {
+                            saveState = true
+                        }
+                        // Avoid multiple copies of the same destination
+                        launchSingleTop = true
+                        // Restore state when reselecting a previously selected item
+                        restoreState = true
+                    }
+                },
+                modifier = Modifier.align(Alignment.BottomCenter)
+            )
         }
     }
 }

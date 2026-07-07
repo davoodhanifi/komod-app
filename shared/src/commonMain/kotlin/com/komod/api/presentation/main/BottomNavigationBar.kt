@@ -57,7 +57,8 @@ fun BottomNavigationBar(
         modifier = modifier
             .fillMaxWidth()
             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom))
-            .padding(horizontal = 10.dp, vertical = 10.dp),
+            .padding(horizontal = 20.dp, vertical = 0.dp)
+            .padding(bottom = 0.dp),
     ) {
         val containerShape = RoundedCornerShape(
             topStart = 25.dp,
@@ -137,14 +138,14 @@ fun BottomNavigationItem(
             imageVector = icon,
             contentDescription = label,
             tint = tint.value,
-            modifier = Modifier.size(22.dp),
+            modifier = Modifier.size(25.dp),
         )
         Text(
             text = label,
             color = tint.value,
             fontSize = 10.sp,
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
-            modifier = Modifier.padding(top = 4.dp),
+            modifier = Modifier.padding(top = 2.dp),
         )
     }
 }

@@ -112,6 +112,7 @@ fun WardrobeScreen(
                 containerColor = Purple,
                 contentColor = Color.White,
                 shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.padding(bottom = 75.dp),
             ) {
                 Icon(Icons.Filled.Add, contentDescription = "Add Item")
             }
