@@ -9,13 +9,15 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.Checkroom
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.AutoAwesome
-import androidx.compose.material.icons.outlined.Checkroom
-import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.Person
+import org.jetbrains.compose.resources.painterResource
+import komod.shared.generated.resources.Res
+import komod.shared.generated.resources.hanger
+import komod.shared.generated.resources.hanger_filled
+import komod.shared.generated.resources.home
+import komod.shared.generated.resources.home_filled
+import komod.shared.generated.resources.user
+import komod.shared.generated.resources.user_filled
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -68,18 +70,19 @@ private sealed class MainRoute(val route: String) {
     data object OutfitDetails : MainRoute("outfits/details")
 }
 
-private val MainTabs = listOf(
+@Composable
+private fun getMainTabs() = listOf(
     BottomNavItemUi(
         route = MainRoute.Home.route,
         label = "Home",
-        activeIcon = Icons.Filled.Home,
-        inactiveIcon = Icons.Outlined.Home,
+        activeIcon = painterResource(Res.drawable.home_filled),
+        inactiveIcon = painterResource(Res.drawable.home),
     ),
     BottomNavItemUi(
         route = MainRoute.Wardrobe.route,
         label = "My Komod",
-        activeIcon = Icons.Filled.Checkroom,
-        inactiveIcon = Icons.Outlined.Checkroom,
+        activeIcon = painterResource(Res.drawable.hanger_filled),
+        inactiveIcon = painterResource(Res.drawable.hanger),
     ),
     BottomNavItemUi(
         route = MainRoute.Outfits.route,
@@ -90,8 +93,8 @@ private val MainTabs = listOf(
     BottomNavItemUi(
         route = MainRoute.Profile.route,
         label = "Profile",
-        activeIcon = Icons.Filled.Person,
-        inactiveIcon = Icons.Outlined.Person,
+        activeIcon = painterResource(Res.drawable.user_filled),
+        inactiveIcon = painterResource(Res.drawable.user),
     ),
 )
 
@@ -277,7 +280,7 @@ fun MainScaffold(
         // Floating bottom navigation bar
         if (showBottomBar) {
             BottomNavigationBar(
-                items = MainTabs,
+                items = getMainTabs(),
                 selectedRoute = selectedTabRoute,
                 onItemSelected = { item ->
                     navController.navigate(item.route) {

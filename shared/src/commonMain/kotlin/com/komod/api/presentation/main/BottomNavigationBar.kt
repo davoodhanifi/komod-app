@@ -32,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -41,6 +42,7 @@ import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 
 private val ActivePurple = Color(0xFF7456FF)
 private val InactiveGray = Color(0xFF8B94A8)
@@ -49,8 +51,8 @@ private val ContainerShadow = Color(0x1F101828)
 data class BottomNavItemUi(
     val route: String,
     val label: String,
-    val activeIcon: ImageVector,
-    val inactiveIcon: ImageVector,
+    val activeIcon: Any, // ImageVector or Painter
+    val inactiveIcon: Any, // ImageVector or Painter
 )
 
 @Composable
@@ -97,9 +99,14 @@ fun BottomNavigationBar(
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             items.forEach { item ->
+                val iconToPaint = if (item.route == selectedRoute) item.activeIcon else item.inactiveIcon
                 BottomNavigationItem(
                     label = item.label,
-                    icon = if (item.route == selectedRoute) item.activeIcon else item.inactiveIcon,
+                    iconPainter = when (iconToPaint) {
+                        is ImageVector -> rememberVectorPainter(iconToPaint)
+                        is Painter -> iconToPaint
+                        else -> error("Unsupported icon type")
+                    },
                     selected = item.route == selectedRoute,
                     onClick = { onItemSelected(item) },
                     modifier = Modifier.weight(1f),
@@ -113,7 +120,7 @@ fun BottomNavigationBar(
 @Composable
 fun BottomNavigationItem(
     label: String,
-    icon: ImageVector,
+    iconPainter: Painter,
     selected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -145,7 +152,7 @@ fun BottomNavigationItem(
         verticalArrangement = Arrangement.Center,
     ) {
         Icon(
-            imageVector = icon,
+            painter = iconPainter,
             contentDescription = label,
             tint = tint.value,
             modifier = Modifier.size(25.dp),

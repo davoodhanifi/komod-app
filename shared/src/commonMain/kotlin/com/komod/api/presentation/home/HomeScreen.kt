@@ -28,16 +28,25 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.outlined.CheckCircle
-import androidx.compose.material.icons.outlined.Checkroom
-import androidx.compose.material.icons.outlined.Circle
-import androidx.compose.material.icons.outlined.Diamond
-import androidx.compose.material.icons.outlined.FavoriteBorder
-import androidx.compose.material.icons.outlined.LocalMall
-import androidx.compose.material.icons.outlined.Square
-import androidx.compose.material.icons.outlined.Star
-import androidx.compose.material.icons.outlined.Visibility
-import androidx.compose.material.icons.outlined.Watch
+import org.jetbrains.compose.resources.painterResource
+import komod.shared.generated.resources.Res
+import komod.shared.generated.resources.watch
+import komod.shared.generated.resources.shirt
+import komod.shared.generated.resources.shoes
+import komod.shared.generated.resources.hoodie
+import komod.shared.generated.resources.pants
+import komod.shared.generated.resources.dress
+import komod.shared.generated.resources.hat
+import komod.shared.generated.resources.hand_bag
+import komod.shared.generated.resources.necklace
+import komod.shared.generated.resources.glasses
+import komod.shared.generated.resources.belt
+import komod.shared.generated.resources.boots
+import komod.shared.generated.resources.high_heels
+import komod.shared.generated.resources.sandals
+import komod.shared.generated.resources.socks
+import komod.shared.generated.resources.vest
+import komod.shared.generated.resources.suit
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -354,7 +363,7 @@ fun CategoryChip(
             contentAlignment = Alignment.Center,
         ) {
             Icon(
-                imageVector = getCategoryIcon(category.category),
+                painter = getCategoryIcon(category.category),
                 contentDescription = category.category,
                 tint = getCategoryIconColor(category.category),
                 modifier = Modifier.size(20.dp),
@@ -694,20 +703,26 @@ fun ShimmerBox(modifier: Modifier = Modifier) {
     )
 }
 
-fun getCategoryIcon(category: String): ImageVector {
-    return when (category.lowercase()) {
-        "watch", "watches" -> Icons.Outlined.Watch
-        "shirt", "shirts" -> Icons.Outlined.Checkroom
-        "shoe", "shoes" -> Icons.Outlined.Star
-        "jacket", "jackets" -> Icons.Outlined.Square
-        "pant", "pants", "trouser", "trousers" -> Icons.Outlined.Circle
-        "dress", "dresses" -> Icons.Outlined.FavoriteBorder
-        "hat", "hats" -> Icons.Outlined.CheckCircle
-        "bag", "bags" -> Icons.Outlined.LocalMall
-        "accessory", "accessories" -> Icons.Outlined.Diamond
-        "glasses", "sunglasses" -> Icons.Outlined.Visibility
-        else -> Icons.Outlined.Checkroom
-    }
+@Composable
+fun getCategoryIcon(category: String) = when (category.lowercase()) {
+    "watch", "watches" -> painterResource(Res.drawable.watch)
+    "shirt", "shirts" -> painterResource(Res.drawable.shirt)
+    "shoe", "shoes" -> painterResource(Res.drawable.shoes)
+    "jacket", "jackets", "hoodie", "hoodies" -> painterResource(Res.drawable.hoodie)
+    "pant", "pants", "trouser", "trousers" -> painterResource(Res.drawable.pants)
+    "dress", "dresses" -> painterResource(Res.drawable.dress)
+    "hat", "hats", "cap", "caps" -> painterResource(Res.drawable.hat)
+    "bag", "bags" -> painterResource(Res.drawable.hand_bag)
+    "accessory", "accessories", "necklace", "necklaces" -> painterResource(Res.drawable.necklace)
+    "glasses", "sunglasses" -> painterResource(Res.drawable.glasses)
+    "belt", "belts" -> painterResource(Res.drawable.belt)
+    "boot", "boots" -> painterResource(Res.drawable.boots)
+    "heels", "high heels" -> painterResource(Res.drawable.high_heels)
+    "sandal", "sandals" -> painterResource(Res.drawable.sandals)
+    "sock", "socks" -> painterResource(Res.drawable.socks)
+    "vest", "vests" -> painterResource(Res.drawable.vest)
+    "suit", "suits" -> painterResource(Res.drawable.suit)
+    else -> painterResource(Res.drawable.shirt)
 }
 
 fun getCategoryIconColor(category: String): Color {
