@@ -3,6 +3,13 @@ package com.komod.api.presentation.main
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -52,6 +59,7 @@ fun BottomNavigationBar(
     selectedRoute: String?,
     onItemSelected: (BottomNavItemUi) -> Unit,
     modifier: Modifier = Modifier,
+    showLabels: Boolean = true,
 ) {
     Box(
         modifier = modifier
@@ -95,6 +103,7 @@ fun BottomNavigationBar(
                     selected = item.route == selectedRoute,
                     onClick = { onItemSelected(item) },
                     modifier = Modifier.weight(1f),
+                    showLabel = showLabels,
                 )
             }
         }
@@ -108,6 +117,7 @@ fun BottomNavigationItem(
     selected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    showLabel: Boolean = true,
 ) {
     val tint = animateColorAsState(
         targetValue = if (selected) ActivePurple else InactiveGray,
@@ -140,12 +150,38 @@ fun BottomNavigationItem(
             tint = tint.value,
             modifier = Modifier.size(25.dp),
         )
-        Text(
-            text = label,
-            color = tint.value,
-            fontSize = 10.sp,
-            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
-            modifier = Modifier.padding(top = 2.dp),
-        )
+        AnimatedVisibility(
+            visible = showLabel,
+            enter = fadeIn(
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioNoBouncy,
+                    stiffness = Spring.StiffnessHigh
+                )
+            ) + expandVertically(
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioNoBouncy,
+                    stiffness = Spring.StiffnessHigh
+                )
+            ),
+            exit = fadeOut(
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioNoBouncy,
+                    stiffness = Spring.StiffnessHigh
+                )
+            ) + shrinkVertically(
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioNoBouncy,
+                    stiffness = Spring.StiffnessHigh
+                )
+            ),
+        ) {
+            Text(
+                text = label,
+                color = tint.value,
+                fontSize = 10.sp,
+                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+                modifier = Modifier.padding(top = 2.dp),
+            )
+        }
     }
 }

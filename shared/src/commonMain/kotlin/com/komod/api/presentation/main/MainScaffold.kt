@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Checkroom
@@ -22,6 +24,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -100,6 +103,19 @@ fun MainScaffold(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
     
+    // Scroll states for each screen
+    val homeScrollState = rememberScrollState()
+    val wardrobeScrollState = rememberLazyGridState()
+    
+    // Bottom bar scroll behavior
+    val bottomBarScrollState = remember { BottomBarScrollState() }
+    
+    // Track scroll for the current screen
+    LaunchedEffect(currentRoute) {
+        // Expand labels when navigating to a new screen
+        bottomBarScrollState.expand()
+    }
+    
     // Hide bottom bar only for specific full-screen flows
     val hideBottomBarRoutes = setOf(
         MainRoute.AddItem.route,
@@ -135,8 +151,14 @@ fun MainScaffold(
                     .padding(bottom = if (showBottomBar) 0.dp else 0.dp),
             ) {
                 composable(MainRoute.Home.route) {
+                    // Track scroll behavior - immediate response
+                    LaunchedEffect(homeScrollState.value) {
+                        bottomBarScrollState.updateScroll(homeScrollState.value.toFloat())
+                    }
+                    
                     HomeScreen(
                         user = currentUser,
+                        scrollState = homeScrollState,
                         onGenerateOutfit = { occasion ->
                             // Navigate to Outfits with the selected occasion
                             navController.navigate("${MainRoute.Outfits.route}?occasion=$occasion") {
@@ -174,9 +196,18 @@ fun MainScaffold(
                             backStackEntry.savedStateHandle[WardrobeRefreshArg] = false
                         }
                     }
+                    
+                    // Track scroll behavior for wardrobe grid - immediate response
+                    LaunchedEffect(wardrobeScrollState.firstVisibleItemIndex, wardrobeScrollState.firstVisibleItemScrollOffset) {
+                        val firstVisibleItemIndex = wardrobeScrollState.firstVisibleItemIndex
+                        val firstVisibleItemScrollOffset = wardrobeScrollState.firstVisibleItemScrollOffset
+                        val currentScroll = (firstVisibleItemIndex * 1000f) + firstVisibleItemScrollOffset
+                        bottomBarScrollState.updateScroll(currentScroll)
+                    }
 
                     WardrobeScreen(
                         refreshKey = wardrobeRefreshKey,
+                        lazyGridState = wardrobeScrollState,
                         onAddItem = { navController.navigate(MainRoute.AddItem.route) },
                         onItemClick = { itemId ->
                             navController.navigate(MainRoute.WardrobeItemDetail.createRoute(itemId))
@@ -260,6 +291,7 @@ fun MainScaffold(
                         restoreState = true
                     }
                 },
+                showLabels = bottomBarScrollState.isExpanded > 0.5f,
                 modifier = Modifier.align(Alignment.BottomCenter)
             )
         }

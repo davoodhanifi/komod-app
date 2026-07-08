@@ -84,6 +84,7 @@ fun HomeScreen(
     onGenerateOutfit: (occasion: String) -> Unit,
     onViewWardrobe: () -> Unit,
     onItemClick: (String) -> Unit,
+    scrollState: androidx.compose.foundation.ScrollState = rememberScrollState(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -91,7 +92,7 @@ fun HomeScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.White)
-            .verticalScroll(rememberScrollState())
+            .verticalScroll(scrollState)
             .padding(bottom = 80.dp),
     ) {
         Spacer(modifier = Modifier.height(16.dp))
