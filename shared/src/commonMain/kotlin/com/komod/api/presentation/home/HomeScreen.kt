@@ -1,11 +1,13 @@
 package com.komod.api.presentation.home
 
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,6 +21,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -45,14 +48,16 @@ import komod.shared.generated.resources.sandals
 import komod.shared.generated.resources.socks
 import komod.shared.generated.resources.vest
 import komod.shared.generated.resources.suit
+import komod.shared.generated.resources.sport
+import komod.shared.generated.resources.office
+import komod.shared.generated.resources.date
+import komod.shared.generated.resources.travel
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -67,7 +72,12 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -77,6 +87,7 @@ import com.komod.api.domain.model.RecentItem
 import com.komod.api.domain.model.User
 import com.komod.api.domain.model.WardrobeSummary
 import komod.shared.generated.resources.user_filled
+import org.jetbrains.compose.resources.DrawableResource
 import org.koin.compose.viewmodel.koinViewModel
 
 private val Purple = Color(0xFF7C5CFC)
@@ -85,6 +96,27 @@ private val GrayText = Color(0xFF6B7280)
 private val CardBg = Color(0xFFF9F9F9)
 private val LightPurple = Color(0xFFF0EDFF)
 private val SkeletonColor = Color(0xFFE5E7EB)
+private val TileSelectedBackground = Color(0xFFEDE7FF)
+private val TileBorderDefault = Color(0xFFE6E8EE)
+private val TileIconDefault = Purple
+private val TileLabelDefault = Color(0xFF1F2937)
+
+private val Res.drawable.tree: DrawableResource
+    get() = Res.drawable.sport
+
+private val Res.drawable.briefcase: DrawableResource
+    get() = Res.drawable.office
+
+private val Res.drawable.heart: DrawableResource
+    get() = Res.drawable.date
+
+private val Res.drawable.airplane: DrawableResource
+    get() = Res.drawable.travel
+
+private data class OccasionOption(
+    val label: String,
+    val icon: DrawableResource,
+)
 
 @Composable
 fun HomeScreen(
@@ -118,7 +150,7 @@ fun HomeScreen(
         GenerateOutfitCard(
             selectedOccasion = uiState.selectedOccasion,
             onOccasionSelected = viewModel::selectOccasion,
-            onGenerateClick = { onGenerateOutfit(uiState.selectedOccasion) },
+            onGenerateClick = onGenerateOutfit,
         )
 
         Spacer(modifier = Modifier.height(32.dp))
@@ -219,15 +251,19 @@ private fun UserAvatar(photoUrl: String?) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GenerateOutfitCard(
-    selectedOccasion: String,
+    selectedOccasion: String?,
     onOccasionSelected: (String) -> Unit,
-    onGenerateClick: () -> Unit,
+    onGenerateClick: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val occasions = listOf("Outdoor", "Office", "Date", "Travel")
+    val occasions = listOf(
+        OccasionOption(label = "Outdoor", icon = Res.drawable.tree),
+        OccasionOption(label = "Office", icon = Res.drawable.briefcase),
+        OccasionOption(label = "Date", icon = Res.drawable.heart),
+        OccasionOption(label = "Travel", icon = Res.drawable.airplane),
+    )
 
     Card(
         modifier = modifier
@@ -252,7 +288,7 @@ fun GenerateOutfitCard(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "Generate an outfit from your wardrobe.",
+                text = "Generate AI-powered outfit recommendations.",
                 fontSize = 14.sp,
                 color = GrayText,
             )
@@ -264,44 +300,122 @@ fun GenerateOutfitCard(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 occasions.forEach { occasion ->
-                    FilterChip(
-                        selected = occasion == selectedOccasion,
-                        onClick = { onOccasionSelected(occasion) },
-                        label = { Text(occasion) },
-                        enabled = true,
-                        colors = FilterChipDefaults.filterChipColors(
-                            containerColor = Color.White,
-                            selectedContainerColor = Purple,
-                            selectedLabelColor = Color.White,
-                            labelColor = DarkText,
-                        ),
-                        border = FilterChipDefaults.filterChipBorder(
-                            borderColor = Color.Transparent,
-                            selectedBorderColor = Color.Transparent,
-                            enabled = true,
-                            selected = occasion == selectedOccasion,
-                        ),
-                    )
+                    Box(
+                        modifier = Modifier.weight(1f),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        OccasionTile(
+                            option = occasion,
+                            selected = occasion.label == selectedOccasion,
+                            onClick = { onOccasionSelected(occasion.label) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .aspectRatio(1f)
+                                .sizeIn(minWidth = 64.dp, minHeight = 64.dp, maxWidth = 80.dp, maxHeight = 80.dp),
+                        )
+                    }
                 }
             }
 
             Spacer(modifier = Modifier.height(20.dp))
 
             Button(
-                onClick = onGenerateClick,
+                onClick = { selectedOccasion?.let(onGenerateClick) },
+                enabled = selectedOccasion != null,
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Purple,
+                    disabledContainerColor = Purple.copy(alpha = 0.45f),
                 ),
                 contentPadding = PaddingValues(vertical = 16.dp),
             ) {
-                Text(
-                    text = "Generate Outfit ✨",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.SemiBold,
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                ) {
+                    Text(
+                        text = "Generate Outfit",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "✨",
+                        fontSize = 16.sp,
+                    )
+                }
             }
+        }
+    }
+}
+
+@Composable
+private fun OccasionTile(
+    option: OccasionOption,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val containerColor by animateColorAsState(
+        targetValue = if (selected) TileSelectedBackground else Color.White,
+        animationSpec = tween(durationMillis = 200),
+        label = "occasion-tile-bg",
+    )
+    val borderColor by animateColorAsState(
+        targetValue = if (selected) Purple else TileBorderDefault,
+        animationSpec = tween(durationMillis = 200),
+        label = "occasion-tile-border",
+    )
+    val iconColor by animateColorAsState(
+        targetValue = if (selected) Purple else TileIconDefault,
+        animationSpec = tween(durationMillis = 200),
+        label = "occasion-tile-icon",
+    )
+    val labelColor by animateColorAsState(
+        targetValue = if (selected) Purple else TileLabelDefault,
+        animationSpec = tween(durationMillis = 200),
+        label = "occasion-tile-label",
+    )
+
+    Surface(
+        modifier = modifier
+            .semantics {
+                role = Role.Button
+                contentDescription = "${option.label}, ${if (selected) "selected" else "not selected"}"
+            }
+            .clip(RoundedCornerShape(20.dp))
+            .clickable(onClick = onClick)
+            .border(width = 1.dp, color = borderColor, shape = RoundedCornerShape(20.dp)),
+        color = containerColor,
+        shape = RoundedCornerShape(20.dp),
+        shadowElevation = 3.dp,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 8.dp, vertical = 10.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Icon(
+                painter = painterResource(option.icon),
+                contentDescription = null,
+                tint = iconColor,
+                modifier = Modifier.size(20.dp),
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Text(
+                text = option.label,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Medium,
+                color = labelColor,
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
     }
 }

@@ -18,5 +18,5 @@ sealed interface RecentItemsState {
 data class HomeUiState(
     val summaryState: WardrobeSummaryState = WardrobeSummaryState.Loading,
     val recentItemsState: RecentItemsState = RecentItemsState.Loading,
-    val selectedOccasion: String = "Outdoor",
+    val selectedOccasion: String? = "Outdoor",
 )

@@ -197,7 +197,7 @@ fun MainScaffold(
                         scrollState = homeScrollState,
                         onGenerateOutfit = { occasion ->
                             // Navigate to Outfits with the selected occasion
-                            navController.navigate("${MainRoute.Outfits.route}?occasion=$occasion") {
+                            navController.navigate("${MainRoute.Outfits.route}?$OccasionArg=$occasion") {
                                 popUpTo(navController.graph.findStartDestination().id) {
                                     saveState = true
                                 }
@@ -253,16 +253,16 @@ fun MainScaffold(
                 }
 
                 composable(
-                    route = "${MainRoute.Outfits.route}?occasion={occasion}",
+                    route = "${MainRoute.Outfits.route}?$OccasionArg={$OccasionArg}",
                     arguments = listOf(
-                        navArgument("occasion") {
+                        navArgument(OccasionArg) {
                             type = NavType.StringType
                             nullable = true
                             defaultValue = null
                         }
                     )
                 ) { backStackEntry ->
-                    val occasion = backStackEntry.savedStateHandle.get<String>("occasion")
+                    val occasion = backStackEntry.savedStateHandle.get<String>(OccasionArg)
                     OutfitScreen(
                         initialOccasion = occasion,
                         onOpenDetails = { outfit ->
