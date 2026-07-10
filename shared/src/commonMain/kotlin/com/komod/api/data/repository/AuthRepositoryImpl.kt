@@ -33,11 +33,17 @@ class AuthRepositoryImpl(
         val displayName = userInfo.userMetadata?.get("full_name")?.jsonPrimitive?.contentOrNull
             ?: userInfo.userMetadata?.get("name")?.jsonPrimitive?.contentOrNull
             ?: userInfo.email?.substringBefore('@')
+        val photoUrl = userInfo.userMetadata?.get("avatar_url")?.jsonPrimitive?.contentOrNull
+            ?: userInfo.userMetadata?.get("avatarUrl")?.jsonPrimitive?.contentOrNull
+            ?: userInfo.userMetadata?.get("picture")?.jsonPrimitive?.contentOrNull
+            ?: userInfo.userMetadata?.get("photo_url")?.jsonPrimitive?.contentOrNull
+            ?: userInfo.userMetadata?.get("photoUrl")?.jsonPrimitive?.contentOrNull
 
         return User(
             id = userInfo.id,
             email = userInfo.email,
             displayName = displayName,
+            photoUrl = photoUrl,
         )
     }
 

@@ -26,8 +26,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Person
 import org.jetbrains.compose.resources.painterResource
 import komod.shared.generated.resources.Res
 import komod.shared.generated.resources.watch
@@ -182,13 +180,29 @@ fun GreetingSection(
 
         Spacer(modifier = Modifier.width(16.dp))
 
-        Box(
-            modifier = Modifier
-                .size(56.dp)
-                .clip(CircleShape)
-                .background(LightPurple),
-            contentAlignment = Alignment.Center,
-        ) {
+        UserAvatar(photoUrl = user?.photoUrl)
+    }
+}
+
+@Composable
+private fun UserAvatar(photoUrl: String?) {
+    Box(
+        modifier = Modifier
+            .size(56.dp)
+            .clip(CircleShape)
+            .background(LightPurple),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (!photoUrl.isNullOrBlank()) {
+            AsyncImage(
+                model = photoUrl,
+                contentDescription = "Profile photo",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+                error = painterResource(Res.drawable.user_filled),
+                fallback = painterResource(Res.drawable.user_filled),
+            )
+        } else {
             Icon(
                 painter = painterResource(Res.drawable.user_filled),
                 contentDescription = "Profile",
