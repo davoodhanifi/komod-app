@@ -434,41 +434,42 @@ fun WardrobeSummarySection(
         .sortedByDescending { it.count }
         .take(3)
 
-    Column(modifier = modifier.padding(horizontal = 24.dp)) {
-        // Fully clickable header row
-        Row(
+    Card(
+        modifier = modifier.padding(horizontal = 24.dp).fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+    ) {
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable(onClick = onViewAll),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
+                .clickable(onClick = onViewAll)
+                .padding(horizontal = 20.dp, vertical = 16.dp),
         ) {
-            Text(
-                text = "My Komod",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                color = DarkText,
-            )
-            Text(
-                text = "View all →",
-                color = Purple,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium,
-            )
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-        ) {
+            // Header row inside the card
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 20.dp),
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "My Komod",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = DarkText,
+                )
+                Text(
+                    text = "View all →",
+                    color = Purple,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 // First column: total items
@@ -647,28 +648,30 @@ fun RecentItemCard(
 
 @Composable
 fun WardrobeSummarySkeleton(modifier: Modifier = Modifier) {
-    Column(modifier = modifier.padding(horizontal = 24.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            ShimmerBox(modifier = Modifier.width(100.dp).height(20.dp))
-            ShimmerBox(modifier = Modifier.width(60.dp).height(16.dp))
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+    Card(
+        modifier = modifier.padding(horizontal = 24.dp).fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 16.dp),
         ) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 20.dp),
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                ShimmerBox(modifier = Modifier.width(100.dp).height(18.dp))
+                ShimmerBox(modifier = Modifier.width(60.dp).height(14.dp))
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 repeat(4) { index ->
@@ -750,33 +753,29 @@ fun WardrobeSummaryError(
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier = modifier.padding(horizontal = 24.dp)) {
-        Text(
-            text = "My Komod",
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold,
-            color = DarkText,
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+    Card(
+        modifier = modifier.padding(horizontal = 24.dp).fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp),
         ) {
+            Text(
+                text = "My Komod",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = DarkText,
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(32.dp),
+                modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Text(
-                    text = message,
-                    fontSize = 14.sp,
-                    color = GrayText,
-                )
+                Text(text = message, fontSize = 14.sp, color = GrayText)
                 Spacer(modifier = Modifier.height(16.dp))
                 Button(
                     onClick = onRetry,
