@@ -23,8 +23,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -96,7 +94,6 @@ import org.koin.compose.viewmodel.koinViewModel
 private val Purple = Color(0xFF7C5CFC)
 private val DarkText = Color(0xFF111827)
 private val GrayText = Color(0xFF6B7280)
-private val CardBg = Color(0xFFF9F9F9)
 private val LightPurple = Color(0xFFF0EDFF)
 private val SkeletonColor = Color(0xFFE5E7EB)
 private val TileSelectedBackground = Color(0xFFEDE7FF)
@@ -177,6 +174,7 @@ fun HomeScreen(
             is RecentItemsState.Success -> RecentItemsSection(
                 items = state.items,
                 onItemClick = onItemClick,
+                onViewAll = onViewWardrobe,
             )
             is RecentItemsState.Error -> RecentItemsError(
                 message = state.message,
@@ -283,7 +281,7 @@ fun GenerateOutfitCard(
         ) {
             Text(
                 text = "What are you dressing for today?",
-                fontSize = 22.sp,
+                fontSize = 19.sp,
                 fontWeight = FontWeight.Bold,
                 color = DarkText,
             )
@@ -292,7 +290,7 @@ fun GenerateOutfitCard(
 
             Text(
                 text = "Generate AI-powered outfit recommendations.",
-                fontSize = 14.sp,
+                fontSize = 13.sp,
                 color = GrayText,
             )
 
@@ -435,7 +433,7 @@ fun WardrobeSummarySection(
         .take(3)
 
     Card(
-        modifier = modifier.padding(horizontal = 24.dp).fillMaxWidth(),
+        modifier = modifier.padding(horizontal = 20.dp).fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
@@ -517,7 +515,7 @@ private fun WardrobeSummaryItem(
         )
         Text(
             text = count.toString(),
-            fontSize = 22.sp,
+            fontSize = 18.sp,
             fontWeight = FontWeight.Bold,
             color = DarkText,
         )
@@ -545,44 +543,65 @@ private fun WardrobeSummaryDivider() {
 fun RecentItemsSection(
     items: List<RecentItem>,
     onItemClick: (String) -> Unit,
+    onViewAll: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier = modifier) {
-        Text(
-            text = "Recently Added",
-            fontSize = 22.sp,
-            fontWeight = FontWeight.Bold,
-            color = DarkText,
-            modifier = Modifier.padding(horizontal = 24.dp),
-        )
+    val displayItems = items.take(5)
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        if (items.isEmpty()) {
-            Card(
+    Card(
+        modifier = modifier.padding(horizontal = 20.dp).fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 16.dp),
+        ) {
+            // Header
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 24.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = CardBg),
+                    .clickable(onClick = onViewAll),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
             ) {
+                Text(
+                    text = "Recently Added",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = DarkText,
+                )
+                Text(
+                    text = "View all →",
+                    color = Purple,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            if (displayItems.isEmpty()) {
                 Text(
                     text = "No items yet. Add your first item to get started!",
                     fontSize = 14.sp,
                     color = GrayText,
-                    modifier = Modifier.padding(32.dp),
+                    modifier = Modifier.padding(vertical = 16.dp),
                 )
-            }
-        } else {
-            LazyRow(
-                contentPadding = PaddingValues(horizontal = 24.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                items(items, key = { it.id }) { item ->
-                    RecentItemCard(
-                        item = item,
-                        onClick = { onItemClick(item.id) },
-                    )
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    displayItems.forEach { item ->
+                        RecentItemTile(
+                            item = item,
+                            onClick = { onItemClick(item.id) },
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
                 }
             }
         }
@@ -590,59 +609,41 @@ fun RecentItemsSection(
 }
 
 @Composable
-fun RecentItemCard(
+private fun RecentItemTile(
     item: RecentItem,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Card(
-        modifier = modifier
-            .width(140.dp)
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = CardBg),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    Column(
+        modifier = modifier.clickable(onClick = onClick),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Column {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(0.9f)
-                    .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
-                    .background(Color(0xFFF3F4F6)),
-                contentAlignment = Alignment.Center,
-            ) {
-                if (item.imageUrl != null) {
-                    AsyncImage(
-                        model = item.imageUrl,
-                        contentDescription = item.itemName,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                }
-            }
-
-            Column(
-                modifier = Modifier.padding(12.dp),
-            ) {
-                Text(
-                    text = item.itemName ?: "Untitled",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = DarkText,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Text(
-                    text = formatDate(item.createdAt),
-                    fontSize = 12.sp,
-                    color = GrayText,
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(1f)
+                .clip(RoundedCornerShape(14.dp))
+                .background(Color(0xFFF3F4F6)),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (item.imageUrl != null) {
+                AsyncImage(
+                    model = item.imageUrl,
+                    contentDescription = item.itemName,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
                 )
             }
         }
+        Text(
+            text = formatDate(item.createdAt),
+            fontSize = 10.sp,
+            color = GrayText,
+            textAlign = TextAlign.Center,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 
@@ -700,46 +701,45 @@ fun WardrobeSummarySkeleton(modifier: Modifier = Modifier) {
 
 @Composable
 fun RecentItemsSkeleton(modifier: Modifier = Modifier) {
-    Column(modifier = modifier) {
-        Text(
-            text = "Recently Added",
-            fontSize = 22.sp,
-            fontWeight = FontWeight.Bold,
-            color = DarkText,
-            modifier = Modifier.padding(horizontal = 24.dp),
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        LazyRow(
-            contentPadding = PaddingValues(horizontal = 24.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+    Card(
+        modifier = modifier.padding(horizontal = 24.dp).fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 16.dp),
         ) {
-            items(3) {
-                Card(
-                    modifier = Modifier.width(140.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = CardBg),
-                ) {
-                    Column {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                ShimmerBox(modifier = Modifier.width(120.dp).height(18.dp))
+                ShimmerBox(modifier = Modifier.width(60.dp).height(14.dp))
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                repeat(4) {
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
                         ShimmerBox(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .aspectRatio(0.9f),
+                                .aspectRatio(1f)
+                                .clip(RoundedCornerShape(14.dp)),
                         )
-                        Column(modifier = Modifier.padding(12.dp)) {
-                            ShimmerBox(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(16.dp),
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            ShimmerBox(
-                                modifier = Modifier
-                                    .width(60.dp)
-                                    .height(12.dp),
-                            )
-                        }
+                        ShimmerBox(modifier = Modifier.width(40.dp).height(10.dp))
                     }
                 }
             }
@@ -794,32 +794,29 @@ fun RecentItemsError(
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier = modifier.padding(horizontal = 24.dp)) {
-        Text(
-            text = "Recently Added",
-            fontSize = 22.sp,
-            fontWeight = FontWeight.Bold,
-            color = DarkText,
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = CardBg),
+    Card(
+        modifier = modifier.padding(horizontal = 24.dp).fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp),
         ) {
+            Text(
+                text = "Recently Added",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = DarkText,
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(32.dp),
+                modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Text(
-                    text = message,
-                    fontSize = 14.sp,
-                    color = GrayText,
-                )
+                Text(text = message, fontSize = 14.sp, color = GrayText)
                 Spacer(modifier = Modifier.height(16.dp))
                 Button(
                     onClick = onRetry,
