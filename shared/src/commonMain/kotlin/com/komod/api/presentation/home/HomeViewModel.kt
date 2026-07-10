@@ -21,6 +21,10 @@ class HomeViewModel(
     }
 
     fun loadData() {
+        refresh()
+    }
+
+    fun refresh() {
         viewModelScope.launch {
             _uiState.update {
                 it.copy(

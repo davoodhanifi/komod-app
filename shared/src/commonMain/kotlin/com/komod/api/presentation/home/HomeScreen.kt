@@ -56,6 +56,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -92,9 +93,14 @@ fun HomeScreen(
     onGenerateOutfit: (occasion: String) -> Unit,
     onViewWardrobe: () -> Unit,
     onItemClick: (String) -> Unit,
+    refreshKey: Int = 0,
     scrollState: androidx.compose.foundation.ScrollState = rememberScrollState(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
+
+    LaunchedEffect(refreshKey) {
+        if (refreshKey > 0) viewModel.refresh()
+    }
 
     Column(
         modifier = Modifier

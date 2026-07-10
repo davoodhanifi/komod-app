@@ -10,6 +10,8 @@ import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import org.jetbrains.compose.resources.painterResource
 import komod.shared.generated.resources.Res
 import komod.shared.generated.resources.hanger
@@ -27,6 +29,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -48,6 +51,7 @@ import com.komod.api.presentation.home.HomeScreen
 import com.komod.api.presentation.outfits.OutfitScreen
 import com.komod.api.presentation.wardrobe.WardrobeItemDetailScreen
 import com.komod.api.presentation.wardrobe.WardrobeScreen
+import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -55,6 +59,7 @@ import org.koin.compose.koinInject
 
 private const val WardrobeItemIdArg = "wardrobeItemId"
 private const val WardrobeRefreshArg = "wardrobe_refresh_required"
+private const val HomeRefreshArg = "home_refresh_required"
 private const val SelectedOutfitKey = "selected_outfit"
 private const val OccasionArg = "occasion"
 
@@ -103,6 +108,8 @@ fun MainScaffold(
     authRepository: AuthRepository = koinInject(),
 ) {
     val navController = rememberNavController()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val snackbarScope = rememberCoroutineScope()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
     
@@ -138,12 +145,27 @@ fun MainScaffold(
     }
     
     var wardrobeRefreshKey by rememberSaveable { mutableIntStateOf(0) }
+    var homeRefreshKey by rememberSaveable { mutableIntStateOf(0) }
+
+    fun requestRefresh(route: String, key: String) {
+        runCatching { navController.getBackStackEntry(route) }
+            .getOrNull()
+            ?.savedStateHandle
+            ?.set(key, true)
+    }
+
+    fun showSnackbar(message: String) {
+        snackbarScope.launch {
+            snackbarHostState.showSnackbar(message)
+        }
+    }
 
     val currentUser = authRepository.currentUserOrNull()
 
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
             containerColor = Color.White,
+            snackbarHost = { SnackbarHost(snackbarHostState) },
         ) { contentPadding ->
             NavHost(
                 navController = navController,
@@ -153,7 +175,18 @@ fun MainScaffold(
                     .padding(contentPadding)
                     .padding(bottom = if (showBottomBar) 0.dp else 0.dp),
             ) {
-                composable(MainRoute.Home.route) {
+                composable(MainRoute.Home.route) { backStackEntry ->
+                    val shouldRefresh by backStackEntry.savedStateHandle
+                        .getStateFlow(HomeRefreshArg, false)
+                        .collectAsState()
+
+                    LaunchedEffect(shouldRefresh) {
+                        if (shouldRefresh) {
+                            homeRefreshKey += 1
+                            backStackEntry.savedStateHandle[HomeRefreshArg] = false
+                        }
+                    }
+
                     // Track scroll behavior - immediate response
                     LaunchedEffect(homeScrollState.value) {
                         bottomBarScrollState.updateScroll(homeScrollState.value.toFloat())
@@ -185,6 +218,7 @@ fun MainScaffold(
                         onItemClick = { itemId ->
                             navController.navigate(MainRoute.WardrobeItemDetail.createRoute(itemId))
                         },
+                        refreshKey = homeRefreshKey,
                     )
                 }
 
@@ -267,6 +301,13 @@ fun MainScaffold(
                     WardrobeItemDetailScreen(
                         wardrobeItemId = itemId,
                         onNavigateBack = { navController.navigateUp() },
+                        onRefreshWardrobe = {
+                            requestRefresh(MainRoute.Wardrobe.route, WardrobeRefreshArg)
+                        },
+                        onRefreshHome = {
+                            requestRefresh(MainRoute.Home.route, HomeRefreshArg)
+                        },
+                        onShowSnackbar = ::showSnackbar,
                     )
                 }
 

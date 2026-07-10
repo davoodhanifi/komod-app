@@ -22,6 +22,12 @@ class WardrobeItemCache {
         return mutex.withLock { items[id] }
     }
 
+    suspend fun remove(id: String) {
+        mutex.withLock {
+            items.remove(id)
+        }
+    }
+
     suspend fun snapshot(): List<WardrobeItem> {
         return mutex.withLock { items.values.toList() }
     }

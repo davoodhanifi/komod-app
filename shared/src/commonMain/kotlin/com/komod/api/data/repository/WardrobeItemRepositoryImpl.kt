@@ -5,6 +5,8 @@ import com.komod.api.domain.model.WardrobeItemDetail
 import com.komod.api.domain.model.WardrobeItem
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.storage.storage
+import io.ktor.client.plugins.ResponseException
+import io.ktor.http.HttpStatusCode
 import kotlin.time.Duration.Companion.hours
 
 private const val WARDROBE_BUCKET = "wardrobe"
@@ -68,6 +70,21 @@ class WardrobeItemRepositoryImpl(
             confidence = dto.confidence,
             createdAt = dto.createdAt,
         ).also { wardrobeItemCache.putAll(listOf(it.toWardrobeItem())) }
+    }
+
+    override suspend fun deleteWardrobeItem(id: String) {
+        try {
+            wardrobeApiService.deleteWardrobeItem(id)
+            wardrobeItemCache.remove(id)
+        } catch (error: ResponseException) {
+            when (error.response.status) {
+                HttpStatusCode.NotFound -> throw WardrobeItemDeleteNotFoundException()
+                HttpStatusCode.BadRequest -> throw WardrobeItemDeleteBadRequestException()
+                else -> throw WardrobeItemDeleteNetworkException(error)
+            }
+        } catch (error: kotlinx.io.IOException) {
+            throw WardrobeItemDeleteNetworkException(error)
+        }
     }
 }
 

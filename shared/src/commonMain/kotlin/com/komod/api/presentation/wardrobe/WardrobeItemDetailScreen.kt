@@ -30,7 +30,7 @@ import androidx.compose.material.icons.outlined.Checkroom
 import androidx.compose.material.icons.outlined.CloudOff
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.LocalOffer
-import androidx.compose.material.icons.outlined.MoreHoriz
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -41,6 +41,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -49,6 +50,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -61,6 +63,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.komod.api.domain.model.WardrobeItemDetail
+import komod.shared.generated.resources.Res
+import komod.shared.generated.resources.delete
+import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
@@ -77,10 +82,36 @@ private val Skeleton = Color(0xFFE9EDF4)
 fun WardrobeItemDetailScreen(
     wardrobeItemId: String,
     onNavigateBack: () -> Unit,
+    onRefreshWardrobe: () -> Unit,
+    onRefreshHome: () -> Unit,
+    onShowSnackbar: (String) -> Unit,
     viewModel: WardrobeItemDetailViewModel = koinViewModel(parameters = { parametersOf(wardrobeItemId) }),
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
+    val deleteEnabled = (uiState as? WardrobeItemDetailUiState.Success)?.isDeleting?.not() == true
+
+    LaunchedEffect(viewModel) {
+        viewModel.effects.collect { effect ->
+            when (effect) {
+                WardrobeItemDetailEffect.DeleteSucceeded -> {
+                    onShowSnackbar("Item deleted.")
+                    onRefreshWardrobe()
+                    onRefreshHome()
+                    onNavigateBack()
+                }
+                WardrobeItemDetailEffect.ItemMissing -> {
+                    onShowSnackbar("This item no longer exists.")
+                    onRefreshWardrobe()
+                    onRefreshHome()
+                    onNavigateBack()
+                }
+                is WardrobeItemDetailEffect.DeleteFailed -> {
+                    onShowSnackbar(effect.message)
+                }
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -103,11 +134,14 @@ fun WardrobeItemDetailScreen(
                             tint = Dark,
                         )
                     }
-                    IconButton(onClick = {}) {
+                    IconButton(
+                        enabled = deleteEnabled,
+                        onClick = { viewModel.onEvent(WardrobeItemDetailEvent.DeleteClicked) },
+                    ) {
                         Icon(
-                            imageVector = Icons.Outlined.MoreHoriz,
-                            contentDescription = "More",
-                            tint = Dark,
+                            painter = painterResource(Res.drawable.delete),
+                            contentDescription = "Delete item",
+                            tint = Color(0xFFD92D20),
                         )
                     }
                 },
@@ -130,14 +164,26 @@ fun WardrobeItemDetailScreen(
                     message = state.message,
                     onRetry = viewModel::load,
                 )
-                is WardrobeItemDetailUiState.Success -> DetailContent(item = state.item)
+                is WardrobeItemDetailUiState.Success -> DetailContent(
+                    item = state.item,
+                    showDeleteDialog = state.isDeleteDialogVisible,
+                    isDeleting = state.isDeleting,
+                    onDeleteDismiss = { viewModel.onEvent(WardrobeItemDetailEvent.DeleteDismissed) },
+                    onDeleteConfirm = { viewModel.onEvent(WardrobeItemDetailEvent.DeleteConfirmed) },
+                )
             }
         }
     }
 }
 
 @Composable
-private fun DetailContent(item: WardrobeItemDetail) {
+private fun DetailContent(
+    item: WardrobeItemDetail,
+    showDeleteDialog: Boolean,
+    isDeleting: Boolean,
+    onDeleteDismiss: () -> Unit,
+    onDeleteConfirm: () -> Unit,
+) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = 28.dp),
@@ -225,6 +271,14 @@ private fun DetailContent(item: WardrobeItemDetail) {
                 }
             }
         }
+    }
+
+    if (showDeleteDialog) {
+        DeleteConfirmDialog(
+            isDeleting = isDeleting,
+            onDismiss = onDeleteDismiss,
+            onConfirm = onDeleteConfirm,
+        )
     }
 }
 
@@ -495,6 +549,76 @@ private fun ErrorContent(message: String, onRetry: () -> Unit) {
             Text("Retry", fontWeight = FontWeight.SemiBold)
         }
     }
+}
+
+@Composable
+private fun DeleteConfirmDialog(
+    isDeleting: Boolean,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = { if (!isDeleting) onDismiss() },
+        icon = {
+            Icon(
+                painter = painterResource(Res.drawable.delete),
+                contentDescription = null,
+                tint = Color(0xFFD92D20),
+            )
+        },
+        title = {
+            Text(
+                text = "Delete item?",
+                fontWeight = FontWeight.Bold,
+                color = Dark,
+            )
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(
+                    text = "This item will be permanently removed from your wardrobe.",
+                    color = Muted,
+                )
+                Text(
+                    text = "This action cannot be undone.",
+                    color = Muted,
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                enabled = !isDeleting,
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFFD92D20),
+                    contentColor = Color.White,
+                    disabledContainerColor = Color(0xFFD92D20).copy(alpha = 0.5f),
+                    disabledContentColor = Color.White,
+                ),
+            ) {
+                if (isDeleting) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(14.dp),
+                        strokeWidth = 2.dp,
+                        color = Color.White,
+                    )
+                    Spacer(Modifier.width(8.dp))
+                }
+                Text("Delete", fontWeight = FontWeight.SemiBold)
+            }
+        },
+        dismissButton = {
+            OutlinedButton(
+                onClick = onDismiss,
+                enabled = !isDeleting,
+                shape = RoundedCornerShape(12.dp),
+            ) {
+                Text("Cancel", fontWeight = FontWeight.SemiBold)
+            }
+        },
+        shape = RoundedCornerShape(24.dp),
+    )
 }
 
 private fun itemTitle(item: WardrobeItemDetail): String {

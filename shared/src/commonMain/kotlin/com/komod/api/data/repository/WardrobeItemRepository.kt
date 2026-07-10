@@ -4,4 +4,5 @@ import com.komod.api.domain.model.WardrobeItemDetail
 
 interface WardrobeItemRepository {
     suspend fun getWardrobeItem(id: String): WardrobeItemDetail
+    suspend fun deleteWardrobeItem(id: String)
 }
