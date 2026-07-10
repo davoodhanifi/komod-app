@@ -1,5 +1,6 @@
 package com.komod.api.presentation.outfits
 
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -72,6 +73,16 @@ import com.komod.api.domain.model.Outfit
 import com.komod.api.domain.model.OutfitOccasion
 import com.komod.api.domain.model.OutfitStyle
 import com.komod.api.domain.model.OutfitItem
+import komod.shared.generated.resources.Res
+import komod.shared.generated.resources.date
+import komod.shared.generated.resources.hanger_filled
+import komod.shared.generated.resources.office
+import komod.shared.generated.resources.party
+import komod.shared.generated.resources.shirt
+import komod.shared.generated.resources.sport
+import komod.shared.generated.resources.travel
+import org.jetbrains.compose.resources.DrawableResource
+import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.viewmodel.koinViewModel
 
 private val OutfitPurple = Color(0xFF7C5CFC)
@@ -82,6 +93,14 @@ private val OutfitSurface = Color(0xFFF7F5F2)
 private val OutfitChipSurface = Color(0xFFF3F4F6)
 private val OutfitBorder = Color(0xFFE5E7EB)
 private val OutfitSkeleton = Color(0xFFE5E7EB)
+private val FilterTileSelectedBackground = Color(0xFFEDE7FF)
+private val FilterTileBorderDefault = Color(0xFFE6E8EE)
+private val FilterTileLabelDefault = Color(0xFF1F2937)
+
+private data class OccasionFilterOption(
+    val occasion: OutfitOccasion,
+    val icon: DrawableResource,
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -229,52 +248,108 @@ fun OutfitFilters(
     selectedOccasion: OutfitOccasion,
     onOccasionSelected: (OutfitOccasion) -> Unit,
 ) {
+    val filterOptions = remember {
+        val iconMap = mapOf(
+            OutfitOccasion.Outdoor to Res.drawable.sport,
+            OutfitOccasion.Office to Res.drawable.office,
+            OutfitOccasion.Date to Res.drawable.date,
+            OutfitOccasion.Travel to Res.drawable.travel,
+            OutfitOccasion.Casual to Res.drawable.shirt,
+            OutfitOccasion.Sport to Res.drawable.sport,
+            OutfitOccasion.Party to Res.drawable.party,
+            OutfitOccasion.All to Res.drawable.hanger_filled,
+        )
+
+        val preferredOrder = listOf(
+            OutfitOccasion.Outdoor,
+            OutfitOccasion.Office,
+            OutfitOccasion.Date,
+            OutfitOccasion.Travel,
+            OutfitOccasion.Casual,
+            OutfitOccasion.Sport,
+            OutfitOccasion.Party,
+            OutfitOccasion.All,
+        )
+
+        preferredOrder
+            .filter { it in OutfitOccasion.entries }
+            .map { occasion ->
+                OccasionFilterOption(
+                    occasion = occasion,
+                    icon = iconMap.getValue(occasion),
+                )
+            }
+    }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        OutfitOccasion.entries.forEach { occasion ->
-            val selected = occasion == selectedOccasion
-            FilterChip(
-                label = occasion.label,
-                icon = if (occasion == OutfitOccasion.All) Icons.Filled.AutoAwesome else Icons.Outlined.Checkroom,
-                selected = selected,
-                onClick = { onOccasionSelected(occasion) },
+        filterOptions.forEach { option ->
+            OccasionFilterTile(
+                option = option,
+                selected = option.occasion == selectedOccasion,
+                onClick = { onOccasionSelected(option.occasion) },
             )
         }
     }
 }
 
 @Composable
-private fun FilterChip(
-    label: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+private fun OccasionFilterTile(
+    option: OccasionFilterOption,
     selected: Boolean,
     onClick: () -> Unit,
 ) {
+    val containerColor by animateColorAsState(
+        targetValue = if (selected) FilterTileSelectedBackground else Color.White,
+        animationSpec = tween(durationMillis = 200),
+        label = "outfit-filter-bg",
+    )
+    val borderColor by animateColorAsState(
+        targetValue = if (selected) OutfitPurple else FilterTileBorderDefault,
+        animationSpec = tween(durationMillis = 200),
+        label = "outfit-filter-border",
+    )
+    val iconColor by animateColorAsState(
+        targetValue = OutfitPurple,
+        animationSpec = tween(durationMillis = 200),
+        label = "outfit-filter-icon",
+    )
+    val labelColor by animateColorAsState(
+        targetValue = if (selected) OutfitPurple else FilterTileLabelDefault,
+        animationSpec = tween(durationMillis = 200),
+        label = "outfit-filter-label",
+    )
+
     Column(
         modifier = Modifier
-            .size(width = 70.dp, height = 88.dp)
+            .size(width = 80.dp, height = 80.dp)
             .clip(RoundedCornerShape(20.dp))
-            .background(if (selected) Color(0xFF121212) else OutfitChipSurface)
-            .clickable(onClick = onClick),
+            .background(containerColor)
+            .border(1.dp, borderColor, RoundedCornerShape(20.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 8.dp, vertical = 10.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
         Icon(
-            imageVector = icon,
-            contentDescription = label,
-            tint = if (selected) Color.White else OutfitMuted,
-            modifier = Modifier.size(22.dp),
+            painter = painterResource(option.icon),
+            contentDescription = "${option.occasion.label}, ${if (selected) "selected" else "not selected"}",
+            tint = iconColor,
+            modifier = Modifier.size(20.dp),
         )
+        Spacer(modifier = Modifier.height(4.dp))
         Text(
-            text = label,
-            color = if (selected) Color.White else OutfitText,
-            fontSize = 13.sp,
+            text = option.occasion.label,
+            color = labelColor,
+            fontSize = 11.sp,
             fontWeight = FontWeight.Medium,
-            modifier = Modifier.padding(top = 10.dp),
+            textAlign = TextAlign.Center,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
         )
     }
 }
