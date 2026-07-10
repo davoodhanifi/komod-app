@@ -77,6 +77,7 @@ import com.komod.api.domain.model.CategoryCount
 import com.komod.api.domain.model.RecentItem
 import com.komod.api.domain.model.User
 import com.komod.api.domain.model.WardrobeSummary
+import komod.shared.generated.resources.user_filled
 import org.koin.compose.viewmodel.koinViewModel
 
 private val Purple = Color(0xFF7C5CFC)
@@ -189,7 +190,7 @@ fun GreetingSection(
             contentAlignment = Alignment.Center,
         ) {
             Icon(
-                imageVector = Icons.Default.Person,
+                painter = painterResource(Res.drawable.user_filled),
                 contentDescription = "Profile",
                 tint = Purple,
                 modifier = Modifier.size(32.dp),
