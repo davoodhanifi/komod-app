@@ -59,7 +59,6 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -70,7 +69,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -82,10 +80,15 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
-import com.komod.api.domain.model.CategoryCount
 import com.komod.api.domain.model.RecentItem
 import com.komod.api.domain.model.User
 import com.komod.api.domain.model.WardrobeSummary
+import androidx.compose.ui.graphics.painter.Painter
+import komod.shared.generated.resources.hanger_filled
+import komod.shared.generated.resources.long_sleeve_shirt
+import komod.shared.generated.resources.shorts_pants
+import komod.shared.generated.resources.t_shirt
+import komod.shared.generated.resources.tank_top
 import komod.shared.generated.resources.user_filled
 import org.jetbrains.compose.resources.DrawableResource
 import org.koin.compose.viewmodel.koinViewModel
@@ -426,54 +429,66 @@ fun WardrobeSummarySection(
     onViewAll: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // Total + top 3 categories = 4 columns (never scrollable)
+    val topCategories = summary.categories
+        .sortedByDescending { it.count }
+        .take(3)
+
     Column(modifier = modifier.padding(horizontal = 24.dp)) {
+        // Fully clickable header row
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onViewAll),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "Your Komod",
-                fontSize = 22.sp,
+                text = "My Komod",
+                fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
                 color = DarkText,
             )
-
-            TextButton(onClick = onViewAll) {
-                Text(
-                    text = "View all →",
-                    color = Purple,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium,
-                )
-            }
+            Text(
+                text = "View all →",
+                color = Purple,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium,
+            )
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
         Card(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         ) {
-            Column(
-                modifier = Modifier.padding(20.dp),
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 20.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(
-                    text = "${summary.totalItems} Items",
-                    fontSize = 32.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = DarkText,
+                // First column: total items
+                WardrobeSummaryItem(
+                    icon = painterResource(Res.drawable.hanger_filled),
+                    iconColor = Purple,
+                    count = summary.totalItems,
+                    label = "Items",
+                    modifier = Modifier.weight(1f),
                 )
 
-                Spacer(modifier = Modifier.height(16.dp))
-
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    items(summary.categories.sortedByDescending { it.count }) { categoryCount ->
-                        CategoryChip(category = categoryCount)
-                    }
+                topCategories.forEach { category ->
+                    WardrobeSummaryDivider()
+                    WardrobeSummaryItem(
+                        icon = getCategoryIcon(category.category),
+                        iconColor = getCategoryIconColor(category.category),
+                        count = category.count,
+                        label = category.category.capitalize(),
+                        modifier = Modifier.weight(1f),
+                    )
                 }
             }
         }
@@ -481,44 +496,48 @@ fun WardrobeSummarySection(
 }
 
 @Composable
-fun CategoryChip(
-    category: CategoryCount,
+private fun WardrobeSummaryItem(
+    icon: Painter,
+    iconColor: Color,
+    count: Int,
+    label: String,
     modifier: Modifier = Modifier,
 ) {
-    Row(
+    Column(
         modifier = modifier,
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .clip(CircleShape)
-                .background(getCategoryColor(category.category)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                painter = getCategoryIcon(category.category),
-                contentDescription = category.category,
-                tint = getCategoryIconColor(category.category),
-                modifier = Modifier.size(20.dp),
-            )
-        }
-
-        Column {
-            Text(
-                text = category.category.capitalize(),
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium,
-                color = DarkText,
-            )
-            Text(
-                text = "${category.count} items",
-                fontSize = 12.sp,
-                color = GrayText,
-            )
-        }
+        Icon(
+            painter = icon,
+            contentDescription = label,
+            tint = iconColor,
+            modifier = Modifier.size(28.dp),
+        )
+        Text(
+            text = count.toString(),
+            fontSize = 22.sp,
+            fontWeight = FontWeight.Bold,
+            color = DarkText,
+        )
+        Text(
+            text = label,
+            fontSize = 12.sp,
+            color = GrayText,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
+}
+
+@Composable
+private fun WardrobeSummaryDivider() {
+    Box(
+        modifier = Modifier
+            .width(1.dp)
+            .height(56.dp)
+            .background(Color(0xFFE5E7EB)),
+    )
 }
 
 @Composable
@@ -634,37 +653,41 @@ fun WardrobeSummarySkeleton(modifier: Modifier = Modifier) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text = "Your Komod",
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold,
-                color = DarkText,
-            )
+            ShimmerBox(modifier = Modifier.width(100.dp).height(20.dp))
+            ShimmerBox(modifier = Modifier.width(60.dp).height(16.dp))
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
         Card(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         ) {
-            Column(modifier = Modifier.padding(20.dp)) {
-                ShimmerBox(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(60.dp),
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    repeat(3) {
-                        ShimmerBox(
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 20.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                repeat(4) { index ->
+                    if (index > 0) {
+                        Box(
                             modifier = Modifier
-                                .weight(1f)
-                                .height(80.dp),
+                                .width(1.dp)
+                                .height(56.dp)
+                                .background(Color(0xFFE5E7EB)),
                         )
+                    }
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        ShimmerBox(modifier = Modifier.size(28.dp))
+                        ShimmerBox(modifier = Modifier.width(32.dp).height(22.dp))
+                        ShimmerBox(modifier = Modifier.width(40.dp).height(12.dp))
                     }
                 }
             }
@@ -729,8 +752,8 @@ fun WardrobeSummaryError(
 ) {
     Column(modifier = modifier.padding(horizontal = 24.dp)) {
         Text(
-            text = "Your Komod",
-            fontSize = 22.sp,
+            text = "My Komod",
+            fontSize = 20.sp,
             fontWeight = FontWeight.Bold,
             color = DarkText,
         )
@@ -739,8 +762,9 @@ fun WardrobeSummaryError(
 
         Card(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = CardBg),
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         ) {
             Column(
                 modifier = Modifier
@@ -842,17 +866,22 @@ fun ShimmerBox(modifier: Modifier = Modifier) {
 fun getCategoryIcon(category: String) = when (category.lowercase()) {
     "watch", "watches" -> painterResource(Res.drawable.watch)
     "shirt", "shirts" -> painterResource(Res.drawable.shirt)
-    "shoe", "shoes" -> painterResource(Res.drawable.shoes)
-    "jacket", "jackets", "hoodie", "hoodies" -> painterResource(Res.drawable.hoodie)
+    "t-shirt", "t-shirts", "tshirt", "tshirts", "tee", "tees" -> painterResource(Res.drawable.t_shirt)
+    "long sleeve", "long-sleeve", "long sleeve shirt" -> painterResource(Res.drawable.long_sleeve_shirt)
+    "top", "tops" -> painterResource(Res.drawable.tank_top)
+    "shoe", "shoes", "sneaker", "sneakers" -> painterResource(Res.drawable.shoes)
+    "jacket", "jackets", "blazer", "blazers", "outerwear", "coat", "coats" -> painterResource(Res.drawable.suit)
+    "hoodie", "hoodies", "sweatshirt", "sweatshirts", "sweater", "sweaters" -> painterResource(Res.drawable.hoodie)
     "pant", "pants", "trouser", "trousers" -> painterResource(Res.drawable.pants)
+    "short", "shorts" -> painterResource(Res.drawable.shorts_pants)
     "dress", "dresses" -> painterResource(Res.drawable.dress)
     "hat", "hats", "cap", "caps" -> painterResource(Res.drawable.hat)
-    "bag", "bags" -> painterResource(Res.drawable.hand_bag)
+    "bag", "bags", "handbag", "handbags" -> painterResource(Res.drawable.hand_bag)
     "accessory", "accessories", "necklace", "necklaces" -> painterResource(Res.drawable.necklace)
     "glasses", "sunglasses" -> painterResource(Res.drawable.glasses)
     "belt", "belts" -> painterResource(Res.drawable.belt)
     "boot", "boots" -> painterResource(Res.drawable.boots)
-    "heels", "high heels" -> painterResource(Res.drawable.high_heels)
+    "heels", "high heels", "high-heels" -> painterResource(Res.drawable.high_heels)
     "sandal", "sandals" -> painterResource(Res.drawable.sandals)
     "sock", "socks" -> painterResource(Res.drawable.socks)
     "vest", "vests" -> painterResource(Res.drawable.vest)
@@ -863,32 +892,22 @@ fun getCategoryIcon(category: String) = when (category.lowercase()) {
 fun getCategoryIconColor(category: String): Color {
     return when (category.lowercase()) {
         "watch", "watches" -> Color(0xFF4CAF50)
-        "shirt", "shirts" -> Color(0xFF2196F3)
-        "shoe", "shoes" -> Color(0xFFFF9800)
-        "jacket", "jackets" -> Color(0xFF9C27B0)
-        "pant", "pants", "trouser", "trousers" -> Color(0xFF009688)
+        "shirt", "shirts", "t-shirt", "t-shirts", "tshirt", "tshirts", "tee", "tees",
+        "top", "tops", "long sleeve", "long-sleeve" -> Color(0xFF2196F3)
+        "shoe", "shoes", "sneaker", "sneakers", "boot", "boots",
+        "heels", "high heels", "sandal", "sandals" -> Color(0xFFFF9800)
+        "jacket", "jackets", "blazer", "blazers", "outerwear", "coat", "coats",
+        "suit", "suits" -> Color(0xFF4CAF50)
+        "hoodie", "hoodies", "sweatshirt", "sweatshirts", "sweater", "sweaters" -> Color(0xFF9C27B0)
+        "pant", "pants", "trouser", "trousers", "short", "shorts" -> Color(0xFF009688)
         "dress", "dresses" -> Color(0xFFE91E63)
-        "hat", "hats" -> Color(0xFFFFC107)
-        "bag", "bags" -> Color(0xFFFF6F00)
-        "accessory", "accessories" -> Color(0xFFF06292)
+        "hat", "hats", "cap", "caps" -> Color(0xFFFFC107)
+        "bag", "bags", "handbag", "handbags" -> Color(0xFFFF6F00)
+        "accessory", "accessories", "necklace", "necklaces" -> Color(0xFFF06292)
         "glasses", "sunglasses" -> Color(0xFF03A9F4)
+        "belt", "belts" -> Color(0xFF795548)
+        "sock", "socks" -> Color(0xFF607D8B)
         else -> Color(0xFF7C5CFC)
-    }
-}
-
-fun getCategoryColor(category: String): Color {
-    return when (category.lowercase()) {
-        "watch", "watches" -> Color(0xFFE8F5E9)
-        "shirt", "shirts" -> Color(0xFFE3F2FD)
-        "shoe", "shoes" -> Color(0xFFFFF3E0)
-        "jacket", "jackets" -> Color(0xFFF3E5F5)
-        "pant", "pants", "trouser", "trousers" -> Color(0xFFE0F2F1)
-        "dress", "dresses" -> Color(0xFFFCE4EC)
-        "hat", "hats" -> Color(0xFFFFF9C4)
-        "bag", "bags" -> Color(0xFFFFECB3)
-        "accessory", "accessories" -> Color(0xFFF8BBD0)
-        "glasses", "sunglasses" -> Color(0xFFE1F5FE)
-        else -> Color(0xFFF0EDFF)
     }
 }
 
