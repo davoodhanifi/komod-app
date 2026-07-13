@@ -6,6 +6,12 @@
 	<true/>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Komod needs camera access so you can take photos of clothing items.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Komod needs photo library access so you can choose existing clothing photos.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Komod needs permission to save photos when you choose to export or store captured images.</string>
 
 	<!-- OAuth callback URL scheme (must match the scheme configured in Supabase and AppModule) -->
 	<key>CFBundleURLTypes</key>
