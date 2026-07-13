@@ -64,7 +64,12 @@ import androidx.compose.ui.unit.sp
 import com.komod.api.platform.ImagePickerLauncher
 import com.komod.api.platform.rememberImagePickerLauncher
 import com.komod.api.platform.toImageBitmap
+import komod.shared.generated.resources.Res
+import komod.shared.generated.resources.camera
+import komod.shared.generated.resources.gallery
+import komod.shared.generated.resources.hanger
 import kotlinx.coroutines.delay
+import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.viewmodel.koinViewModel
 
 private val Purple = Color(0xFF7C5CFC)
@@ -164,7 +169,7 @@ private fun AddItemInitialContent(
             SourceOptionCard(
                 icon = {
                     Icon(
-                        imageVector = Icons.Filled.CameraAlt,
+                        painter = painterResource(Res.drawable.camera),
                         contentDescription = null,
                         tint = Purple,
                     )
@@ -177,7 +182,7 @@ private fun AddItemInitialContent(
             SourceOptionCard(
                 icon = {
                     Icon(
-                        imageVector = Icons.Filled.PhotoLibrary,
+                        painter = painterResource(Res.drawable.gallery),
                         contentDescription = null,
                         tint = Purple,
                     )
@@ -229,7 +234,7 @@ private fun AddItemHeroCard(modifier: Modifier = Modifier) {
         ) {
             Box(modifier = Modifier.fillMaxSize()) {
                 Icon(
-                    imageVector = Icons.Outlined.Checkroom,
+                    painter = painterResource(Res.drawable.hanger),
                     contentDescription = null,
                     tint = Purple,
                     modifier = Modifier
