@@ -60,6 +60,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.komod.api.domain.model.WardrobeItem
+import komod.shared.generated.resources.Res
+import komod.shared.generated.resources.filter
+import komod.shared.generated.resources.hanger
+import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.viewmodel.koinViewModel
 
 private val Purple = Color(0xFF7C5CFC)
@@ -97,11 +101,8 @@ fun WardrobeScreen(
                     )
                 },
                 actions = {
-                    IconButton(onClick = { /* TODO: Search */ }) {
-                        Icon(Icons.Filled.Search, contentDescription = "Search", tint = DarkText)
-                    }
                     IconButton(onClick = { /* TODO: Filter */ }) {
-                        Icon(Icons.Filled.FilterList, contentDescription = "Filter", tint = DarkText)
+                        Icon(painter = painterResource(Res.drawable.filter), contentDescription = "Filter", tint = DarkText)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -240,7 +241,7 @@ fun WardrobeCard(
 @Composable
 private fun ClothingPlaceholder() {
     Icon(
-        imageVector = Icons.Outlined.Checkroom,
+        painter = painterResource(Res.drawable.hanger),
         contentDescription = null,
         tint = Color(0xFFD1D5DB),
         modifier = Modifier.size(48.dp),

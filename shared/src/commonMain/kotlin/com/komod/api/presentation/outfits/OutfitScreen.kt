@@ -32,7 +32,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.Checkroom
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.outlined.Checkroom
 import androidx.compose.material.icons.outlined.ErrorOutline
@@ -75,7 +75,8 @@ import com.komod.api.domain.model.OutfitStyle
 import com.komod.api.domain.model.OutfitItem
 import komod.shared.generated.resources.Res
 import komod.shared.generated.resources.date
-import komod.shared.generated.resources.hanger_filled
+import komod.shared.generated.resources.filter
+import komod.shared.generated.resources.hanger
 import komod.shared.generated.resources.office
 import komod.shared.generated.resources.party
 import komod.shared.generated.resources.shirt
@@ -89,6 +90,7 @@ private val OutfitPurple = Color(0xFF7C5CFC)
 private val OutfitPurpleSoft = Color(0xFFF0ECFF)
 private val OutfitText = Color(0xFF111827)
 private val OutfitMuted = Color(0xFF6B7280)
+private val DarkText = Color(0xFF111827)
 private val OutfitSurface = Color(0xFFF7F5F2)
 private val OutfitChipSurface = Color(0xFFF3F4F6)
 private val OutfitBorder = Color(0xFFE5E7EB)
@@ -221,16 +223,13 @@ private fun OutfitHeader(
             }
             Box(
                 modifier = Modifier
-                    .size(48.dp)
-                    .clip(CircleShape)
-                    .background(Color(0xFFF3F4F6))
-                    .clickable(onClick = onSettingsClick),
+                    .size(48.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
-                    imageVector = Icons.Filled.Tune,
-                    contentDescription = "Filters",
-                    tint = OutfitMuted,
+                    painter = painterResource(Res.drawable.filter),
+                    contentDescription = "Filter",
+                    tint = DarkText,
                 )
             }
         }
@@ -257,7 +256,7 @@ fun OutfitFilters(
             OutfitOccasion.Casual to Res.drawable.shirt,
             OutfitOccasion.Sport to Res.drawable.sport,
             OutfitOccasion.Party to Res.drawable.party,
-            OutfitOccasion.All to Res.drawable.hanger_filled,
+            OutfitOccasion.All to Res.drawable.hanger,
         )
 
         val preferredOrder = listOf(
@@ -490,7 +489,7 @@ fun OutfitCard(
                     modifier = Modifier.weight(1f),
                 ) {
                     Icon(
-                        imageVector = Icons.Outlined.Checkroom,
+                        painter = painterResource(Res.drawable.hanger),
                         contentDescription = null,
                         modifier = Modifier.size(18.dp),
                     )
