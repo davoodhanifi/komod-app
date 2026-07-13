@@ -65,6 +65,7 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.komod.api.domain.model.WardrobeItemDetail
 import komod.shared.generated.resources.Res
+import komod.shared.generated.resources.arrow_left
 import komod.shared.generated.resources.delete
 import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.viewmodel.koinViewModel
@@ -122,7 +123,7 @@ fun WardrobeItemDetailScreen(
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
+                            painter = painterResource(Res.drawable.arrow_left),
                             contentDescription = "Back",
                             tint = Dark,
                         )

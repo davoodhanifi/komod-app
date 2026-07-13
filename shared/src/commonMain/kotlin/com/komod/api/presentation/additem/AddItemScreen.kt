@@ -22,14 +22,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.ErrorOutline
-import androidx.compose.material.icons.filled.PhotoLibrary
-import androidx.compose.material.icons.outlined.Checkroom
 import androidx.compose.material.icons.outlined.RadioButtonUnchecked
 import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material3.Button
@@ -65,6 +60,8 @@ import com.komod.api.platform.ImagePickerLauncher
 import com.komod.api.platform.rememberImagePickerLauncher
 import com.komod.api.platform.toImageBitmap
 import komod.shared.generated.resources.Res
+import komod.shared.generated.resources.arrow_left
+import komod.shared.generated.resources.arrow_right
 import komod.shared.generated.resources.camera
 import komod.shared.generated.resources.gallery
 import komod.shared.generated.resources.hanger
@@ -129,7 +126,7 @@ private fun AddItemInitialContent(
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            painter = painterResource(Res.drawable.arrow_left),
                             contentDescription = "Back",
                             tint = DarkText,
                         )
@@ -301,7 +298,7 @@ private fun SourceOptionCard(
             )
         }
         Icon(
-            imageVector = Icons.Filled.ChevronRight,
+            painter = painterResource(Res.drawable.arrow_right),
             contentDescription = null,
             tint = GrayText,
         )
@@ -351,6 +348,7 @@ private fun AddItemUploadingContent(
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
+                windowInsets = WindowInsets(0, 0, 0, 0),
                 title = {
                     Text(
                         text = "Uploading",
@@ -362,7 +360,7 @@ private fun AddItemUploadingContent(
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            painter = painterResource(Res.drawable.arrow_left),
                             contentDescription = "Back",
                             tint = DarkText,
                         )
@@ -547,11 +545,12 @@ private fun AddItemErrorContent(
     Scaffold(
         topBar = {
             TopAppBar(
+                windowInsets = WindowInsets(0, 0, 0, 0),
                 title = { Text(text = "") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            painter = painterResource(Res.drawable.arrow_left),
                             contentDescription = "Back",
                             tint = DarkText,
                         )
