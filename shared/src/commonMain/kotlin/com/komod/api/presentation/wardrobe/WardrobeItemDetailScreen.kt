@@ -67,6 +67,7 @@ import com.komod.api.domain.model.WardrobeItemDetail
 import komod.shared.generated.resources.Res
 import komod.shared.generated.resources.arrow_left
 import komod.shared.generated.resources.delete
+import komod.shared.generated.resources.hanger
 import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
@@ -304,7 +305,7 @@ private fun HeroImage(imageUrl: String?, contentDescription: String) {
             AsyncImage(
                 model = imageUrl,
                 contentDescription = contentDescription,
-                contentScale = ContentScale.Fit,
+                contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),
             )
         }
@@ -322,7 +323,7 @@ private fun QuickFactsRow(item: WardrobeItemDetail) {
         )
         FactItem(
             modifier = Modifier.weight(1f),
-            icon = { Icon(Icons.Outlined.Checkroom, contentDescription = null, tint = Muted, modifier = Modifier.size(14.dp)) },
+            icon = { Icon(painter = painterResource(Res.drawable.hanger), contentDescription = null, tint = Muted, modifier = Modifier.size(14.dp)) },
             label = "Category",
             value = item.category.toLabel(),
         )
