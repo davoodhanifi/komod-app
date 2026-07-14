@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.StateFlow
 interface AuthRepository {
     val sessionStatus: StateFlow<SessionStatus>
     val callbackError: SharedFlow<Throwable>
+    val currentUser: StateFlow<User?>
 
     suspend fun signInWithGoogle()
 

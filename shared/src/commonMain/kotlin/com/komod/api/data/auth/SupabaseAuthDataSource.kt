@@ -32,6 +32,9 @@ class SupabaseAuthDataSource(
             val session = supabaseClient.auth.parseSessionFromUrl(url)
             supabaseClient.auth.importSession(session)
         }
+        // Ensure user profile is hydrated after callback import/exchange.
+        // parseSessionFromUrl may provide a session without populated user details.
+        supabaseClient.auth.retrieveUserForCurrentSession(updateSession = true)
     }
 
     fun currentAccessToken(): String? = supabaseClient.auth.currentSessionOrNull()?.accessToken

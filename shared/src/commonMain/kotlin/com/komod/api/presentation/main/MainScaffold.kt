@@ -162,7 +162,7 @@ fun MainScaffold(
         }
     }
 
-    val currentUser = authRepository.currentUserOrNull()
+    val currentUser by authRepository.currentUser.collectAsState()
 
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
