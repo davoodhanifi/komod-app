@@ -49,6 +49,7 @@ import com.komod.api.data.repository.AuthRepository
 import com.komod.api.presentation.additem.AddItemScreen
 import com.komod.api.presentation.home.HomeScreen
 import com.komod.api.presentation.outfits.OutfitScreen
+import com.komod.api.presentation.profile.ProfileScreen
 import com.komod.api.presentation.wardrobe.WardrobeItemDetailScreen
 import com.komod.api.presentation.wardrobe.WardrobeScreen
 import kotlinx.coroutines.launch
@@ -116,6 +117,7 @@ fun MainScaffold(
     // Scroll states for each screen
     val homeScrollState = rememberScrollState()
     val wardrobeScrollState = rememberLazyGridState()
+    val profileScrollState = rememberScrollState()
     
     // Bottom bar scroll behavior
     val bottomBarScrollState = remember { BottomBarScrollState() }
@@ -276,9 +278,26 @@ fun MainScaffold(
                 }
 
                 composable(MainRoute.Profile.route) {
-                    MainTabPlaceholder(
-                        title = "Profile",
-                        subtitle = "Manage your account and preferences.",
+                    LaunchedEffect(profileScrollState.value) {
+                        bottomBarScrollState.updateScroll(profileScrollState.value.toFloat())
+                    }
+
+                    ProfileScreen(
+                        user = currentUser,
+                        scrollState = profileScrollState,
+                        onHelpSupportClick = {
+                            // TODO: Navigate to Help & Support screen when available.
+                            showSnackbar("Help & Support is coming soon.")
+                        },
+                        onAboutClick = {
+                            // TODO: Navigate to About screen when available.
+                            showSnackbar("About Komod is coming soon.")
+                        },
+                        onSignOutConfirmed = {
+                            snackbarScope.launch {
+                                authRepository.signOut()
+                            }
+                        },
                     )
                 }
 

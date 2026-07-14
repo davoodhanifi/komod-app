@@ -15,6 +15,7 @@ val localProps = Properties().apply {
     val f = rootProject.file("local.properties")
     if (f.exists()) load(f.inputStream())
 }
+val appVersion = providers.gradleProperty("appVersion").orElse("1.0").get()
 
 kotlin {
     compilerOptions {
@@ -101,5 +102,6 @@ buildkonfig {
     defaultConfigs {
         buildConfigField(STRING, "SUPABASE_URL", localProps["SUPABASE_URL"]?.toString() ?: "")
         buildConfigField(STRING, "SUPABASE_PUBLISHABLE_KEY", localProps["SUPABASE_PUBLISHABLE_KEY"]?.toString() ?: "")
+        buildConfigField(STRING, "APP_VERSION", appVersion)
     }
 }

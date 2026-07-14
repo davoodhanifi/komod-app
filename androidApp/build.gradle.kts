@@ -6,6 +6,8 @@ plugins {
     alias(libs.plugins.composeCompiler)
 }
 
+val appVersion = providers.gradleProperty("appVersion").orElse("1.0").get()
+
 kotlin {
     compilerOptions {
         jvmTarget = JvmTarget.JVM_11
@@ -31,7 +33,7 @@ android {
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
         versionCode = 1
-        versionName = "1.0"
+        versionName = appVersion
     }
     packaging {
         resources {
