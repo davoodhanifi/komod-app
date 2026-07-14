@@ -219,6 +219,15 @@ fun MainScaffold(
                                 restoreState = true
                             }
                         },
+                        onProfileClick = {
+                            navController.navigate(MainRoute.Profile.route) {
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        },
                         onItemClick = { itemId ->
                             navController.navigate(MainRoute.WardrobeItemDetail.createRoute(itemId))
                         },

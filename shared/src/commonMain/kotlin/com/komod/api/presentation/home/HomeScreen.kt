@@ -124,6 +124,7 @@ fun HomeScreen(
     viewModel: HomeViewModel = koinViewModel(),
     onGenerateOutfit: (occasion: String) -> Unit,
     onViewWardrobe: () -> Unit,
+    onProfileClick: () -> Unit,
     onItemClick: (String) -> Unit,
     refreshKey: Int = 0,
     scrollState: androidx.compose.foundation.ScrollState = rememberScrollState(),
@@ -143,7 +144,10 @@ fun HomeScreen(
     ) {
         Spacer(modifier = Modifier.height(16.dp))
 
-        GreetingSection(user = user)
+        GreetingSection(
+            user = user,
+            onProfileClick = onProfileClick,
+        )
 
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -189,6 +193,7 @@ fun HomeScreen(
 @Composable
 fun GreetingSection(
     user: User?,
+    onProfileClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val greeting = "Hi" // Simplified for now - can be enhanced later
@@ -219,17 +224,24 @@ fun GreetingSection(
 
         Spacer(modifier = Modifier.width(16.dp))
 
-        UserAvatar(photoUrl = user?.photoUrl)
+        UserAvatar(
+            photoUrl = user?.photoUrl,
+            onClick = onProfileClick,
+        )
     }
 }
 
 @Composable
-private fun UserAvatar(photoUrl: String?) {
+private fun UserAvatar(
+    photoUrl: String?,
+    onClick: () -> Unit,
+) {
     Box(
         modifier = Modifier
             .size(56.dp)
             .clip(CircleShape)
-            .background(LightPurple),
+            .background(LightPurple)
+            .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         if (!photoUrl.isNullOrBlank()) {
