@@ -35,6 +35,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -108,6 +109,7 @@ private fun getMainTabs() = listOf(
 fun MainScaffold(
     authRepository: AuthRepository = koinInject(),
 ) {
+    val uriHandler = LocalUriHandler.current
     val navController = rememberNavController()
     val snackbarHostState = remember { SnackbarHostState() }
     val snackbarScope = rememberCoroutineScope()
@@ -286,13 +288,9 @@ fun MainScaffold(
                         user = currentUser,
                         scrollState = profileScrollState,
                         onHelpSupportClick = {
-                            // TODO: Navigate to Help & Support screen when available.
-                            showSnackbar("Help & Support is coming soon.")
+                            uriHandler.openUri("https://komod.app/support")
                         },
-                        onAboutClick = {
-                            // TODO: Navigate to About screen when available.
-                            showSnackbar("About Komod is coming soon.")
-                        },
+                        onAboutClick = {},
                         onSignOutConfirmed = {
                             snackbarScope.launch {
                                 authRepository.signOut()
