@@ -1,6 +1,7 @@
 package com.komod.api.data.repository
 
 import com.komod.api.data.api.WardrobeApiService
+import com.komod.api.data.api.model.WardrobeItemUpdateRequest
 import com.komod.api.domain.model.WardrobeItemDetail
 import com.komod.api.domain.model.WardrobeItem
 import io.github.jan.supabase.SupabaseClient
@@ -84,6 +85,24 @@ class WardrobeItemRepositoryImpl(
             }
         } catch (error: kotlinx.io.IOException) {
             throw WardrobeItemDeleteNetworkException(error)
+        }
+    }
+
+    override suspend fun updateWardrobeItem(
+        id: String,
+        request: WardrobeItemUpdateRequest,
+    ): WardrobeItemDetail {
+        try {
+            wardrobeApiService.updateWardrobeItem(id, request)
+            return getWardrobeItem(id)
+        } catch (error: ResponseException) {
+            when (error.response.status) {
+                HttpStatusCode.NotFound -> throw WardrobeItemUpdateNotFoundException()
+                HttpStatusCode.BadRequest -> throw WardrobeItemUpdateBadRequestException()
+                else -> throw WardrobeItemUpdateNetworkException(error)
+            }
+        } catch (error: kotlinx.io.IOException) {
+            throw WardrobeItemUpdateNetworkException(error)
         }
     }
 }

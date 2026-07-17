@@ -23,6 +23,7 @@ import com.komod.api.presentation.additem.AddItemViewModel
 import com.komod.api.presentation.auth.LoginViewModel
 import com.komod.api.presentation.home.HomeViewModel
 import com.komod.api.presentation.outfits.OutfitViewModel
+import com.komod.api.presentation.wardrobe.WardrobeItemEditViewModel
 import com.komod.api.presentation.wardrobe.WardrobeItemDetailViewModel
 import com.komod.api.presentation.wardrobe.WardrobeViewModel
 import io.github.jan.supabase.auth.Auth
@@ -62,4 +63,5 @@ fun appModule() = module {
     viewModel { WardrobeViewModel(get()) }
     viewModel { HomeViewModel(get()) }
     viewModel { params -> WardrobeItemDetailViewModel(params.get(), get()) }
+    viewModel { params -> WardrobeItemEditViewModel(params.get(), get()) }
 }

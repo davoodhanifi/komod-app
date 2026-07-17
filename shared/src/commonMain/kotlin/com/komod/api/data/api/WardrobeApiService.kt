@@ -6,11 +6,13 @@ import com.komod.api.data.api.model.ImageDto
 import com.komod.api.data.api.model.RecentItemDto
 import com.komod.api.data.api.model.ResponseData
 import com.komod.api.data.api.model.WardrobeItemDto
+import com.komod.api.data.api.model.WardrobeItemUpdateRequest
 import com.komod.api.data.api.model.WardrobeSummaryDto
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.delete
 import io.ktor.client.request.get
+import io.ktor.client.request.patch
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
@@ -44,6 +46,16 @@ class WardrobeApiService(
 
     suspend fun deleteWardrobeItem(id: String) {
         httpClient.delete("wardrobe-items/$id")
+    }
+
+    suspend fun updateWardrobeItem(
+        id: String,
+        request: WardrobeItemUpdateRequest,
+    ) {
+        httpClient.patch("wardrobe-items/$id") {
+            contentType(ContentType.Application.Json)
+            setBody(request)
+        }
     }
 
     suspend fun getImage(imageId: String): ImageDto {

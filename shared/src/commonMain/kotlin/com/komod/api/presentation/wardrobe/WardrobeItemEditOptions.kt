@@ -1,0 +1,82 @@
+package com.komod.api.presentation.wardrobe
+
+internal val WardrobeCategoryOptions = listOf(
+    "t-shirt",
+    "shirt",
+    "polo",
+    "tank-top",
+    "top",
+    "blouse",
+    "sweater",
+    "hoodie",
+    "sweatshirt",
+    "cardigan",
+    "jacket",
+    "blazer",
+    "coat",
+    "trench-coat",
+    "parka",
+    "vest",
+    "jeans",
+    "trousers",
+    "chinos",
+    "shorts",
+    "skirt",
+    "leggings",
+    "dress",
+    "jumpsuit",
+    "overalls",
+    "sneakers",
+    "shoes",
+    "boots",
+    "sandals",
+    "heels",
+    "loafers",
+    "slippers",
+    "belt",
+    "watch",
+    "bag",
+    "backpack",
+    "wallet",
+    "hat",
+    "cap",
+    "beanie",
+    "scarf",
+    "gloves",
+    "sunglasses",
+    "tie",
+    "jewelry",
+    "accessory",
+)
+
+internal val WardrobeFormalityOptions = listOf(
+    "casual",
+    "smart-casual",
+    "business-casual",
+    "business",
+    "formal",
+    "black-tie",
+    "sport",
+)
+
+internal val WardrobeSeasonOptions = listOf(
+    "spring",
+    "summer",
+    "autumn",
+    "winter",
+)
+
+internal val WardrobeOccasionOptions = listOf(
+    "daily",
+    "office",
+    "business",
+    "travel",
+    "party",
+    "sport",
+    "outdoor",
+    "date",
+    "wedding",
+    "holiday",
+)
+
+internal val WardrobeStatusOptions = com.komod.api.data.api.model.WardrobeItemStatus.entries

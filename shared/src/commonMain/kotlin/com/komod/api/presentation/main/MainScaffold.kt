@@ -51,6 +51,7 @@ import com.komod.api.presentation.additem.AddItemScreen
 import com.komod.api.presentation.home.HomeScreen
 import com.komod.api.presentation.outfits.OutfitScreen
 import com.komod.api.presentation.profile.ProfileScreen
+import com.komod.api.presentation.wardrobe.WardrobeItemEditScreen
 import com.komod.api.presentation.wardrobe.WardrobeItemDetailScreen
 import com.komod.api.presentation.wardrobe.WardrobeScreen
 import kotlinx.coroutines.launch
@@ -60,6 +61,7 @@ import org.koin.compose.koinInject
 
 private const val WardrobeItemIdArg = "wardrobeItemId"
 private const val WardrobeRefreshArg = "wardrobe_refresh_required"
+private const val WardrobeItemRefreshArg = "wardrobe_item_refresh_required"
 private const val HomeRefreshArg = "home_refresh_required"
 private const val SelectedOutfitKey = "selected_outfit"
 private const val OccasionArg = "occasion"
@@ -72,6 +74,9 @@ private sealed class MainRoute(val route: String) {
     data object AddItem : MainRoute("wardrobe/add-item")
     data object WardrobeItemDetail : MainRoute("wardrobe/item/{$WardrobeItemIdArg}") {
         fun createRoute(itemId: String): String = "wardrobe/item/$itemId"
+    }
+    data object WardrobeItemEdit : MainRoute("wardrobe/item/{$WardrobeItemIdArg}/edit") {
+        fun createRoute(itemId: String): String = "wardrobe/item/$itemId/edit"
     }
     data object OutfitDetails : MainRoute("outfits/details")
 }
@@ -132,6 +137,7 @@ fun MainScaffold(
     // Hide bottom bar only for specific full-screen flows
     val hideBottomBarRoutes = setOf(
         MainRoute.AddItem.route,
+        MainRoute.WardrobeItemEdit.route,
         MainRoute.OutfitDetails.route,
     )
     val showBottomBar = currentRoute !in hideBottomBarRoutes
@@ -149,6 +155,7 @@ fun MainScaffold(
     
     var wardrobeRefreshKey by rememberSaveable { mutableIntStateOf(0) }
     var homeRefreshKey by rememberSaveable { mutableIntStateOf(0) }
+    var wardrobeItemRefreshKey by rememberSaveable { mutableIntStateOf(0) }
 
     fun requestRefresh(route: String, key: String) {
         runCatching { navController.getBackStackEntry(route) }
@@ -323,9 +330,45 @@ fun MainScaffold(
                     ),
                 ) { backStackEntry ->
                     val itemId = backStackEntry.savedStateHandle.get<String>(WardrobeItemIdArg).orEmpty()
+                    val shouldRefresh by backStackEntry.savedStateHandle
+                        .getStateFlow(WardrobeItemRefreshArg, false)
+                        .collectAsState()
+
+                    LaunchedEffect(shouldRefresh) {
+                        if (shouldRefresh) {
+                            wardrobeItemRefreshKey += 1
+                            backStackEntry.savedStateHandle[WardrobeItemRefreshArg] = false
+                        }
+                    }
+
                     WardrobeItemDetailScreen(
                         wardrobeItemId = itemId,
                         onNavigateBack = { navController.navigateUp() },
+                        onEditItem = { navController.navigate(MainRoute.WardrobeItemEdit.createRoute(itemId)) },
+                        refreshKey = wardrobeItemRefreshKey,
+                        onRefreshWardrobe = {
+                            requestRefresh(MainRoute.Wardrobe.route, WardrobeRefreshArg)
+                        },
+                        onRefreshHome = {
+                            requestRefresh(MainRoute.Home.route, HomeRefreshArg)
+                        },
+                        onShowSnackbar = ::showSnackbar,
+                    )
+                }
+
+                composable(
+                    route = MainRoute.WardrobeItemEdit.route,
+                    arguments = listOf(
+                        navArgument(WardrobeItemIdArg) { type = NavType.StringType },
+                    ),
+                ) { backStackEntry ->
+                    val itemId = backStackEntry.savedStateHandle.get<String>(WardrobeItemIdArg).orEmpty()
+                    WardrobeItemEditScreen(
+                        wardrobeItemId = itemId,
+                        onNavigateBack = { navController.navigateUp() },
+                        onRefreshDetail = {
+                            requestRefresh(MainRoute.WardrobeItemDetail.route, WardrobeItemRefreshArg)
+                        },
                         onRefreshWardrobe = {
                             requestRefresh(MainRoute.Wardrobe.route, WardrobeRefreshArg)
                         },

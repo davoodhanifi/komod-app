@@ -27,9 +27,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Checkroom
 import androidx.compose.material.icons.outlined.CloudOff
-import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.LocalOffer
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -85,14 +85,22 @@ private val Skeleton = Color(0xFFE9EDF4)
 fun WardrobeItemDetailScreen(
     wardrobeItemId: String,
     onNavigateBack: () -> Unit,
+    onEditItem: () -> Unit,
     onRefreshWardrobe: () -> Unit,
     onRefreshHome: () -> Unit,
+    refreshKey: Int = 0,
     onShowSnackbar: (String) -> Unit,
     viewModel: WardrobeItemDetailViewModel = koinViewModel(parameters = { parametersOf(wardrobeItemId) }),
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
     val deleteEnabled = (uiState as? WardrobeItemDetailUiState.Success)?.isDeleting?.not() == true
+
+    LaunchedEffect(refreshKey) {
+        if (refreshKey > 0) {
+            viewModel.refresh()
+        }
+    }
 
     LaunchedEffect(viewModel) {
         viewModel.effects.collect { effect ->
@@ -131,10 +139,10 @@ fun WardrobeItemDetailScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = {}) {
+                    IconButton(onClick = onEditItem) {
                         Icon(
-                            imageVector = Icons.Outlined.FavoriteBorder,
-                            contentDescription = "Favorite",
+                            imageVector = Icons.Outlined.Edit,
+                            contentDescription = "Edit item",
                             tint = Dark,
                         )
                     }
@@ -254,24 +262,6 @@ private fun DetailContent(
                     Spacer(Modifier.height(12.dp))
                     AddedOnRow(createdAt = item.createdAt)
                     Spacer(Modifier.height(24.dp))
-                    Button(
-                        onClick = {},
-                        shape = RoundedCornerShape(16.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Primary,
-                            contentColor = Color.White,
-                        ),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(52.dp),
-                    ) {
-                        Text(
-                            text = "Edit Item",
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 22.sp,
-                        )
-                    }
-                    Spacer(Modifier.height(22.dp))
                 }
             }
         }
