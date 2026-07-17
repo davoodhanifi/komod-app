@@ -55,7 +55,6 @@ import com.komod.api.presentation.wardrobe.WardrobeItemDetailScreen
 import com.komod.api.presentation.wardrobe.WardrobeScreen
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.koin.compose.koinInject
 
@@ -87,7 +86,7 @@ private fun getMainTabs() = listOf(
     ),
     BottomNavItemUi(
         route = MainRoute.Wardrobe.route,
-        label = "My Komod",
+        label = "My Wardrobe",
         activeIcon = painterResource(Res.drawable.hanger_filled),
         inactiveIcon = painterResource(Res.drawable.hanger),
     ),

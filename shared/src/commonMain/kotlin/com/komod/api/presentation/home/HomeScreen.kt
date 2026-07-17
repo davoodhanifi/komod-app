@@ -463,7 +463,7 @@ fun WardrobeSummarySection(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = "My Komod",
+                    text = "My Wardrobe",
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
                     color = DarkText,
@@ -775,7 +775,7 @@ fun WardrobeSummaryError(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp),
         ) {
             Text(
-                text = "My Komod",
+                text = "My Wardrobe",
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
                 color = DarkText,

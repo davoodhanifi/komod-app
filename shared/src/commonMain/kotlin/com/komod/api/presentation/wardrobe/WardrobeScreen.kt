@@ -94,7 +94,7 @@ fun WardrobeScreen(
                 windowInsets = WindowInsets(0, 0, 0, 0),
                 title = {
                     Text(
-                        text = "My Komod",
+                        text = "My Wardrobe",
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold,
                         color = DarkText,
