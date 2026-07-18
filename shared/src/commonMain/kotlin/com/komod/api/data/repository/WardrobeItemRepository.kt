@@ -5,6 +5,7 @@ import com.komod.api.data.api.model.WardrobeItemUpdateRequest
 
 interface WardrobeItemRepository {
     suspend fun getWardrobeItem(id: String): WardrobeItemDetail
+    suspend fun setWardrobeItemFavorite(id: String, favorite: Boolean)
     suspend fun deleteWardrobeItem(id: String)
     suspend fun updateWardrobeItem(
         id: String,

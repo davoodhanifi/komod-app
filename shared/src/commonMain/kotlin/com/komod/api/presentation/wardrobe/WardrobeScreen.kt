@@ -26,6 +26,7 @@ import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.Checkroom
@@ -199,6 +200,17 @@ fun WardrobeCard(
                         contentDescription = item.itemName ?: item.category,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize(),
+                    )
+                }
+                if (item.isFavorite) {
+                    Icon(
+                        imageVector = Icons.Filled.Favorite,
+                        contentDescription = "Favorite item",
+                        tint = Purple,
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(8.dp)
+                            .size(14.dp),
                     )
                 }
             }

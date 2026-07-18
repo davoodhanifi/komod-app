@@ -68,9 +68,17 @@ class WardrobeItemRepositoryImpl(
             features = dto.features,
             recommendedPairings = dto.recommendedPairings,
             embeddingDescription = dto.embeddingDescription,
+            isFavorite = dto.isFavorite,
             confidence = dto.confidence,
             createdAt = dto.createdAt,
         ).also { wardrobeItemCache.putAll(listOf(it.toWardrobeItem())) }
+    }
+
+    override suspend fun setWardrobeItemFavorite(id: String, favorite: Boolean) {
+        wardrobeApiService.setWardrobeItemFavorite(id = id, favorite = favorite)
+        wardrobeItemCache.get(id)?.let { cached ->
+            wardrobeItemCache.putAll(listOf(cached.copy(isFavorite = favorite)))
+        }
     }
 
     override suspend fun deleteWardrobeItem(id: String) {
@@ -121,6 +129,7 @@ private fun WardrobeItemDetail.toWardrobeItem(): WardrobeItem {
         occasion = occasion,
         material = material,
         formality = formality,
+        isFavorite = isFavorite,
         imageUrl = imageUrl,
         createdAt = createdAt,
     )

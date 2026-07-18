@@ -5,6 +5,7 @@ import com.komod.api.data.api.model.CreateImageResponse
 import com.komod.api.data.api.model.ImageDto
 import com.komod.api.data.api.model.RecentItemDto
 import com.komod.api.data.api.model.ResponseData
+import com.komod.api.data.api.model.WardrobeFavoriteRequest
 import com.komod.api.data.api.model.WardrobeItemDto
 import com.komod.api.data.api.model.WardrobeItemUpdateRequest
 import com.komod.api.data.api.model.WardrobeSummaryDto
@@ -17,6 +18,7 @@ import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
+import io.ktor.http.isSuccess
 
 class WardrobeApiService(
     private val httpClient: HttpClient,
@@ -56,6 +58,42 @@ class WardrobeApiService(
             contentType(ContentType.Application.Json)
             setBody(request)
         }
+    }
+
+    suspend fun setWardrobeItemFavorite(
+        id: String,
+        favorite: Boolean,
+    ) {
+        val requestBody = WardrobeFavoriteRequest(favorite = favorite)
+
+        val postResponse = httpClient.post("wardrobe-items/$id/favorite") {
+            contentType(ContentType.Application.Json)
+            setBody(requestBody)
+        }
+        if (postResponse.status.isSuccess()) return
+
+        val patchResponse = httpClient.patch("wardrobe-items/$id/favorite") {
+            contentType(ContentType.Application.Json)
+            setBody(requestBody)
+        }
+        if (patchResponse.status.isSuccess()) return
+
+        val absolutePostResponse = httpClient.post("/v1/wardrobe-items/$id/favorite") {
+            contentType(ContentType.Application.Json)
+            setBody(requestBody)
+        }
+        if (absolutePostResponse.status.isSuccess()) return
+
+        val absolutePatchResponse = httpClient.patch("/v1/wardrobe-items/$id/favorite") {
+            contentType(ContentType.Application.Json)
+            setBody(requestBody)
+        }
+        if (absolutePatchResponse.status.isSuccess()) return
+
+        error(
+            "Failed to update favorite. Statuses: post=${postResponse.status}, patch=${patchResponse.status}, " +
+                "absolutePost=${absolutePostResponse.status}, absolutePatch=${absolutePatchResponse.status}"
+        )
     }
 
     suspend fun getImage(imageId: String): ImageDto {

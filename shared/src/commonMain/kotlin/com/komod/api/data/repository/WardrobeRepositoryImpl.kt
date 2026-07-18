@@ -36,6 +36,7 @@ class WardrobeRepositoryImpl(
                 occasion = dto.occasion,
                 material = dto.material,
                 formality = dto.formality,
+                isFavorite = dto.isFavorite,
                 imageUrl = imageUrl,
                 createdAt = dto.createdAt,
             )

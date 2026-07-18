@@ -35,6 +35,7 @@ data class WardrobeItemDetail(
     val features: List<String>?,
     val recommendedPairings: List<String>?,
     val embeddingDescription: String?,
+    val isFavorite: Boolean,
     val confidence: Double,
     val createdAt: String,
 )

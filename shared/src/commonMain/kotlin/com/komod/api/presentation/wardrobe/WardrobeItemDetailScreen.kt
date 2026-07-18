@@ -25,11 +25,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Checkroom
 import androidx.compose.material.icons.outlined.CloudOff
+import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.LocalOffer
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -94,7 +96,10 @@ fun WardrobeItemDetailScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
-    val deleteEnabled = (uiState as? WardrobeItemDetailUiState.Success)?.isDeleting?.not() == true
+    val successState = uiState as? WardrobeItemDetailUiState.Success
+    val isFavorite = successState?.item?.isFavorite == true
+    val favoriteEnabled = successState?.let { !it.isDeleting && !it.isUpdatingFavorite } == true
+    val deleteEnabled = successState?.isDeleting?.not() == true
 
     LaunchedEffect(refreshKey) {
         if (refreshKey > 0) {
@@ -105,6 +110,13 @@ fun WardrobeItemDetailScreen(
     LaunchedEffect(viewModel) {
         viewModel.effects.collect { effect ->
             when (effect) {
+                WardrobeItemDetailEffect.FavoriteUpdated -> {
+                    onRefreshWardrobe()
+                    onRefreshHome()
+                }
+                is WardrobeItemDetailEffect.FavoriteUpdateFailed -> {
+                    onShowSnackbar(effect.message)
+                }
                 WardrobeItemDetailEffect.DeleteSucceeded -> {
                     onShowSnackbar("Item deleted.")
                     onRefreshWardrobe()
@@ -139,6 +151,16 @@ fun WardrobeItemDetailScreen(
                     }
                 },
                 actions = {
+                    IconButton(
+                        enabled = favoriteEnabled,
+                        onClick = { viewModel.onEvent(WardrobeItemDetailEvent.FavoriteClicked) },
+                    ) {
+                        Icon(
+                            imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                            contentDescription = if (isFavorite) "Unfavorite item" else "Favorite item",
+                            tint = if (isFavorite) Color(0xFFD92D20) else Dark,
+                        )
+                    }
                     IconButton(onClick = onEditItem) {
                         Icon(
                             imageVector = Icons.Outlined.Edit,

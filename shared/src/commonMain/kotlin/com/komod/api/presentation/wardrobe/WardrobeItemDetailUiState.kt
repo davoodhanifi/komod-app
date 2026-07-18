@@ -8,6 +8,7 @@ sealed interface WardrobeItemDetailUiState {
         val item: WardrobeItemDetail,
         val isDeleteDialogVisible: Boolean = false,
         val isDeleting: Boolean = false,
+        val isUpdatingFavorite: Boolean = false,
     ) : WardrobeItemDetailUiState
     data class Error(val message: String) : WardrobeItemDetailUiState
 }

@@ -13,6 +13,7 @@ data class WardrobeItem(
     val occasion: List<String>?,
     val material: String?,
     val formality: String?,
+    val isFavorite: Boolean,
     val imageUrl: String?,
     val createdAt: String,
 )

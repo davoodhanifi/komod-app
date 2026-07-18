@@ -49,6 +49,7 @@ class WardrobeItemDetailViewModel(
 
     fun onEvent(event: WardrobeItemDetailEvent) {
         when (event) {
+            WardrobeItemDetailEvent.FavoriteClicked -> toggleFavorite()
             WardrobeItemDetailEvent.DeleteClicked -> showDeleteDialog()
             WardrobeItemDetailEvent.DeleteDismissed -> dismissDeleteDialog()
             WardrobeItemDetailEvent.DeleteConfirmed -> deleteItem()
@@ -76,6 +77,35 @@ class WardrobeItemDetailViewModel(
         val state = _uiState.value
         if (state is WardrobeItemDetailUiState.Success) {
             _uiState.value = state.copy(isDeleteDialogVisible = false, isDeleting = false)
+        }
+    }
+
+    private fun toggleFavorite() {
+        val state = _uiState.value
+        if (state !is WardrobeItemDetailUiState.Success || state.isDeleting || state.isUpdatingFavorite) return
+
+        val nextFavorite = !state.item.isFavorite
+        val optimistic = state.copy(
+            item = state.item.copy(isFavorite = nextFavorite),
+            isUpdatingFavorite = true,
+        )
+        _uiState.value = optimistic
+
+        viewModelScope.launch {
+            runCatching {
+                repository.setWardrobeItemFavorite(itemId, nextFavorite)
+            }.onSuccess {
+                val current = _uiState.value as? WardrobeItemDetailUiState.Success ?: return@onSuccess
+                _uiState.value = current.copy(isUpdatingFavorite = false)
+                _effects.emit(WardrobeItemDetailEffect.FavoriteUpdated)
+            }.onFailure {
+                _uiState.value = state.copy(isUpdatingFavorite = false)
+                _effects.emit(
+                    WardrobeItemDetailEffect.FavoriteUpdateFailed(
+                        message = "Couldn't update favorite.\nPlease try again.",
+                    ),
+                )
+            }
         }
     }
 

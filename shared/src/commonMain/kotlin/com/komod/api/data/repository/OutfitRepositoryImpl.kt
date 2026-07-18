@@ -116,6 +116,7 @@ private fun WardrobeItemDetail.toWardrobeItem(): WardrobeItem {
         occasion = occasion,
         material = material,
         formality = formality,
+        isFavorite = isFavorite,
         imageUrl = imageUrl,
         createdAt = createdAt,
     )
