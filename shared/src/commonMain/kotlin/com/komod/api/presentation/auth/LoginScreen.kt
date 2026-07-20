@@ -103,7 +103,7 @@ fun LoginScreen(
                 }
 
                 Text(
-                    text = "Secure sign-in powered by Google and Supabase",
+                    text = "Secure sign-in powered by Google",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
