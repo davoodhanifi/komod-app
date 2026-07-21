@@ -1,7 +1,6 @@
 package com.komod.api.presentation.outfits
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
@@ -9,6 +8,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -175,16 +175,8 @@ private fun WeatherHeroCard(
     onExpandToggle: () -> Unit,
     bodyContent: @Composable () -> Unit,
 ) {
-    val cardBg by animateColorAsState(
-        targetValue = if (isEnabled) Color.White else WeatherDisabledBg,
-        animationSpec = tween(300),
-        label = "weather-card-bg",
-    )
-    val contentAlpha by animateFloatAsState(
-        targetValue = if (isEnabled) 1f else 0.65f,
-        animationSpec = tween(300),
-        label = "weather-content-alpha",
-    )
+    val cardBg = if (isEnabled) Color.White else WeatherDisabledBg
+    val contentAlpha = if (isEnabled) 1f else 0.65f
     val arrowRotation by animateFloatAsState(
         targetValue = if (expanded) 90f else 0f,
         animationSpec = tween(200),
@@ -202,6 +194,7 @@ private fun WeatherHeroCard(
             )
             .clip(RoundedCornerShape(24.dp))
             .background(cardBg)
+            .border(1.dp, WeatherBorder, RoundedCornerShape(24.dp))
             .graphicsLayer { alpha = contentAlpha },
     ) {
         Column(
@@ -218,7 +211,7 @@ private fun WeatherHeroCard(
                 Text(
                     text = "Use weather",
                     color = if (isEnabled) WeatherMuted else WeatherDisabledText,
-                    fontSize = 14.sp,
+                    fontSize = 12.sp,
                     fontWeight = FontWeight.Medium,
                 )
                 Spacer(modifier = Modifier.width(8.dp))
@@ -238,8 +231,6 @@ private fun WeatherHeroCard(
 
             // Main weather body
             bodyContent()
-
-            Spacer(modifier = Modifier.height(4.dp))
         }
     }
 }
