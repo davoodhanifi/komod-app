@@ -7,5 +7,5 @@ data class WeatherCurrent(
     val condition: String,
     val windSpeedKmh: Double,
     val isRaining: Boolean,
-    val isSnowing: Boolean,
+    val isSnowing: Boolean
 )

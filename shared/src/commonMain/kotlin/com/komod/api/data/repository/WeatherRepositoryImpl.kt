@@ -19,6 +19,6 @@ private fun com.komod.api.data.api.model.WeatherDto.toDomain(): WeatherCurrent {
         condition = condition,
         windSpeedKmh = windSpeedKmh,
         isRaining = isRaining,
-        isSnowing = isSnowing,
+        isSnowing = isSnowing
     )
 }
