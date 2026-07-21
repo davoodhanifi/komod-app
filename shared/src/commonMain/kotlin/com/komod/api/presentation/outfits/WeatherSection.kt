@@ -8,7 +8,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -24,6 +23,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -36,7 +37,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
@@ -183,19 +183,14 @@ private fun WeatherHeroCard(
         label = "weather-arrow",
     )
 
-    Box(
+    Card(
         modifier = Modifier
+            .padding(horizontal = 20.dp)
             .fillMaxWidth()
-            .shadow(
-                elevation = 16.dp,
-                shape = RoundedCornerShape(24.dp),
-                ambientColor = Color(0x142A1454),
-                spotColor = Color(0x142A1454),
-            )
-            .clip(RoundedCornerShape(24.dp))
-            .background(cardBg)
-            .border(1.dp, WeatherBorder, RoundedCornerShape(24.dp))
             .graphicsLayer { alpha = contentAlpha },
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = cardBg),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
     ) {
         Column(
             modifier = Modifier
@@ -211,7 +206,7 @@ private fun WeatherHeroCard(
                 Text(
                     text = "Use weather",
                     color = if (isEnabled) WeatherMuted else WeatherDisabledText,
-                    fontSize = 12.sp,
+                    fontSize = 14.sp,
                     fontWeight = FontWeight.Medium,
                 )
                 Spacer(modifier = Modifier.width(8.dp))
@@ -343,17 +338,13 @@ private fun WeatherErrorBody(
 private fun PermissionRequiredBanner(
     onOpenSettings: () -> Unit,
 ) {
-    Box(
+    Card(
         modifier = Modifier
-            .fillMaxWidth()
-            .shadow(
-                elevation = 16.dp,
-                shape = RoundedCornerShape(24.dp),
-                ambientColor = Color(0x142A1454),
-                spotColor = Color(0x142A1454),
-            )
-            .clip(RoundedCornerShape(24.dp))
-            .background(Color.White),
+            .padding(horizontal = 20.dp)
+            .fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
     ) {
         Column(
             modifier = Modifier
