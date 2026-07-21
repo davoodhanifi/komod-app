@@ -160,6 +160,8 @@ fun OutfitScreen(
             )
         }
 
+        item { GenerateButton(isGenerating = uiState.isGenerating, onGenerate = viewModel::generateOutfits) }
+
         when {
             uiState.isGenerating -> {
                 item { GeneratingTitle() }
@@ -174,7 +176,7 @@ fun OutfitScreen(
                 }
             }
             uiState.outfits.isEmpty() -> {
-                item { EmptyState(isGenerating = uiState.isGenerating, onGenerate = viewModel::generateOutfits) }
+                item { Spacer(modifier = Modifier.height(20.dp)) }
             }
             else -> {
                 item { Spacer(modifier = Modifier.height(4.dp)) }
@@ -377,7 +379,7 @@ private fun GeneratingTitle() {
 }
 
 @Composable
-private fun EmptyState(
+private fun GenerateButton(
     isGenerating: Boolean = false,
     onGenerate: () -> Unit,
 ) {
@@ -388,7 +390,6 @@ private fun EmptyState(
             .padding(top = 28.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-
         Button(
             onClick = onGenerate,
             enabled = !isGenerating,
