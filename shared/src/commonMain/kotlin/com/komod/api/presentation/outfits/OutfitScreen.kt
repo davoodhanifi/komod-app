@@ -240,6 +240,11 @@ private fun OutfitHeader(
             }
         }
 
+        OutfitFilters(
+            selectedOccasion = selectedOccasion,
+            onOccasionSelected = onOccasionSelected,
+        )
+        Spacer(modifier = Modifier.height(12.dp))
         WeatherSection(
             uiState = weatherUiState,
             onToggleWeather = onWeatherToggle,
@@ -248,11 +253,6 @@ private fun OutfitHeader(
             onPermissionDenied = onWeatherPermissionDenied,
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
-        OutfitFilters(
-            selectedOccasion = selectedOccasion,
-            onOccasionSelected = onOccasionSelected,
-        )
     }
 }
 
@@ -388,42 +388,7 @@ private fun EmptyState(
             .padding(top = 28.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(260.dp)
-                .clip(RoundedCornerShape(32.dp))
-                .background(
-                    brush = Brush.linearGradient(
-                        listOf(Color(0xFFF8F4FF), Color(0xFFF5F1EC)),
-                    ),
-                ),
-            contentAlignment = Alignment.Center,
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(126.dp)
-                    .clip(CircleShape)
-                    .background(OutfitPurpleSoft),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.AutoAwesome,
-                    contentDescription = null,
-                    tint = OutfitPurple,
-                    modifier = Modifier.size(54.dp),
-                )
-            }
-        }
-        Spacer(modifier = Modifier.height(24.dp))
-        Text(
-            text = "Generate AI outfits from your wardrobe.",
-            color = OutfitText,
-            fontSize = 18.sp,
-            fontWeight = FontWeight.SemiBold,
-            textAlign = TextAlign.Center,
-        )
-        Spacer(modifier = Modifier.height(20.dp))
+
         Button(
             onClick = onGenerate,
             enabled = !isGenerating,
