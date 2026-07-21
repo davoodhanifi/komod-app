@@ -8,6 +8,8 @@
 	<string>LaunchScreen</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Komod needs camera access so you can take photos of clothing items.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Komod needs your location to show current weather for outfit generation.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Komod needs photo library access so you can choose existing clothing photos.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>

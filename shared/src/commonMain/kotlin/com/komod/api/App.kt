@@ -66,7 +66,7 @@ private fun LoadingScreen() {
     ) {
         CircularProgressIndicator()
         Text(
-            text = "Checking your session…",
+            text = "Loading…",
             style = MaterialTheme.typography.titleMedium,
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(top = 20.dp),

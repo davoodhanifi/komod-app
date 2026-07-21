@@ -18,8 +18,16 @@ class OutfitRepositoryImpl(
     private val wardrobeItemRepository: WardrobeItemRepository,
     private val wardrobeItemCache: WardrobeItemCache,
 ) : OutfitRepository {
-    override suspend fun generateOutfits(occasion: String, style: String): List<Outfit> {
-        val response = outfitApiService.generateOutfits(occasion = occasion, style = style)
+    override suspend fun generateOutfits(
+        occasion: String,
+        style: String,
+        weather: com.komod.api.domain.model.WeatherCurrent?,
+    ): List<Outfit> {
+        val response = outfitApiService.generateOutfits(
+            occasion = occasion,
+            style = style,
+            weather = weather,
+        )
 
         return response.outfits.map { dto ->
             Outfit(

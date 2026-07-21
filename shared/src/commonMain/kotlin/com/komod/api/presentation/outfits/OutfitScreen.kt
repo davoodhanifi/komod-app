@@ -70,9 +70,9 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import coil3.compose.AsyncImage
 import com.komod.api.domain.model.Outfit
+import com.komod.api.domain.model.OutfitItem
 import com.komod.api.domain.model.OutfitOccasion
 import com.komod.api.domain.model.OutfitStyle
-import com.komod.api.domain.model.OutfitItem
 import komod.shared.generated.resources.Res
 import komod.shared.generated.resources.date
 import komod.shared.generated.resources.filter
@@ -115,13 +115,11 @@ fun OutfitScreen(
     var showStyleSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    // Handle initial occasion and auto-generate (only once)
     LaunchedEffect(initialOccasion) {
         if (initialOccasion != null) {
-            // Find the matching OutfitOccasion enum
-            val occasion = OutfitOccasion.entries.find { 
-                it.label.equals(initialOccasion, ignoreCase = true) || 
-                it.apiValue.equals(initialOccasion, ignoreCase = true)
+            val occasion = OutfitOccasion.entries.find {
+                it.label.equals(initialOccasion, ignoreCase = true) ||
+                    it.apiValue.equals(initialOccasion, ignoreCase = true)
             }
             if (occasion != null) {
                 viewModel.autoGenerateOutfits(occasion)
@@ -154,6 +152,11 @@ fun OutfitScreen(
                 selectedOccasion = uiState.selectedOccasion,
                 onSettingsClick = { showStyleSheet = true },
                 onOccasionSelected = viewModel::selectOccasion,
+                weatherUiState = uiState.weatherUiState,
+                onWeatherToggle = viewModel::setWeatherEnabled,
+                onWeatherRetry = viewModel::retryWeather,
+                onOpenWeatherSettings = viewModel::openWeatherSettings,
+                onWeatherPermissionDenied = viewModel::markWeatherPermissionRequired,
             )
         }
 
@@ -162,7 +165,6 @@ fun OutfitScreen(
                 item { GeneratingTitle() }
                 items(2) { SkeletonOutfitCard() }
             }
-
             uiState.errorMessage != null && uiState.outfits.isEmpty() -> {
                 item {
                     ErrorState(
@@ -171,11 +173,9 @@ fun OutfitScreen(
                     )
                 }
             }
-
             uiState.outfits.isEmpty() -> {
                 item { EmptyState(isGenerating = uiState.isGenerating, onGenerate = viewModel::generateOutfits) }
             }
-
             else -> {
                 item { Spacer(modifier = Modifier.height(4.dp)) }
                 items(
@@ -197,6 +197,11 @@ private fun OutfitHeader(
     selectedOccasion: OutfitOccasion,
     onSettingsClick: () -> Unit,
     onOccasionSelected: (OutfitOccasion) -> Unit,
+    weatherUiState: WeatherUiState,
+    onWeatherToggle: (Boolean) -> Unit,
+    onWeatherRetry: () -> Unit,
+    onOpenWeatherSettings: () -> Unit,
+    onWeatherPermissionDenied: () -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -223,7 +228,8 @@ private fun OutfitHeader(
             }
             Box(
                 modifier = Modifier
-                    .size(48.dp),
+                    .size(48.dp)
+                    .clickable(onClick = onSettingsClick),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
@@ -234,7 +240,15 @@ private fun OutfitHeader(
             }
         }
 
-        Spacer(modifier = Modifier.height(20.dp))
+        WeatherSection(
+            uiState = weatherUiState,
+            onToggleWeather = onWeatherToggle,
+            onRetry = onWeatherRetry,
+            onOpenSettings = onOpenWeatherSettings,
+            onPermissionDenied = onWeatherPermissionDenied,
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
         OutfitFilters(
             selectedOccasion = selectedOccasion,
             onOccasionSelected = onOccasionSelected,
@@ -258,7 +272,6 @@ fun OutfitFilters(
             OutfitOccasion.Party to Res.drawable.party,
             OutfitOccasion.All to Res.drawable.hanger,
         )
-
         val preferredOrder = listOf(
             OutfitOccasion.Outdoor,
             OutfitOccasion.Office,
@@ -269,7 +282,6 @@ fun OutfitFilters(
             OutfitOccasion.Party,
             OutfitOccasion.All,
         )
-
         preferredOrder
             .filter { it in OutfitOccasion.entries }
             .map { occasion ->
@@ -476,7 +488,6 @@ fun OutfitCard(
                         .height(218.dp),
                 )
             }
-
             Spacer(modifier = Modifier.height(18.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
                 OutlinedButton(
@@ -558,21 +569,13 @@ fun OutfitImageCollage(
     BoxWithConstraints(
         modifier = modifier.clip(RoundedCornerShape(24.dp)).background(Color(0xFFF4F0EA)),
     ) {
-        val visibleItems = wardrobeItems
-            .take(6)
-            .filter { !it.imageUrl.isNullOrBlank() }
-
+        val visibleItems = wardrobeItems.take(6).filter { !it.imageUrl.isNullOrBlank() }
         if (visibleItems.isEmpty()) {
             EmptyCollagePlaceholder()
             return@BoxWithConstraints
         }
-
         val arrangedItems = arrangeItemsForComposition(visibleItems).take(6)
-        val slots = collageSlots(
-            items = arrangedItems,
-            width = maxWidth,
-            height = maxHeight,
-        )
+        val slots = collageSlots(items = arrangedItems, width = maxWidth, height = maxHeight)
         arrangedItems.forEachIndexed { index, item ->
             CollageItem(item = item, slot = slots[index])
         }
@@ -648,61 +651,23 @@ private fun collageSlots(
             ),
         )
     }
-
     if (total == 2) {
         return listOf(
-            CollageSlot(
-                width = width * 0.62f,
-                height = height * 0.86f,
-                x = width * 0.02f,
-                y = height * 0.02f,
-                rotation = -2f,
-                zIndex = 2f,
-            ),
-            CollageSlot(
-                width = width * 0.58f,
-                height = height * 0.86f,
-                x = width * 0.40f,
-                y = height * 0.06f,
-                rotation = 2f,
-                zIndex = 1f,
-            ),
+            CollageSlot(width * 0.62f, height * 0.86f, width * 0.02f, height * 0.02f, -2f, 2f),
+            CollageSlot(width * 0.58f, height * 0.86f, width * 0.40f, height * 0.06f, 2f, 1f),
         )
     }
 
     val slots = mutableListOf(
-        CollageSlot(
-            width = width * 0.60f,
-            height = height * 0.78f,
-            x = width * 0.00f,
-            y = height * 0.00f,
-            rotation = -1.5f,
-            zIndex = 3f,
-        ),
-        CollageSlot(
-            width = width * 0.54f,
-            height = height * 0.86f,
-            x = width * 0.42f,
-            y = height * 0.03f,
-            rotation = 1.8f,
-            zIndex = 2f,
-        ),
-        CollageSlot(
-            width = width * 0.44f,
-            height = height * 0.30f,
-            x = width * 0.16f,
-            y = height * 0.62f,
-            rotation = -4f,
-            zIndex = 4f,
-        ),
+        CollageSlot(width * 0.60f, height * 0.78f, width * 0.00f, height * 0.00f, -1.5f, 3f),
+        CollageSlot(width * 0.54f, height * 0.86f, width * 0.42f, height * 0.03f, 1.8f, 2f),
+        CollageSlot(width * 0.44f, height * 0.30f, width * 0.16f, height * 0.62f, -4f, 4f),
     )
-
     val accessoryAnchors = listOf(
         Triple(width * 0.66f, height * 0.62f, 4.5f),
         Triple(width * 0.02f, height * 0.64f, -6f),
         Triple(width * 0.72f, height * 0.24f, 6f),
     )
-
     items.drop(3).forEachIndexed { index, item ->
         val anchor = accessoryAnchors[index % accessoryAnchors.size]
         val baseW = if (item.isAccessoryLike()) width * 0.22f else width * 0.34f
@@ -727,7 +692,6 @@ private fun EmptyCollagePlaceholder() {
         CollageSlot(52.dp, 44.dp, 22.dp, 82.dp, 0f, 2f),
         CollageSlot(52.dp, 44.dp, 84.dp, 88.dp, 0f, 2f),
     )
-
     placeholders.forEach { slot ->
         Box(
             modifier = Modifier
@@ -747,9 +711,7 @@ private fun EmptyCollagePlaceholder() {
 }
 
 private fun OutfitItem.isAccessoryLike(): Boolean {
-    val value = listOfNotNull(category, subcategory)
-        .joinToString(" ")
-        .lowercase()
+    val value = listOfNotNull(category, subcategory).joinToString(" ").lowercase()
     if (value.isBlank()) return false
     return value.contains("accessor") ||
         value.contains("jewel") ||
@@ -784,9 +746,7 @@ private fun arrangeItemsForComposition(items: List<OutfitItem>): List<OutfitItem
 }
 
 private fun OutfitItem.pieceType(): OutfitPieceType {
-    val value = listOfNotNull(category, subcategory)
-        .joinToString(" ")
-        .lowercase()
+    val value = listOfNotNull(category, subcategory).joinToString(" ").lowercase()
     return when {
         value.contains("shoe") || value.contains("sneaker") || value.contains("boot") || value.contains("footwear") -> OutfitPieceType.Footwear
         value.contains("pant") || value.contains("jean") || value.contains("trouser") || value.contains("short") || value.contains("skirt") -> OutfitPieceType.Bottom
