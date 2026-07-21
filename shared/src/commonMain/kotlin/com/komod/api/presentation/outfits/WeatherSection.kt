@@ -280,7 +280,7 @@ private fun WeatherBody(
                         Text(
                             text = "${weather.temperatureC.roundToInt()}°",
                             color = textColor,
-                            fontSize = 46.sp,
+                            fontSize = 42.sp,
                             fontWeight = FontWeight.SemiBold,
                             lineHeight = 46.sp,
                         )
@@ -293,7 +293,9 @@ private fun WeatherBody(
                             overflow = TextOverflow.Ellipsis,
                         )
                     }
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Row(verticalAlignment = Alignment.Bottom) {
                     Text(
                         text = "Feels like ${weather.feelsLikeC.roundToInt()}°",
                         color = mutedColor,
