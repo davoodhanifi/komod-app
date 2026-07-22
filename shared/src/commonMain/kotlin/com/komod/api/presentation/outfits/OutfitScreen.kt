@@ -42,6 +42,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -75,7 +76,6 @@ import com.komod.api.domain.model.OutfitOccasion
 import com.komod.api.domain.model.OutfitStyle
 import komod.shared.generated.resources.Res
 import komod.shared.generated.resources.date
-import komod.shared.generated.resources.filter
 import komod.shared.generated.resources.hanger
 import komod.shared.generated.resources.office
 import komod.shared.generated.resources.party
@@ -90,7 +90,6 @@ private val OutfitPurple = Color(0xFF7C5CFC)
 private val OutfitPurpleSoft = Color(0xFFF0ECFF)
 private val OutfitText = Color(0xFF111827)
 private val OutfitMuted = Color(0xFF6B7280)
-private val DarkText = Color(0xFF111827)
 private val OutfitSurface = Color(0xFFF7F5F2)
 private val OutfitChipSurface = Color(0xFFF3F4F6)
 private val OutfitBorder = Color(0xFFE5E7EB)
@@ -150,7 +149,6 @@ fun OutfitScreen(
         item {
             OutfitHeader(
                 selectedOccasion = uiState.selectedOccasion,
-                onSettingsClick = { showStyleSheet = false },
                 onOccasionSelected = viewModel::selectOccasion,
                 weatherUiState = uiState.weatherUiState,
                 onWeatherToggle = viewModel::setWeatherEnabled,
@@ -197,7 +195,6 @@ fun OutfitScreen(
 @Composable
 private fun OutfitHeader(
     selectedOccasion: OutfitOccasion,
-    onSettingsClick: () -> Unit,
     onOccasionSelected: (OutfitOccasion) -> Unit,
     weatherUiState: WeatherUiState,
     onWeatherToggle: (Boolean) -> Unit,
@@ -208,40 +205,22 @@ private fun OutfitHeader(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp)
-            .padding(top = 18.dp, bottom = 8.dp),
+            .padding(horizontal = 24.dp),
     ) {
-        Row(verticalAlignment = Alignment.Top, modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "Outfits",
-                    color = OutfitText,
-                    fontSize = 34.sp,
-                    fontWeight = FontWeight.Bold,
-                    lineHeight = 38.sp,
-                )
-                Text(
-                    text = "Your personal AI stylist",
-                    color = OutfitMuted,
-                    fontSize = 16.sp,
-                    lineHeight = 20.sp,
-                    modifier = Modifier.padding(top = 8.dp),
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-            }
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .clickable(onClick = onSettingsClick),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    painter = painterResource(Res.drawable.filter),
-                    contentDescription = "Filter",
-                    tint = DarkText,
-                )
-            }
-        }
+        Spacer(modifier = Modifier.height(20.dp))
+        Text(
+            text = "Outfits",
+            style = MaterialTheme.typography.headlineLarge,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onBackground,
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "Your personal AI stylist",
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(modifier = Modifier.height(24.dp))
 
         OutfitFilters(
             selectedOccasion = selectedOccasion,

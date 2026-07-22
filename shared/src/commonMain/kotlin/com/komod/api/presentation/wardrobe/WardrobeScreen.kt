@@ -27,8 +27,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FilterList
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.Checkroom
 import androidx.compose.material.icons.outlined.CloudOff
 import androidx.compose.material3.Button
@@ -38,12 +36,9 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -62,7 +57,6 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.komod.api.domain.model.WardrobeItem
 import komod.shared.generated.resources.Res
-import komod.shared.generated.resources.filter
 import komod.shared.generated.resources.hanger
 import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.viewmodel.koinViewModel
@@ -90,28 +84,7 @@ fun WardrobeScreen(
     }
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                windowInsets = WindowInsets(0, 0, 0, 0),
-                title = {
-                    Text(
-                        text = "My Wardrobe",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = DarkText,
-                    )
-                },
-                actions = {
-                    IconButton(onClick = { /* TODO: Filter */ }) {
-                        Icon(painter = painterResource(Res.drawable.filter), contentDescription = "Filter", tint = DarkText)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.White,
-                    scrolledContainerColor = Color.White,
-                ),
-            )
-        },
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         floatingActionButton = {
             FloatingActionButton(
                 onClick = onAddItem,
@@ -126,7 +99,16 @@ fun WardrobeScreen(
         containerColor = Color.White,
     ) { padding ->
         when (val state = uiState) {
-            WardrobeUiState.Loading -> LoadingState(modifier = Modifier.padding(padding))
+            WardrobeUiState.Loading -> {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding),
+                ) {
+                    WardrobeHeader()
+                    LoadingState(modifier = Modifier.fillMaxSize())
+                }
+            }
 
             is WardrobeUiState.Success -> {
                 PullToRefreshBox(
@@ -136,37 +118,77 @@ fun WardrobeScreen(
                         .fillMaxSize()
                         .padding(padding),
                 ) {
-                    if (state.items.isEmpty()) {
-                        EmptyState(onAddItem = onAddItem)
-                    } else {
-                        LazyVerticalGrid(
-                            columns = GridCells.Fixed(3),
-                            state = lazyGridState,
-                            contentPadding = PaddingValues(16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp),
-                            modifier = Modifier.fillMaxSize(),
-                        ) {
-                            items(
-                                items = state.items,
-                                key = { item -> item.id },
-                            ) { item ->
-                                WardrobeCard(
-                                    item = item,
-                                    onClick = { onItemClick(item.id) },
-                                )
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        WardrobeHeader()
+
+                        if (state.items.isEmpty()) {
+                            EmptyState(
+                                onAddItem = onAddItem,
+                                modifier = Modifier.fillMaxSize(),
+                            )
+                        } else {
+                            LazyVerticalGrid(
+                                columns = GridCells.Fixed(3),
+                                state = lazyGridState,
+                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp),
+                                modifier = Modifier.fillMaxSize(),
+                            ) {
+                                items(
+                                    items = state.items,
+                                    key = { item -> item.id },
+                                ) { item ->
+                                    WardrobeCard(
+                                        item = item,
+                                        onClick = { onItemClick(item.id) },
+                                    )
+                                }
                             }
                         }
                     }
                 }
             }
 
-            is WardrobeUiState.Error -> ErrorState(
-                message = state.message,
-                onRetry = viewModel::loadItems,
-                modifier = Modifier.padding(padding),
-            )
+            is WardrobeUiState.Error -> {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding),
+                ) {
+                    WardrobeHeader()
+                    ErrorState(
+                        message = state.message,
+                        onRetry = viewModel::loadItems,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
+            }
         }
+    }
+}
+
+@Composable
+private fun WardrobeHeader() {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp),
+    ) {
+        Spacer(modifier = Modifier.height(20.dp))
+        Text(
+            text = "My Wardrobe",
+            style = MaterialTheme.typography.headlineLarge,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onBackground,
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "Everything you own, beautifully organized",
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(modifier = Modifier.height(24.dp))
     }
 }
 
