@@ -305,7 +305,9 @@ fun MainScaffold(
                         onHelpSupportClick = {
                             uriHandler.openUri("https://komod.app/support")
                         },
-                        onAboutClick = {},
+                        onAboutClick = {
+                            uriHandler.openUri("https://komod.app/about")
+                        },
                         onSignOutConfirmed = {
                             snackbarScope.launch {
                                 authRepository.signOut()
