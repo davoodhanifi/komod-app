@@ -418,7 +418,6 @@ fun OutfitCard(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp, vertical = 10.dp)
-            .clickable(onClick = onTryThis)
             .shadow(14.dp, shape, ambientColor = Color(0x14111827), spotColor = Color(0x14111827)),
         shape = shape,
         colors = CardDefaults.cardColors(containerColor = OutfitSurface),
@@ -453,50 +452,6 @@ fun OutfitCard(
                         .weight(0.58f)
                         .height(218.dp),
                 )
-            }
-            Spacer(modifier = Modifier.height(18.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-                OutlinedButton(
-                    onClick = {},
-                    enabled = false,
-                    shape = RoundedCornerShape(18.dp),
-                    border = BorderStroke(1.dp, OutfitBorder),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = OutfitText),
-                    contentPadding = PaddingValues(horizontal = 18.dp, vertical = 14.dp),
-                    modifier = Modifier.weight(1f),
-                ) {
-                    Icon(
-                        painter = painterResource(Res.drawable.hanger),
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Save Outfit",
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Medium,
-                    )
-                }
-                Button(
-                    onClick = onTryThis,
-                    shape = RoundedCornerShape(18.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = OutfitPurple),
-                    contentPadding = PaddingValues(horizontal = 18.dp, vertical = 14.dp),
-                    modifier = Modifier.weight(1f),
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.AutoAwesome,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(18.dp),
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Try This",
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                }
             }
         }
     }
