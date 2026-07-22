@@ -221,12 +221,13 @@ private fun OutfitHeader(
                     lineHeight = 38.sp,
                 )
                 Text(
-                    text = "AI-powered recommendations\njust for you",
+                    text = "Your personal AI stylist",
                     color = OutfitMuted,
                     fontSize = 16.sp,
                     lineHeight = 20.sp,
                     modifier = Modifier.padding(top = 8.dp),
                 )
+                Spacer(modifier = Modifier.height(16.dp))
             }
             Box(
                 modifier = Modifier
