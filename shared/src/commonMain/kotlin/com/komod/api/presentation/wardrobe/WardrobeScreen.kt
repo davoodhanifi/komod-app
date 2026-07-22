@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
@@ -224,17 +225,6 @@ fun WardrobeCard(
                         modifier = Modifier.fillMaxSize(),
                     )
                 }
-                if (item.isFavorite) {
-                    Icon(
-                        imageVector = Icons.Filled.Favorite,
-                        contentDescription = "Favorite item",
-                        tint = Purple,
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(8.dp)
-                            .size(14.dp),
-                    )
-                }
             }
 
             Column(
@@ -256,15 +246,31 @@ fun WardrobeCard(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                if (item.primaryColor != null) {
+                if (item.isFavorite || item.primaryColor != null) {
                     Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = item.primaryColor,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Purple,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        if (item.primaryColor != null) {
+                            Text(
+                                text = item.primaryColor,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Purple,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                        if (item.isFavorite) {
+                            Spacer(modifier = Modifier.weight(1f))
+                            Icon(
+                                imageVector = Icons.Filled.Favorite,
+                                contentDescription = "Favorite item",
+                                tint = Purple,
+                                modifier = Modifier.size(14.dp),
+                            )
+                        }
+                    }
                 }
                 Spacer(modifier = Modifier.height(2.dp))
             }
