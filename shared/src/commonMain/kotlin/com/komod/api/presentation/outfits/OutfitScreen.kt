@@ -150,7 +150,7 @@ fun OutfitScreen(
         item {
             OutfitHeader(
                 selectedOccasion = uiState.selectedOccasion,
-                onSettingsClick = { showStyleSheet = true },
+                onSettingsClick = { showStyleSheet = false },
                 onOccasionSelected = viewModel::selectOccasion,
                 weatherUiState = uiState.weatherUiState,
                 onWeatherToggle = viewModel::setWeatherEnabled,
