@@ -86,6 +86,8 @@ class AddItemRepositoryImpl(
                 storagePath = dto.originalImagePath,
                 thumbnailStoragePath = dto.thumbnailStoragePath,
                 status = dto.status.toImageStatus(),
+                uploadedAt = dto.uploadedAt,
+                extractedItemCount = dto.extractedItemCount,
             )
         }
         uploadedImageStore.upsertAll(remoteImages)

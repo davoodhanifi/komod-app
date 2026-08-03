@@ -212,24 +212,36 @@ private fun WardrobeHeader() {
 private fun RecentUploadsSection(uploads: List<RecentUploadUi>) {
     if (uploads.isEmpty()) return
 
-    Column(modifier = Modifier.padding(bottom = 16.dp)) {
-        Text(
-            text = "Recent Uploads",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = DarkText,
-            modifier = Modifier.padding(horizontal = 24.dp),
-        )
-        Spacer(modifier = Modifier.height(12.dp))
-        Row(
+    Card(
+        modifier = Modifier
+            .padding(horizontal = 20.dp)
+            .padding(bottom = 16.dp)
+            .fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+    ) {
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .horizontalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                .padding(horizontal = 20.dp, vertical = 16.dp),
         ) {
-            uploads.forEach { upload ->
-                UploadQueueCard(upload = upload)
+            Text(
+                text = "Recent Uploads",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = DarkText,
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                uploads.forEach { upload ->
+                    UploadQueueCard(upload = upload)
+                }
             }
         }
     }
@@ -241,7 +253,11 @@ private fun UploadQueueCard(upload: RecentUploadUi) {
     val isAnalyzed = upload.status == ImageStatus.Analyzed
 
     Card(
-        modifier = Modifier.size(76.dp),
+        modifier = Modifier
+            .size(76.dp)
+            .clickable(enabled = isAnalyzed) {
+                // Navigation to the review screen is implemented in a future step.
+            },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = CardBg),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),

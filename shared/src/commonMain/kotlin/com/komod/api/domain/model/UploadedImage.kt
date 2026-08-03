@@ -7,4 +7,6 @@ data class UploadedImage(
     val storagePath: String,
     val thumbnailStoragePath: String,
     val status: ImageStatus,
+    val uploadedAt: String? = null,
+    val extractedItemCount: Int = 0,
 )
