@@ -92,6 +92,28 @@ class UploadReviewViewModel(
             )
         }
 
+        submitItems(current, items) { UploadReviewEffect.ReviewSucceeded(approvedCount) }
+    }
+
+    fun deleteUpload() {
+        val current = _uiState.value as? UploadReviewUiState.Ready ?: return
+        if (current.isSubmitting) return
+
+        // Marking every item Delete, regardless of the current selection, is how
+        // the review endpoint expresses "discard this whole upload" — there's no
+        // separate delete-image endpoint.
+        val items = current.detail.items.map { item ->
+            WardrobeItemReviewRequestItem(id = item.id, action = WardrobeItemReviewAction.Delete)
+        }
+
+        submitItems(current, items) { UploadReviewEffect.UploadDeleted }
+    }
+
+    private fun submitItems(
+        current: UploadReviewUiState.Ready,
+        items: List<WardrobeItemReviewRequestItem>,
+        onSuccessEffect: () -> UploadReviewEffect,
+    ) {
         viewModelScope.launch {
             _uiState.value = current.copy(isSubmitting = true)
             runCatching { repository.submitReview(items) }
@@ -100,7 +122,7 @@ class UploadReviewViewModel(
                     // "awaiting review" list anymore, so drop it from Recent Uploads now
                     // rather than waiting on a refetch that may never exclude it locally.
                     addItemRepository.removeUploadedImage(imageId)
-                    _effects.emit(UploadReviewEffect.ReviewSucceeded(approvedCount))
+                    _effects.emit(onSuccessEffect())
                 }
                 .onFailure { error ->
                     when (error) {

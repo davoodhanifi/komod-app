@@ -103,6 +103,12 @@ fun UploadReviewScreen(
                     onNavigateBack()
                 }
 
+                UploadReviewEffect.UploadDeleted -> {
+                    onShowSnackbar("Upload deleted.")
+                    onReviewCompleted()
+                    onNavigateBack()
+                }
+
                 UploadReviewEffect.ReviewConflict -> {
                     onShowSnackbar("This upload has already been reviewed.")
                     onReviewCompleted()
@@ -168,6 +174,7 @@ fun UploadReviewScreen(
                     onToggleItem = viewModel::toggleItemSelection,
                     onToggleSelectAll = viewModel::toggleSelectAll,
                     onSubmit = viewModel::submitReview,
+                    onDelete = viewModel::deleteUpload,
                 )
             }
         }
@@ -180,6 +187,7 @@ private fun UploadReviewReadyContent(
     onToggleItem: (String) -> Unit,
     onToggleSelectAll: () -> Unit,
     onSubmit: () -> Unit,
+    onDelete: () -> Unit,
 ) {
     val interactionsEnabled = !state.isSubmitting
     var previewImageUrl by remember { mutableStateOf<String?>(null) }
@@ -251,7 +259,7 @@ private fun UploadReviewReadyContent(
                     )
                 }
 
-                ConfidenceInfoCard(modifier = Modifier.padding(top = 4.dp, bottom = 24.dp))
+                Spacer(modifier = Modifier.height(4.dp))
 
                 Button(
                     onClick = onSubmit,
@@ -260,8 +268,7 @@ private fun UploadReviewReadyContent(
                     shape = RoundedCornerShape(14.dp),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(64.dp)
-                        .padding(bottom = 24.dp),
+                        .height(64.dp),
                 ) {
                     if (state.isSubmitting) {
                         CircularProgressIndicator(
@@ -277,6 +284,20 @@ private fun UploadReviewReadyContent(
                         fontSize = 17.sp,
                     )
                 }
+
+                Text(
+                    text = "Delete Upload",
+                    color = if (interactionsEnabled) Purple else GrayText,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 14.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(enabled = interactionsEnabled, onClick = onDelete)
+                        .padding(vertical = 16.dp),
+                )
+
+                ConfidenceInfoCard(modifier = Modifier.padding(bottom = 24.dp))
             }
         }
     }
