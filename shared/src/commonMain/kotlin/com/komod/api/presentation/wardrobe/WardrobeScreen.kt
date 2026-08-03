@@ -1,12 +1,16 @@
 package com.komod.api.presentation.wardrobe
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.scaleIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,9 +28,11 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.outlined.Checkroom
 import androidx.compose.material.icons.outlined.CloudOff
@@ -45,17 +51,23 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import com.komod.api.data.api.model.ImageStatus
 import com.komod.api.domain.model.WardrobeItem
 import komod.shared.generated.resources.Res
 import komod.shared.generated.resources.hanger
@@ -79,6 +91,7 @@ fun WardrobeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
+    val recentUploads by viewModel.recentUploads.collectAsState()
 
     LaunchedEffect(refreshKey) {
         if (refreshKey > 0) viewModel.refresh()
@@ -121,6 +134,8 @@ fun WardrobeScreen(
                 ) {
                     Column(modifier = Modifier.fillMaxSize()) {
                         WardrobeHeader()
+
+                        RecentUploadsSection(uploads = recentUploads)
 
                         if (state.items.isEmpty()) {
                             EmptyState(
@@ -190,6 +205,163 @@ private fun WardrobeHeader() {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(modifier = Modifier.height(24.dp))
+    }
+}
+
+@Composable
+private fun RecentUploadsSection(uploads: List<RecentUploadUi>) {
+    if (uploads.isEmpty()) return
+
+    Column(modifier = Modifier.padding(bottom = 16.dp)) {
+        Text(
+            text = "Recent Uploads",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = DarkText,
+            modifier = Modifier.padding(horizontal = 24.dp),
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState())
+                .padding(horizontal = 24.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            uploads.forEach { upload ->
+                UploadQueueCard(upload = upload)
+            }
+        }
+    }
+}
+
+@Composable
+private fun UploadQueueCard(upload: RecentUploadUi) {
+    val isActive = upload.status == ImageStatus.Pending || upload.status == ImageStatus.Processing
+    val isAnalyzed = upload.status == ImageStatus.Analyzed
+
+    Card(
+        modifier = Modifier.size(76.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = CardBg),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                ClothingPlaceholder(size = 28.dp)
+            }
+            if (upload.thumbnailUrl != null) {
+                AsyncImage(
+                    model = upload.thumbnailUrl,
+                    contentDescription = "Uploaded photo",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+
+            if (isActive) {
+                UploadShimmerOverlay(modifier = Modifier.fillMaxSize())
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .align(Alignment.BottomCenter)
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.6f)),
+                            ),
+                        )
+                        .padding(vertical = 6.dp, horizontal = 4.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = if (upload.status == ImageStatus.Pending) "Uploading" else "Analyzing",
+                        color = Color.White,
+                        fontSize = 9.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+
+            if (isAnalyzed) {
+                AnalyzedBadge(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 4.dp),
+                )
+            }
+
+            if (upload.status == ImageStatus.Failed) {
+                StatusBadge(
+                    text = "Failed",
+                    containerColor = Color(0xFFDC2626),
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 4.dp),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun UploadShimmerOverlay(modifier: Modifier = Modifier) {
+    val transition = rememberInfiniteTransition(label = "uploadShimmer")
+    val alpha by transition.animateFloat(
+        initialValue = 0.12f,
+        targetValue = 0.32f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 900),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "uploadShimmerAlpha",
+    )
+
+    Box(modifier = modifier.background(Purple.copy(alpha = alpha))) {
+        Icon(
+            imageVector = Icons.Filled.AutoAwesome,
+            contentDescription = null,
+            tint = Color.White.copy(alpha = 0.9f),
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(4.dp)
+                .size(12.dp),
+        )
+    }
+}
+
+@Composable
+private fun AnalyzedBadge(modifier: Modifier = Modifier) {
+    var visible by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { visible = true }
+
+    AnimatedVisibility(
+        visible = visible,
+        enter = fadeIn(animationSpec = tween(250)) + scaleIn(initialScale = 0.6f, animationSpec = tween(250)),
+        modifier = modifier,
+    ) {
+        StatusBadge(text = "Review", containerColor = Color(0xFF16A34A))
+    }
+}
+
+@Composable
+private fun StatusBadge(
+    text: String,
+    containerColor: Color,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(50))
+            .background(containerColor)
+            .padding(horizontal = 7.dp, vertical = 2.dp),
+    ) {
+        Text(
+            text = text,
+            color = Color.White,
+            fontSize = 8.sp,
+            fontWeight = FontWeight.SemiBold,
+        )
     }
 }
 
@@ -279,12 +451,12 @@ fun WardrobeCard(
 }
 
 @Composable
-private fun ClothingPlaceholder() {
+private fun ClothingPlaceholder(size: Dp = 48.dp) {
     Icon(
         painter = painterResource(Res.drawable.hanger),
         contentDescription = null,
         tint = Color(0xFFD1D5DB),
-        modifier = Modifier.size(48.dp),
+        modifier = Modifier.size(size),
     )
 }
 

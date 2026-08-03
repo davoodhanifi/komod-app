@@ -3,6 +3,7 @@ package com.komod.api.data.storage
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.storage.storage
 import io.ktor.http.ContentType
+import kotlin.time.Duration.Companion.hours
 
 private const val BUCKET = "wardrobe"
 
@@ -33,5 +34,11 @@ class StorageService(
             contentType = ContentType.parse(mimeType)
         }
         onProgress(1f)
+    }
+
+    suspend fun createSignedUrl(storagePath: String): String? {
+        return runCatching {
+            supabaseClient.storage.from(BUCKET).createSignedUrl(storagePath, 1.hours)
+        }.getOrNull()
     }
 }

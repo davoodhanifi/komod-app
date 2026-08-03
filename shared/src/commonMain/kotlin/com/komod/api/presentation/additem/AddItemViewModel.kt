@@ -72,9 +72,10 @@ class AddItemViewModel(
                     // Persist locally so the Upload Queue can show this image right away.
                     addItemRepository.saveUploadedImage(imageInfo)
 
-                    viewModelScope.launch {
-                        runCatching { addItemRepository.analyzeWardrobeItems(imageInfo.imageId) }
-                    }
+                    // Fire-and-forget on a scope that outlives this screen: uploading
+                    // navigates back immediately, which would otherwise cancel this
+                    // request mid-flight if it were tied to viewModelScope.
+                    addItemRepository.triggerAnalysisInBackground(imageInfo.imageId)
                 }.isSuccess
 
                 if (!uploaded) failed += photo

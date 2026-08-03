@@ -1,5 +1,6 @@
 package com.komod.api.presentation.wardrobe
 
+import com.komod.api.data.api.model.ImageStatus
 import com.komod.api.domain.model.WardrobeItem
 
 sealed interface WardrobeUiState {
@@ -13,3 +14,9 @@ sealed interface WardrobeUiState {
         val message: String,
     ) : WardrobeUiState
 }
+
+data class RecentUploadUi(
+    val imageId: String,
+    val thumbnailUrl: String?,
+    val status: ImageStatus,
+)

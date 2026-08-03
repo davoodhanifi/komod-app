@@ -72,7 +72,7 @@ fun appModule() = module {
     viewModel { LoginViewModel(get()) }
     viewModel { AddItemViewModel(get()) }
     viewModel { OutfitViewModel(get(), get(), get(), get(), get()) }
-    viewModel { WardrobeViewModel(get()) }
+    viewModel { WardrobeViewModel(get(), get()) }
     viewModel { HomeViewModel(get()) }
     viewModel { params -> WardrobeItemDetailViewModel(params.get(), get()) }
     viewModel { params -> WardrobeItemEditViewModel(params.get(), get()) }
