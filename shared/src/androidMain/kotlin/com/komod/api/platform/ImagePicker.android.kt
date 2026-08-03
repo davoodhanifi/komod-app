@@ -19,30 +19,37 @@ import java.io.File
 
 @Composable
 actual fun rememberImagePickerLauncher(
-    onResult: (bytes: ByteArray, mimeType: String) -> Unit,
+    maxSelection: Int,
+    onResult: (images: List<PickedImage>) -> Unit,
     onCancel: () -> Unit,
 ): ImagePickerLauncher {
     val context = LocalContext.current
     val onResultState = rememberUpdatedState(onResult)
     val onCancelState = rememberUpdatedState(onCancel)
-    var cameraUri by remember { mutableStateOf<Uri?>(null) }
     var cameraFile by remember { mutableStateOf<File?>(null) }
 
+    fun readImage(uri: Uri): PickedImage? {
+        return runCatching {
+            val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                ?: error("Unable to read selected image.")
+            val mimeType = context.contentResolver.getType(uri) ?: "image/jpeg"
+            PickedImage(bytes, mimeType)
+        }.getOrNull()
+    }
+
     val galleryLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickVisualMedia(),
-    ) { uri ->
-        if (uri == null) {
+        contract = ActivityResultContracts.PickMultipleVisualMedia(maxSelection),
+    ) { uris ->
+        if (uris.isEmpty()) {
             onCancelState.value()
             return@rememberLauncherForActivityResult
         }
 
-        runCatching {
-            val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
-                ?: error("Unable to read selected image.")
-            val mimeType = context.contentResolver.getType(uri) ?: "image/jpeg"
-            onResultState.value(bytes, mimeType)
-        }.onFailure {
+        val images = uris.take(maxSelection).mapNotNull(::readImage)
+        if (images.isEmpty()) {
             onCancelState.value()
+        } else {
+            onResultState.value(images)
         }
     }
 
@@ -56,7 +63,7 @@ actual fun rememberImagePickerLauncher(
         }
 
         runCatching {
-            onResultState.value(file.readBytes(), "image/jpeg")
+            onResultState.value(listOf(PickedImage(file.readBytes(), "image/jpeg")))
         }.onFailure {
             onCancelState.value()
         }
@@ -66,7 +73,6 @@ actual fun rememberImagePickerLauncher(
         val file = File.createTempFile("img_", ".jpg", context.cacheDir)
         cameraFile = file
         val uri = FileProvider.getUriForFile(context, "${context.packageName}.provider", file)
-        cameraUri = uri
         cameraLauncher.launch(uri)
     }
 

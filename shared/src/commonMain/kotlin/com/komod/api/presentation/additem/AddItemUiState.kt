@@ -1,31 +1,23 @@
 package com.komod.api.presentation.additem
 
+import com.komod.api.platform.PickedImage
+
 sealed interface AddItemUiState {
     data object Initial : AddItemUiState
 
     data class Uploading(
-        val imageThumbnail: ByteArray,
-        val storagePath: String,
-        val overallProgress: Float,
-        val steps: List<UploadStep>,
+        val total: Int,
+        val completed: Int,
+        val progress: Float,
     ) : AddItemUiState
-
-    data object Success : AddItemUiState
 
     data class Error(
         val message: String,
-        val lastImageBytes: ByteArray? = null,
-        val lastMimeType: String = "image/jpeg",
+        val failedPhotos: List<PickedImage>,
     ) : AddItemUiState
 }
 
-data class UploadStep(
-    val label: String,
-    val status: StepStatus,
-)
-
-enum class StepStatus {
-    Pending,
-    InProgress,
-    Completed,
+sealed interface AddItemEffect {
+    data class UploadsSucceeded(val count: Int) : AddItemEffect
+    data object SelectionLimitExceeded : AddItemEffect
 }

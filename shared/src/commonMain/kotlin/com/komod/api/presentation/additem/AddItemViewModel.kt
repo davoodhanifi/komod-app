@@ -3,10 +3,16 @@ package com.komod.api.presentation.additem
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.komod.api.data.repository.AddItemRepository
+import com.komod.api.platform.PickedImage
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+
+private const val MaxPhotosPerUpload = 5
 
 class AddItemViewModel(
     private val addItemRepository: AddItemRepository,
@@ -14,110 +20,74 @@ class AddItemViewModel(
     private val _uiState = MutableStateFlow<AddItemUiState>(AddItemUiState.Initial)
     val uiState: StateFlow<AddItemUiState> = _uiState.asStateFlow()
 
-    private var lastImageBytes: ByteArray? = null
-    private var lastMimeType: String = "image/jpeg"
+    private val _effects = MutableSharedFlow<AddItemEffect>()
+    val effects: SharedFlow<AddItemEffect> = _effects.asSharedFlow()
 
-    fun onImageSelected(bytes: ByteArray, mimeType: String) {
-        lastImageBytes = bytes
-        lastMimeType = mimeType
-        processImage(bytes, mimeType)
+    fun onImagesSelected(images: List<PickedImage>) {
+        if (images.isEmpty()) return
+
+        if (images.size > MaxPhotosPerUpload) {
+            viewModelScope.launch { _effects.emit(AddItemEffect.SelectionLimitExceeded) }
+            return
+        }
+
+        uploadPhotos(images)
     }
 
-    fun retry() {
-        val bytes = lastImageBytes ?: return
-        processImage(bytes, lastMimeType)
+    fun retryFailed() {
+        val failedPhotos = (_uiState.value as? AddItemUiState.Error)?.failedPhotos ?: return
+        uploadPhotos(failedPhotos)
     }
 
     fun reset() {
         _uiState.value = AddItemUiState.Initial
     }
 
-    private fun processImage(bytes: ByteArray, mimeType: String) {
+    private fun uploadPhotos(photos: List<PickedImage>) {
         viewModelScope.launch {
-            // Step 1: Create image record — shown as upload in-progress (fast backend call)
-            _uiState.value = AddItemUiState.Uploading(
-                imageThumbnail = bytes,
-                storagePath = "",
-                overallProgress = 0f,
-                steps = steps(
-                    upload = StepStatus.InProgress,
-                    analyze = StepStatus.Pending,
-                    create = StepStatus.Pending,
-                ),
-            )
+            val total = photos.size
+            val failed = mutableListOf<PickedImage>()
+            var completedCount = 0
 
-            runCatching {
-                val imageInfo = addItemRepository.createImage()
+            fun emitProgress(currentFraction: Float) {
+                _uiState.value = AddItemUiState.Uploading(
+                    total = total,
+                    completed = completedCount,
+                    progress = ((completedCount + currentFraction) / total).coerceIn(0f, 1f),
+                )
+            }
 
-                updateUploadingState {
-                    copy(storagePath = imageInfo.storagePath)
-                }
+            emitProgress(0f)
 
-                // Step 2: Upload bytes to Supabase Storage
-                addItemRepository.uploadImage(imageInfo.storagePath, bytes, mimeType) { fraction ->
-                    updateUploadingState {
-                        copy(
-                            overallProgress = fraction.coerceIn(0f, 1f) * 0.5f,
-                            steps = steps(
-                                upload = StepStatus.InProgress,
-                                analyze = StepStatus.Pending,
-                                create = StepStatus.Pending,
-                            ),
-                        )
+            for (photo in photos) {
+                val uploaded = runCatching {
+                    val imageInfo = addItemRepository.createImage()
+
+                    // Success is determined by the storage upload alone — analysis runs
+                    // asynchronously on the backend and must not block or fail this upload.
+                    addItemRepository.uploadImage(imageInfo.storagePath, photo.bytes, photo.mimeType) { fraction ->
+                        emitProgress(fraction.coerceIn(0f, 1f))
                     }
-                }
 
-                // Step 3: Trigger AI analysis (backend also creates the wardrobe item)
-                updateUploadingState {
-                    copy(
-                        overallProgress = 0.5f,
-                        steps = steps(
-                            upload = StepStatus.Completed,
-                            analyze = StepStatus.InProgress,
-                            create = StepStatus.Pending,
-                        ),
-                    )
-                }
+                    viewModelScope.launch {
+                        runCatching { addItemRepository.analyzeWardrobeItems(imageInfo.imageId) }
+                    }
+                }.isSuccess
 
-                addItemRepository.analyzeWardrobeItems(imageInfo.imageId)
+                if (!uploaded) failed += photo
+                completedCount += 1
+                emitProgress(0f)
+            }
 
-                // Step 4: Analysis complete — backend has created the wardrobe item
-                updateUploadingState {
-                    copy(
-                        overallProgress = 1f,
-                        steps = steps(
-                            upload = StepStatus.Completed,
-                            analyze = StepStatus.Completed,
-                            create = StepStatus.Completed,
-                        ),
-                    )
-                }
-
-                _uiState.value = AddItemUiState.Success
-            }.onFailure { throwable ->
+            if (failed.isEmpty()) {
+                _uiState.value = AddItemUiState.Initial
+                _effects.emit(AddItemEffect.UploadsSucceeded(count = total))
+            } else {
                 _uiState.value = AddItemUiState.Error(
-                    message = throwable.message ?: "Something went wrong. Please try again.",
-                    lastImageBytes = bytes,
-                    lastMimeType = mimeType,
+                    message = "Some photos couldn't be uploaded. Please try again.",
+                    failedPhotos = failed,
                 )
             }
         }
-    }
-
-    private fun updateUploadingState(transform: AddItemUiState.Uploading.() -> AddItemUiState.Uploading) {
-        val current = _uiState.value as? AddItemUiState.Uploading ?: return
-        _uiState.value = current.transform()
-    }
-
-    private fun steps(
-        upload: StepStatus,
-        analyze: StepStatus,
-        create: StepStatus,
-    ): List<UploadStep> {
-        return listOf(
-            UploadStep(label = "Uploading to storage", status = upload),
-            UploadStep(label = "Analyzing with AI", status = analyze),
-            UploadStep(label = "Creating wardrobe item", status = create),
-        )
     }
 }

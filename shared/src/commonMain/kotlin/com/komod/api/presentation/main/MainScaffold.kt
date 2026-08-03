@@ -322,6 +322,7 @@ fun MainScaffold(
                             navController.previousBackStackEntry?.savedStateHandle?.set(WardrobeRefreshArg, true)
                             navController.popBackStack()
                         },
+                        onShowSnackbar = ::showSnackbar,
                     )
                 }
 

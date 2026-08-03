@@ -16,6 +16,12 @@ import platform.AVFoundation.AVMediaTypeVideo
 import platform.AVFoundation.authorizationStatusForMediaType
 import platform.AVFoundation.requestAccessForMediaType
 import platform.Foundation.NSData
+import platform.Foundation.NSItemProvider
+import platform.PhotosUI.PHPickerConfiguration
+import platform.PhotosUI.PHPickerFilter
+import platform.PhotosUI.PHPickerResult
+import platform.PhotosUI.PHPickerViewController
+import platform.PhotosUI.PHPickerViewControllerDelegateProtocol
 import platform.UIKit.UIApplication
 import platform.UIKit.UIAlertAction
 import platform.UIKit.UIAlertActionStyleDefault
@@ -36,16 +42,16 @@ import platform.darwin.dispatch_get_main_queue
 import platform.posix.memcpy
 
 // UIImagePickerControllerSourceType enum values via enum members
-private val SourceTypePhotoLibrary =
-    UIImagePickerControllerSourceType.UIImagePickerControllerSourceTypePhotoLibrary
 private val SourceTypeCamera =
     UIImagePickerControllerSourceType.UIImagePickerControllerSourceTypeCamera
 
 private var activeImagePickerDelegate: NSObject? = null
+private var activePHPickerDelegate: NSObject? = null
 
 @Composable
 actual fun rememberImagePickerLauncher(
-    onResult: (bytes: ByteArray, mimeType: String) -> Unit,
+    maxSelection: Int,
+    onResult: (images: List<PickedImage>) -> Unit,
     onCancel: () -> Unit,
 ): ImagePickerLauncher {
     val onResultState = rememberUpdatedState(onResult)
@@ -54,15 +60,15 @@ actual fun rememberImagePickerLauncher(
     return remember {
         ImagePickerLauncher(
             galleryAction = {
-                presentImagePicker(
-                    sourceType = SourceTypePhotoLibrary,
-                    onResult = { bytes, mimeType -> onResultState.value(bytes, mimeType) },
+                presentMultiImagePicker(
+                    maxSelection = maxSelection,
+                    onResult = { images -> onResultState.value(images) },
                     onCancel = { onCancelState.value() },
                 )
             },
             cameraAction = {
                 launchCameraPicker(
-                    onResult = { bytes, mimeType -> onResultState.value(bytes, mimeType) },
+                    onResult = { bytes, mimeType -> onResultState.value(listOf(PickedImage(bytes, mimeType))) },
                     onCancel = { onCancelState.value() },
                 )
             },
@@ -157,6 +163,67 @@ private fun presentImagePicker(
         activeImagePickerDelegate = delegate
         picker.delegate = delegate
         topViewController.presentViewController(picker, true, null)
+    }
+}
+
+private fun presentMultiImagePicker(
+    maxSelection: Int,
+    onResult: (List<PickedImage>) -> Unit,
+    onCancel: () -> Unit,
+) {
+    runOnMain {
+        val topViewController = topViewController() ?: run {
+            onCancel()
+            return@runOnMain
+        }
+
+        val configuration = PHPickerConfiguration().apply {
+            selectionLimit = maxSelection.toLong()
+            filter = PHPickerFilter.imagesFilter()
+        }
+        val pickerViewController = PHPickerViewController(configuration = configuration)
+
+        val delegate = object : NSObject(), PHPickerViewControllerDelegateProtocol {
+            override fun picker(picker: PHPickerViewController, didFinishPicking: List<*>) {
+                picker.dismissViewControllerAnimated(true, null)
+                activePHPickerDelegate = null
+
+                val results = didFinishPicking.filterIsInstance<PHPickerResult>()
+                if (results.isEmpty()) {
+                    onCancel()
+                    return
+                }
+
+                val images = arrayOfNulls<PickedImage>(results.size)
+                var remaining = results.size
+
+                results.forEachIndexed { index, result ->
+                    val provider = result.itemProvider
+                    provider.loadDataRepresentationForTypeIdentifier("public.image") { data, _ ->
+                        runOnMain {
+                            images[index] = data?.let { PickedImage(it.toByteArray(), mimeTypeFor(provider)) }
+                            remaining -= 1
+                            if (remaining == 0) {
+                                val picked = images.filterNotNull()
+                                if (picked.isEmpty()) onCancel() else onResult(picked)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        activePHPickerDelegate = delegate
+        pickerViewController.delegate = delegate
+        topViewController.presentViewController(pickerViewController, true, null)
+    }
+}
+
+private fun mimeTypeFor(provider: NSItemProvider): String {
+    val identifier = provider.registeredTypeIdentifiers.firstOrNull() as? String ?: return "image/jpeg"
+    return when {
+        identifier.contains("png") -> "image/png"
+        identifier.contains("heic") || identifier.contains("heif") -> "image/heic"
+        else -> "image/jpeg"
     }
 }
 
