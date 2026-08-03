@@ -64,6 +64,18 @@ class UploadReviewViewModel(
         _uiState.value = current.copy(selectedItemIds = updatedSelection)
     }
 
+    fun toggleSelectAll() {
+        val current = _uiState.value as? UploadReviewUiState.Ready ?: return
+        if (current.isSubmitting) return
+        val allIds = current.detail.items.map { it.id }.toSet()
+        val updatedSelection = if (allIds.isNotEmpty() && current.selectedItemIds.containsAll(allIds)) {
+            emptySet()
+        } else {
+            allIds
+        }
+        _uiState.value = current.copy(selectedItemIds = updatedSelection)
+    }
+
     fun submitReview() {
         val current = _uiState.value as? UploadReviewUiState.Ready ?: return
         if (current.isSubmitting) return
