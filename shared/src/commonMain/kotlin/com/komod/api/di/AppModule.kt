@@ -80,5 +80,5 @@ fun appModule() = module {
     viewModel { HomeViewModel(get()) }
     viewModel { params -> WardrobeItemDetailViewModel(params.get(), get()) }
     viewModel { params -> WardrobeItemEditViewModel(params.get(), get()) }
-    viewModel { params -> UploadReviewViewModel(params.get(), get()) }
+    viewModel { params -> UploadReviewViewModel(params.get(), get(), get(), get()) }
 }

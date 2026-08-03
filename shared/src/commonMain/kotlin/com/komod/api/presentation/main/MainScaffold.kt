@@ -401,6 +401,10 @@ fun MainScaffold(
                     UploadReviewScreen(
                         imageId = imageId,
                         onNavigateBack = { navController.navigateUp() },
+                        onShowSnackbar = ::showSnackbar,
+                        onReviewCompleted = {
+                            requestRefresh(MainRoute.Wardrobe.route, WardrobeRefreshArg)
+                        },
                     )
                 }
 

@@ -75,6 +75,10 @@ class AddItemRepositoryImpl(
         )
     }
 
+    override fun removeUploadedImage(imageId: String) {
+        uploadedImageStore.remove(imageId)
+    }
+
     override val uploadedImages: StateFlow<List<UploadedImage>> = uploadedImageStore.uploadedImages
 
     override suspend fun getThumbnailUrl(storagePath: String): String? = storageService.createSignedUrl(storagePath)

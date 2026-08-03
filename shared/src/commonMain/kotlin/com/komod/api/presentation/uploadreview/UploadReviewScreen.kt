@@ -35,12 +35,14 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -74,9 +76,34 @@ private val BorderColor = Color(0xFFE5E7EB)
 fun UploadReviewScreen(
     imageId: String,
     onNavigateBack: () -> Unit,
+    onShowSnackbar: (String) -> Unit,
+    onReviewCompleted: () -> Unit,
     viewModel: UploadReviewViewModel = koinViewModel(parameters = { parametersOf(imageId) }),
 ) {
     val uiState by viewModel.uiState.collectAsState()
+
+    LaunchedEffect(viewModel) {
+        viewModel.effects.collect { effect ->
+            when (effect) {
+                is UploadReviewEffect.ReviewSucceeded -> {
+                    val count = effect.approvedCount
+                    onShowSnackbar("$count ${if (count == 1) "item" else "items"} added to your wardrobe.")
+                    onReviewCompleted()
+                    onNavigateBack()
+                }
+
+                UploadReviewEffect.ReviewConflict -> {
+                    onShowSnackbar("This upload has already been reviewed.")
+                    onReviewCompleted()
+                    onNavigateBack()
+                }
+
+                is UploadReviewEffect.ReviewFailed -> onShowSnackbar(effect.message)
+            }
+        }
+    }
+
+    val isSubmitting = (uiState as? UploadReviewUiState.Ready)?.isSubmitting == true
 
     Scaffold(
         topBar = {
@@ -102,7 +129,7 @@ fun UploadReviewScreen(
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
+                    IconButton(onClick = onNavigateBack, enabled = !isSubmitting) {
                         Icon(
                             painter = painterResource(Res.drawable.arrow_left),
                             contentDescription = "Back",
@@ -128,6 +155,7 @@ fun UploadReviewScreen(
                 is UploadReviewUiState.Ready -> UploadReviewReadyContent(
                     state = state,
                     onToggleItem = viewModel::toggleItemSelection,
+                    onSubmit = viewModel::submitReview,
                 )
             }
         }
@@ -138,7 +166,9 @@ fun UploadReviewScreen(
 private fun UploadReviewReadyContent(
     state: UploadReviewUiState.Ready,
     onToggleItem: (String) -> Unit,
+    onSubmit: () -> Unit,
 ) {
+    val interactionsEnabled = !state.isSubmitting
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -173,6 +203,7 @@ private fun UploadReviewReadyContent(
                     DetectedItemCard(
                         item = item,
                         isSelected = item.id in state.selectedItemIds,
+                        enabled = interactionsEnabled,
                         onToggle = { onToggleItem(item.id) },
                         modifier = Modifier.padding(bottom = 12.dp),
                     )
@@ -180,36 +211,31 @@ private fun UploadReviewReadyContent(
 
                 ConfidenceInfoCard(modifier = Modifier.padding(top = 4.dp, bottom = 24.dp))
 
+                val selectedCount = state.selectedItemIds.size
                 Button(
-                    onClick = {
-                        // The approval endpoint is implemented in a future step.
-                    },
+                    onClick = onSubmit,
+                    enabled = interactionsEnabled,
                     colors = ButtonDefaults.buttonColors(containerColor = Purple, contentColor = Color.White),
                     shape = RoundedCornerShape(14.dp),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(52.dp),
+                        .height(64.dp)
+                        .padding(bottom = 24.dp),
                 ) {
+                    if (state.isSubmitting) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.dp,
+                            color = Color.White,
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                    }
                     Text(
-                        text = "Add Selected to Wardrobe (${state.selectedItemIds.size})",
+                        text = "Save $selectedCount ${if (selectedCount == 1) "Item" else "Items"}",
                         fontWeight = FontWeight.SemiBold,
-                        fontSize = 16.sp,
+                        fontSize = 17.sp,
                     )
                 }
-
-                Text(
-                    text = "Delete Upload",
-                    color = Purple,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 14.sp,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable {
-                            // Delete isn't implemented yet.
-                        }
-                        .padding(vertical = 16.dp),
-                )
             }
         }
     }
@@ -269,6 +295,7 @@ private fun UploadedImageHero(imageUrl: String?) {
 private fun DetectedItemCard(
     item: WardrobeItemDetail,
     isSelected: Boolean,
+    enabled: Boolean,
     onToggle: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -278,13 +305,14 @@ private fun DetectedItemCard(
             .clip(RoundedCornerShape(14.dp))
             .border(BorderStroke(1.dp, BorderColor), RoundedCornerShape(14.dp))
             .background(Color.White)
-            .clickable(onClick = onToggle)
+            .clickable(enabled = enabled, onClick = onToggle)
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Checkbox(
             checked = isSelected,
             onCheckedChange = { onToggle() },
+            enabled = enabled,
             colors = CheckboxDefaults.colors(checkedColor = Purple, checkmarkColor = Color.White),
         )
         Spacer(modifier = Modifier.width(4.dp))

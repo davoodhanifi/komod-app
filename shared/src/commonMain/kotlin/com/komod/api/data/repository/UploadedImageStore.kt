@@ -27,4 +27,10 @@ class UploadedImageStore {
             byId.values.toList()
         }
     }
+
+    // A reviewed image drops out of the backend's "awaiting review" list, which
+    // upsertAll alone would never reflect, so callers remove it explicitly.
+    fun remove(imageId: String) {
+        _uploadedImages.update { current -> current.filterNot { it.imageId == imageId } }
+    }
 }

@@ -22,6 +22,8 @@ interface AddItemRepository {
 
     fun saveUploadedImage(image: CreateImageResponse)
 
+    fun removeUploadedImage(imageId: String)
+
     val uploadedImages: StateFlow<List<UploadedImage>>
 
     suspend fun getThumbnailUrl(storagePath: String): String?

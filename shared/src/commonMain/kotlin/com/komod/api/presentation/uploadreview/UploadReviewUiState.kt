@@ -8,6 +8,7 @@ sealed interface UploadReviewUiState {
     data class Ready(
         val detail: UploadedImageDetail,
         val selectedItemIds: Set<String>,
+        val isSubmitting: Boolean = false,
     ) : UploadReviewUiState
 
     data class Error(val message: String) : UploadReviewUiState

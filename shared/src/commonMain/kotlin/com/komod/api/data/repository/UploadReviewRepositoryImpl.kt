@@ -2,10 +2,13 @@ package com.komod.api.data.repository
 
 import com.komod.api.data.api.WardrobeApiService
 import com.komod.api.data.api.model.WardrobeItemDto
+import com.komod.api.data.api.model.WardrobeItemReviewRequestItem
 import com.komod.api.data.api.model.toImageStatus
 import com.komod.api.data.storage.StorageService
 import com.komod.api.domain.model.UploadedImageDetail
 import com.komod.api.domain.model.WardrobeItemDetail
+import io.ktor.client.plugins.ResponseException
+import io.ktor.http.HttpStatusCode
 
 class UploadReviewRepositoryImpl(
     private val wardrobeApiService: WardrobeApiService,
@@ -24,6 +27,22 @@ class UploadReviewRepositoryImpl(
             originalImageUrl = originalImageUrl,
             items = dto.items.map { itemDto -> itemDto.toDetail(fallbackImageUrl = originalImageUrl) },
         )
+    }
+
+    override suspend fun submitReview(items: List<WardrobeItemReviewRequestItem>) {
+        try {
+            wardrobeApiService.reviewWardrobeItems(items)
+        } catch (error: ResponseException) {
+            when (error.response.status) {
+                HttpStatusCode.Unauthorized -> throw UploadReviewUnauthorizedException()
+                HttpStatusCode.Forbidden -> throw UploadReviewForbiddenException()
+                HttpStatusCode.NotFound -> throw UploadReviewNotFoundException()
+                HttpStatusCode.PreconditionFailed -> throw UploadReviewConflictException()
+                else -> throw UploadReviewNetworkException(error)
+            }
+        } catch (error: kotlinx.io.IOException) {
+            throw UploadReviewNetworkException(error)
+        }
     }
 
     private suspend fun WardrobeItemDto.toDetail(fallbackImageUrl: String?): WardrobeItemDetail {

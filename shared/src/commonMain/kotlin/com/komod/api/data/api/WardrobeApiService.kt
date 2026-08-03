@@ -5,6 +5,7 @@ import com.komod.api.data.api.model.CreateImageResponse
 import com.komod.api.data.api.model.ImageDto
 import com.komod.api.data.api.model.RecentItemDto
 import com.komod.api.data.api.model.ResponseData
+import com.komod.api.data.api.model.ReviewWardrobeItemsRequest
 import com.komod.api.data.api.model.UploadedImageDto
 import com.komod.api.data.api.model.WardrobeFavoriteRequest
 import com.komod.api.data.api.model.WardrobeItemDto
@@ -105,6 +106,13 @@ class WardrobeApiService(
     suspend fun getUploadedImages(): List<UploadedImageDto> {
         return httpClient.get("images/uploaded")
             .body<ResponseData<List<UploadedImageDto>>>().data
+    }
+
+    suspend fun reviewWardrobeItems(request: ReviewWardrobeItemsRequest) {
+        httpClient.patch("wardrobe-items/review") {
+            contentType(ContentType.Application.Json)
+            setBody(request)
+        }
     }
 
     suspend fun getWardrobeSummary(): WardrobeSummaryDto {
