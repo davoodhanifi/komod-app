@@ -6,4 +6,5 @@ import kotlinx.serialization.Serializable
 data class CreateImageResponse(
     val imageId: String,
     val storagePath: String,
+    val thumbnailStoragePath: String,
 )

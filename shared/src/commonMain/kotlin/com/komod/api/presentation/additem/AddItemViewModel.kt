@@ -65,9 +65,12 @@ class AddItemViewModel(
 
                     // Success is determined by the storage upload alone — analysis runs
                     // asynchronously on the backend and must not block or fail this upload.
-                    addItemRepository.uploadImage(imageInfo.storagePath, photo.bytes, photo.mimeType) { fraction ->
+                    addItemRepository.uploadImage(imageInfo, photo.bytes, photo.mimeType) { fraction ->
                         emitProgress(fraction.coerceIn(0f, 1f))
                     }
+
+                    // Persist locally so the Upload Queue can show this image right away.
+                    addItemRepository.saveUploadedImage(imageInfo)
 
                     viewModelScope.launch {
                         runCatching { addItemRepository.analyzeWardrobeItems(imageInfo.imageId) }

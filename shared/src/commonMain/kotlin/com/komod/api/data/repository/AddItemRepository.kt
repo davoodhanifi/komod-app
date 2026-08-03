@@ -6,11 +6,13 @@ interface AddItemRepository {
     suspend fun createImage(): CreateImageResponse
 
     suspend fun uploadImage(
-        storagePath: String,
+        image: CreateImageResponse,
         bytes: ByteArray,
         mimeType: String,
         onProgress: (Float) -> Unit,
     )
 
     suspend fun analyzeWardrobeItems(imageId: String)
+
+    fun saveUploadedImage(image: CreateImageResponse)
 }

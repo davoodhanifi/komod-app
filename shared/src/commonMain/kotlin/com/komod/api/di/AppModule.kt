@@ -16,6 +16,7 @@ import com.komod.api.data.repository.OutfitRepository
 import com.komod.api.data.repository.OutfitRepositoryImpl
 import com.komod.api.data.repository.WeatherRepository
 import com.komod.api.data.repository.WeatherRepositoryImpl
+import com.komod.api.data.repository.UploadedImageStore
 import com.komod.api.data.repository.WardrobeItemCache
 import com.komod.api.data.repository.WardrobeItemRepository
 import com.komod.api.data.repository.WardrobeItemRepositoryImpl
@@ -57,11 +58,12 @@ fun appModule() = module {
     single { OutfitApiService(get()) }
     single { WeatherApi(get()) }
     single { WardrobeItemCache() }
+    single { UploadedImageStore() }
     single { WeatherPreferences() }
     single { WeatherLocationService() }
     single { com.komod.api.platform.AppSettingsOpener() }
     single { StorageService(supabaseClient = get()) }
-    single<AddItemRepository> { AddItemRepositoryImpl(get(), get()) }
+    single<AddItemRepository> { AddItemRepositoryImpl(get(), get(), get()) }
     single<WardrobeRepository> { WardrobeRepositoryImpl(wardrobeApiService = get(), supabaseClient = get(), wardrobeItemCache = get()) }
     single<WardrobeItemRepository> { WardrobeItemRepositoryImpl(wardrobeApiService = get(), supabaseClient = get(), wardrobeItemCache = get()) }
     single<WeatherRepository> { WeatherRepositoryImpl(weatherApi = get()) }
