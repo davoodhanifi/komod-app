@@ -1,5 +1,6 @@
 package com.komod.api.data.repository
 
+import com.komod.api.domain.model.BoundingBox
 import com.komod.api.domain.model.WardrobeItemDetail
 import com.komod.api.data.api.model.WardrobeItemUpdateRequest
 
@@ -11,4 +12,8 @@ interface WardrobeItemRepository {
         id: String,
         request: WardrobeItemUpdateRequest,
     ): WardrobeItemDetail
+    suspend fun updateWardrobeItemBoundingBox(
+        id: String,
+        boundingBox: BoundingBox,
+    )
 }

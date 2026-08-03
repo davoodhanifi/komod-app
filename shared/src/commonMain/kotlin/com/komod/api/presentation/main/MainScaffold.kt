@@ -48,6 +48,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.komod.api.data.repository.AuthRepository
 import com.komod.api.presentation.additem.AddItemScreen
+import com.komod.api.presentation.cropeditor.CropEditorScreen
 import com.komod.api.presentation.home.HomeScreen
 import com.komod.api.presentation.outfits.OutfitScreen
 import com.komod.api.presentation.profile.ProfileScreen
@@ -64,6 +65,7 @@ private const val WardrobeItemIdArg = "wardrobeItemId"
 private const val UploadImageIdArg = "imageId"
 private const val WardrobeRefreshArg = "wardrobe_refresh_required"
 private const val WardrobeItemRefreshArg = "wardrobe_item_refresh_required"
+private const val UploadReviewRefreshArg = "upload_review_refresh_required"
 private const val HomeRefreshArg = "home_refresh_required"
 private const val SelectedOutfitKey = "selected_outfit"
 private const val OccasionArg = "occasion"
@@ -82,6 +84,10 @@ private sealed class MainRoute(val route: String) {
     }
     data object UploadReview : MainRoute("wardrobe/upload-review/{$UploadImageIdArg}") {
         fun createRoute(imageId: String): String = "wardrobe/upload-review/$imageId"
+    }
+    data object CropEditor : MainRoute("wardrobe/upload-review/{$UploadImageIdArg}/crop/{$WardrobeItemIdArg}") {
+        fun createRoute(imageId: String, wardrobeItemId: String): String =
+            "wardrobe/upload-review/$imageId/crop/$wardrobeItemId"
     }
     data object OutfitDetails : MainRoute("outfits/details")
 }
@@ -144,6 +150,7 @@ fun MainScaffold(
         MainRoute.AddItem.route,
         MainRoute.WardrobeItemEdit.route,
         MainRoute.UploadReview.route,
+        MainRoute.CropEditor.route,
         MainRoute.OutfitDetails.route,
     )
     val showBottomBar = currentRoute !in hideBottomBarRoutes
@@ -162,6 +169,7 @@ fun MainScaffold(
     var wardrobeRefreshKey by rememberSaveable { mutableIntStateOf(0) }
     var homeRefreshKey by rememberSaveable { mutableIntStateOf(0) }
     var wardrobeItemRefreshKey by rememberSaveable { mutableIntStateOf(0) }
+    var uploadReviewRefreshKey by rememberSaveable { mutableIntStateOf(0) }
 
     fun requestRefresh(route: String, key: String) {
         runCatching { navController.getBackStackEntry(route) }
@@ -398,12 +406,47 @@ fun MainScaffold(
                     ),
                 ) { backStackEntry ->
                     val imageId = backStackEntry.savedStateHandle.get<String>(UploadImageIdArg).orEmpty()
+                    val shouldRefresh by backStackEntry.savedStateHandle
+                        .getStateFlow(UploadReviewRefreshArg, false)
+                        .collectAsState()
+
+                    LaunchedEffect(shouldRefresh) {
+                        if (shouldRefresh) {
+                            uploadReviewRefreshKey += 1
+                            backStackEntry.savedStateHandle[UploadReviewRefreshArg] = false
+                        }
+                    }
+
                     UploadReviewScreen(
                         imageId = imageId,
+                        refreshKey = uploadReviewRefreshKey,
                         onNavigateBack = { navController.navigateUp() },
                         onShowSnackbar = ::showSnackbar,
                         onReviewCompleted = {
                             requestRefresh(MainRoute.Wardrobe.route, WardrobeRefreshArg)
+                        },
+                        onAdjustCrop = { wardrobeItemId ->
+                            navController.navigate(MainRoute.CropEditor.createRoute(imageId, wardrobeItemId))
+                        },
+                    )
+                }
+
+                composable(
+                    route = MainRoute.CropEditor.route,
+                    arguments = listOf(
+                        navArgument(UploadImageIdArg) { type = NavType.StringType },
+                        navArgument(WardrobeItemIdArg) { type = NavType.StringType },
+                    ),
+                ) { backStackEntry ->
+                    val imageId = backStackEntry.savedStateHandle.get<String>(UploadImageIdArg).orEmpty()
+                    val wardrobeItemId = backStackEntry.savedStateHandle.get<String>(WardrobeItemIdArg).orEmpty()
+                    CropEditorScreen(
+                        imageId = imageId,
+                        wardrobeItemId = wardrobeItemId,
+                        onNavigateBack = { navController.navigateUp() },
+                        onShowSnackbar = ::showSnackbar,
+                        onCropSaved = {
+                            requestRefresh(MainRoute.UploadReview.route, UploadReviewRefreshArg)
                         },
                     )
                 }

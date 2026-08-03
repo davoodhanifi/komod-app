@@ -3,8 +3,10 @@ package com.komod.api.data.repository
 import com.komod.api.data.api.WardrobeApiService
 import com.komod.api.data.api.model.WardrobeItemDto
 import com.komod.api.data.api.model.WardrobeItemReviewRequestItem
+import com.komod.api.data.api.model.toDomain
 import com.komod.api.data.api.model.toImageStatus
 import com.komod.api.data.storage.StorageService
+import com.komod.api.domain.model.BoundingBox
 import com.komod.api.domain.model.UploadedImageDetail
 import com.komod.api.domain.model.WardrobeItemDetail
 import io.ktor.client.plugins.ResponseException
@@ -89,6 +91,7 @@ class UploadReviewRepositoryImpl(
             isFavorite = isFavorite,
             confidence = confidence,
             createdAt = createdAt,
+            boundingBox = boundingBox?.toDomain() ?: BoundingBox.FullImage,
         )
     }
 }

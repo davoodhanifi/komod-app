@@ -2,12 +2,16 @@ package com.komod.api.data.repository
 
 import com.komod.api.data.api.WardrobeApiService
 import com.komod.api.data.api.model.WardrobeItemUpdateRequest
+import com.komod.api.data.api.model.toDomain
+import com.komod.api.data.api.model.toDto
+import com.komod.api.domain.model.BoundingBox
 import com.komod.api.domain.model.WardrobeItemDetail
 import com.komod.api.domain.model.WardrobeItem
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.storage.storage
 import io.ktor.client.plugins.ResponseException
 import io.ktor.http.HttpStatusCode
+import kotlinx.serialization.SerializationException
 import kotlin.time.Duration.Companion.hours
 
 private const val WARDROBE_BUCKET = "wardrobe"
@@ -71,6 +75,7 @@ class WardrobeItemRepositoryImpl(
             isFavorite = dto.isFavorite,
             confidence = dto.confidence,
             createdAt = dto.createdAt,
+            boundingBox = dto.boundingBox?.toDomain() ?: BoundingBox.FullImage,
         ).also { wardrobeItemCache.putAll(listOf(it.toWardrobeItem())) }
     }
 
@@ -110,6 +115,29 @@ class WardrobeItemRepositoryImpl(
                 else -> throw WardrobeItemUpdateNetworkException(error)
             }
         } catch (error: kotlinx.io.IOException) {
+            throw WardrobeItemUpdateNetworkException(error)
+        }
+    }
+
+    override suspend fun updateWardrobeItemBoundingBox(
+        id: String,
+        boundingBox: BoundingBox,
+    ) {
+        try {
+            // Items being adjusted from the review flow are still pending approval, so
+            // GET wardrobe-items/{id} can't be used to refetch them here — the caller
+            // (Crop Editor) closes on success and the review screen reloads its own list,
+            // which picks up the new croppedImageStoragePath from the backend directly.
+            wardrobeApiService.updateWardrobeItemBoundingBox(id, boundingBox.toDto())
+        } catch (error: ResponseException) {
+            when (error.response.status) {
+                HttpStatusCode.NotFound -> throw WardrobeItemUpdateNotFoundException()
+                HttpStatusCode.BadRequest -> throw WardrobeItemUpdateBadRequestException()
+                else -> throw WardrobeItemUpdateNetworkException(error)
+            }
+        } catch (error: kotlinx.io.IOException) {
+            throw WardrobeItemUpdateNetworkException(error)
+        } catch (error: SerializationException) {
             throw WardrobeItemUpdateNetworkException(error)
         }
     }

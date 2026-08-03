@@ -89,9 +89,17 @@ fun UploadReviewScreen(
     onNavigateBack: () -> Unit,
     onShowSnackbar: (String) -> Unit,
     onReviewCompleted: () -> Unit,
+    onAdjustCrop: (String) -> Unit,
+    refreshKey: Int = 0,
     viewModel: UploadReviewViewModel = koinViewModel(parameters = { parametersOf(imageId) }),
 ) {
     val uiState by viewModel.uiState.collectAsState()
+
+    LaunchedEffect(refreshKey) {
+        if (refreshKey > 0) {
+            viewModel.load()
+        }
+    }
 
     LaunchedEffect(viewModel) {
         viewModel.effects.collect { effect ->
@@ -175,6 +183,7 @@ fun UploadReviewScreen(
                     onToggleSelectAll = viewModel::toggleSelectAll,
                     onSubmit = viewModel::submitReview,
                     onDelete = viewModel::deleteUpload,
+                    onAdjustCrop = onAdjustCrop,
                 )
             }
         }
@@ -188,6 +197,7 @@ private fun UploadReviewReadyContent(
     onToggleSelectAll: () -> Unit,
     onSubmit: () -> Unit,
     onDelete: () -> Unit,
+    onAdjustCrop: (String) -> Unit,
 ) {
     val interactionsEnabled = !state.isSubmitting
     var previewImageUrl by remember { mutableStateOf<String?>(null) }
@@ -255,6 +265,7 @@ private fun UploadReviewReadyContent(
                         enabled = interactionsEnabled,
                         onToggle = { onToggleItem(item.id) },
                         onImageClick = item.imageUrl?.let { url -> { previewImageUrl = url } },
+                        onAdjustCrop = { onAdjustCrop(item.id) },
                         modifier = Modifier.padding(bottom = 12.dp),
                     )
                 }
@@ -364,6 +375,7 @@ private fun DetectedItemCard(
     enabled: Boolean,
     onToggle: () -> Unit,
     onImageClick: (() -> Unit)?,
+    onAdjustCrop: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -383,30 +395,43 @@ private fun DetectedItemCard(
             colors = CheckboxDefaults.colors(checkedColor = Purple, checkmarkColor = Color.White),
         )
         Spacer(modifier = Modifier.width(4.dp))
-        Box(
-            modifier = Modifier
-                .size(76.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(Color(0xFFF3F4F6))
-                .clickable(enabled = enabled && onImageClick != null) { onImageClick?.invoke() },
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                painter = painterResource(Res.drawable.hanger),
-                contentDescription = null,
-                tint = Color(0xFFD1D5DB),
-                modifier = Modifier.size(32.dp),
-            )
-            if (item.imageUrl != null) {
-                AsyncImage(
-                    model = item.imageUrl,
-                    contentDescription = item.itemName ?: item.category,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clip(RoundedCornerShape(12.dp)),
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Box(
+                modifier = Modifier
+                    .size(76.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color(0xFFF3F4F6))
+                    .clickable(enabled = enabled && onImageClick != null) { onImageClick?.invoke() },
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    painter = painterResource(Res.drawable.hanger),
+                    contentDescription = null,
+                    tint = Color(0xFFD1D5DB),
+                    modifier = Modifier.size(32.dp),
                 )
+                if (item.imageUrl != null) {
+                    AsyncImage(
+                        model = item.imageUrl,
+                        contentDescription = item.itemName ?: item.category,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(RoundedCornerShape(12.dp)),
+                    )
+                }
             }
+            Text(
+                text = "Adjust Crop",
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = if (enabled) Purple else GrayText,
+                modifier = Modifier
+                    .padding(top = 6.dp)
+                    .clip(RoundedCornerShape(6.dp))
+                    .clickable(enabled = enabled, onClick = onAdjustCrop)
+                    .padding(vertical = 2.dp, horizontal = 2.dp),
+            )
         }
         Column(
             modifier = Modifier

@@ -1,6 +1,8 @@
 package com.komod.api.data.api
 
 import com.komod.api.data.api.model.AnalyzeWardrobeRequest
+import com.komod.api.data.api.model.BoundingBoxDto
+import com.komod.api.data.api.model.BoundingBoxUpdateResponse
 import com.komod.api.data.api.model.CreateImageResponse
 import com.komod.api.data.api.model.ImageDto
 import com.komod.api.data.api.model.RecentItemDto
@@ -13,11 +15,14 @@ import com.komod.api.data.api.model.WardrobeItemUpdateRequest
 import com.komod.api.data.api.model.WardrobeSummaryDto
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
+import io.ktor.client.plugins.ClientRequestException
+import io.ktor.client.plugins.ServerResponseException
 import io.ktor.client.request.delete
 import io.ktor.client.request.get
 import io.ktor.client.request.patch
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
+import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
@@ -60,6 +65,29 @@ class WardrobeApiService(
             contentType(ContentType.Application.Json)
             setBody(request)
         }
+    }
+
+    suspend fun updateWardrobeItemBoundingBox(
+        id: String,
+        request: BoundingBoxDto,
+    ): BoundingBoxUpdateResponse {
+        // On success this is wrapped in ResponseData like the GET endpoints. On failure
+        // it's a bare ProblemDetails payload with no "data" field, so the status is
+        // checked explicitly first rather than letting a blind `.body()` call fail with
+        // a confusing deserialization error instead of the real HTTP failure.
+        val response = httpClient.patch("wardrobe-items/$id/bounding-box") {
+            contentType(ContentType.Application.Json)
+            setBody(request)
+        }
+        if (!response.status.isSuccess()) {
+            val text = response.bodyAsText()
+            throw if (response.status.value in 400..499) {
+                ClientRequestException(response, text)
+            } else {
+                ServerResponseException(response, text)
+            }
+        }
+        return response.body<ResponseData<BoundingBoxUpdateResponse>>().data
     }
 
     suspend fun setWardrobeItemFavorite(

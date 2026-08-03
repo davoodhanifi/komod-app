@@ -38,4 +38,5 @@ data class WardrobeItemDetail(
     val isFavorite: Boolean,
     val confidence: Double,
     val createdAt: String,
+    val boundingBox: BoundingBox,
 )

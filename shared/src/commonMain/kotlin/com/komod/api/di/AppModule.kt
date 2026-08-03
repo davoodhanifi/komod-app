@@ -29,6 +29,7 @@ import com.komod.api.data.preferences.WeatherPreferences
 import com.komod.api.data.storage.StorageService
 import com.komod.api.presentation.additem.AddItemViewModel
 import com.komod.api.presentation.auth.LoginViewModel
+import com.komod.api.presentation.cropeditor.CropEditorViewModel
 import com.komod.api.presentation.home.HomeViewModel
 import com.komod.api.presentation.outfits.OutfitViewModel
 import com.komod.api.presentation.uploadreview.UploadReviewViewModel
@@ -81,4 +82,5 @@ fun appModule() = module {
     viewModel { params -> WardrobeItemDetailViewModel(params.get(), get()) }
     viewModel { params -> WardrobeItemEditViewModel(params.get(), get()) }
     viewModel { params -> UploadReviewViewModel(params.get(), get(), get(), get()) }
+    viewModel { params -> CropEditorViewModel(params.get(), params.get(), get(), get()) }
 }
