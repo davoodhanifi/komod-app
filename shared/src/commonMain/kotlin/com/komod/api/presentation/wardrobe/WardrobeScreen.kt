@@ -87,6 +87,7 @@ fun WardrobeScreen(
     refreshKey: Int = 0,
     onAddItem: () -> Unit,
     onItemClick: (String) -> Unit,
+    onUploadClick: (String) -> Unit,
     lazyGridState: androidx.compose.foundation.lazy.grid.LazyGridState = rememberLazyGridState(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -135,7 +136,7 @@ fun WardrobeScreen(
                     Column(modifier = Modifier.fillMaxSize()) {
                         WardrobeHeader()
 
-                        RecentUploadsSection(uploads = recentUploads)
+                        RecentUploadsSection(uploads = recentUploads, onUploadClick = onUploadClick)
 
                         if (state.items.isEmpty()) {
                             EmptyState(
@@ -209,7 +210,7 @@ private fun WardrobeHeader() {
 }
 
 @Composable
-private fun RecentUploadsSection(uploads: List<RecentUploadUi>) {
+private fun RecentUploadsSection(uploads: List<RecentUploadUi>, onUploadClick: (String) -> Unit) {
     if (uploads.isEmpty()) return
 
     Card(
@@ -240,7 +241,7 @@ private fun RecentUploadsSection(uploads: List<RecentUploadUi>) {
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 uploads.forEach { upload ->
-                    UploadQueueCard(upload = upload)
+                    UploadQueueCard(upload = upload, onClick = { onUploadClick(upload.imageId) })
                 }
             }
         }
@@ -248,16 +249,14 @@ private fun RecentUploadsSection(uploads: List<RecentUploadUi>) {
 }
 
 @Composable
-private fun UploadQueueCard(upload: RecentUploadUi) {
+private fun UploadQueueCard(upload: RecentUploadUi, onClick: () -> Unit) {
     val isActive = upload.status == ImageStatus.Pending || upload.status == ImageStatus.Processing
     val isAnalyzed = upload.status == ImageStatus.Analyzed
 
     Card(
         modifier = Modifier
             .size(76.dp)
-            .clickable(enabled = isAnalyzed) {
-                // Navigation to the review screen is implemented in a future step.
-            },
+            .clickable(enabled = isAnalyzed, onClick = onClick),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = CardBg),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),

@@ -17,6 +17,8 @@ import com.komod.api.data.repository.OutfitRepositoryImpl
 import com.komod.api.data.repository.WeatherRepository
 import com.komod.api.data.repository.WeatherRepositoryImpl
 import com.komod.api.data.repository.UploadedImageStore
+import com.komod.api.data.repository.UploadReviewRepository
+import com.komod.api.data.repository.UploadReviewRepositoryImpl
 import com.komod.api.data.repository.WardrobeItemCache
 import com.komod.api.data.repository.WardrobeItemRepository
 import com.komod.api.data.repository.WardrobeItemRepositoryImpl
@@ -29,6 +31,7 @@ import com.komod.api.presentation.additem.AddItemViewModel
 import com.komod.api.presentation.auth.LoginViewModel
 import com.komod.api.presentation.home.HomeViewModel
 import com.komod.api.presentation.outfits.OutfitViewModel
+import com.komod.api.presentation.uploadreview.UploadReviewViewModel
 import com.komod.api.presentation.wardrobe.WardrobeItemEditViewModel
 import com.komod.api.presentation.wardrobe.WardrobeItemDetailViewModel
 import com.komod.api.presentation.wardrobe.WardrobeViewModel
@@ -69,6 +72,7 @@ fun appModule() = module {
     single<WeatherRepository> { WeatherRepositoryImpl(weatherApi = get()) }
     single<OutfitRepository> { OutfitRepositoryImpl(outfitApiService = get(), supabaseClient = get(), wardrobeItemRepository = get(), wardrobeItemCache = get()) }
     single<HomeRepository> { HomeRepositoryImpl(wardrobeApiService = get(), supabaseClient = get()) }
+    single<UploadReviewRepository> { UploadReviewRepositoryImpl(wardrobeApiService = get(), storageService = get()) }
     viewModel { LoginViewModel(get()) }
     viewModel { AddItemViewModel(get()) }
     viewModel { OutfitViewModel(get(), get(), get(), get(), get()) }
@@ -76,4 +80,5 @@ fun appModule() = module {
     viewModel { HomeViewModel(get()) }
     viewModel { params -> WardrobeItemDetailViewModel(params.get(), get()) }
     viewModel { params -> WardrobeItemEditViewModel(params.get(), get()) }
+    viewModel { params -> UploadReviewViewModel(params.get(), get()) }
 }

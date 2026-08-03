@@ -51,6 +51,7 @@ import com.komod.api.presentation.additem.AddItemScreen
 import com.komod.api.presentation.home.HomeScreen
 import com.komod.api.presentation.outfits.OutfitScreen
 import com.komod.api.presentation.profile.ProfileScreen
+import com.komod.api.presentation.uploadreview.UploadReviewScreen
 import com.komod.api.presentation.wardrobe.WardrobeItemEditScreen
 import com.komod.api.presentation.wardrobe.WardrobeItemDetailScreen
 import com.komod.api.presentation.wardrobe.WardrobeScreen
@@ -60,6 +61,7 @@ import kotlinx.serialization.json.Json
 import org.koin.compose.koinInject
 
 private const val WardrobeItemIdArg = "wardrobeItemId"
+private const val UploadImageIdArg = "imageId"
 private const val WardrobeRefreshArg = "wardrobe_refresh_required"
 private const val WardrobeItemRefreshArg = "wardrobe_item_refresh_required"
 private const val HomeRefreshArg = "home_refresh_required"
@@ -77,6 +79,9 @@ private sealed class MainRoute(val route: String) {
     }
     data object WardrobeItemEdit : MainRoute("wardrobe/item/{$WardrobeItemIdArg}/edit") {
         fun createRoute(itemId: String): String = "wardrobe/item/$itemId/edit"
+    }
+    data object UploadReview : MainRoute("wardrobe/upload-review/{$UploadImageIdArg}") {
+        fun createRoute(imageId: String): String = "wardrobe/upload-review/$imageId"
     }
     data object OutfitDetails : MainRoute("outfits/details")
 }
@@ -138,6 +143,7 @@ fun MainScaffold(
     val hideBottomBarRoutes = setOf(
         MainRoute.AddItem.route,
         MainRoute.WardrobeItemEdit.route,
+        MainRoute.UploadReview.route,
         MainRoute.OutfitDetails.route,
     )
     val showBottomBar = currentRoute !in hideBottomBarRoutes
@@ -268,6 +274,9 @@ fun MainScaffold(
                         onItemClick = { itemId ->
                             navController.navigate(MainRoute.WardrobeItemDetail.createRoute(itemId))
                         },
+                        onUploadClick = { imageId ->
+                            navController.navigate(MainRoute.UploadReview.createRoute(imageId))
+                        },
                     )
                 }
 
@@ -379,6 +388,19 @@ fun MainScaffold(
                             requestRefresh(MainRoute.Home.route, HomeRefreshArg)
                         },
                         onShowSnackbar = ::showSnackbar,
+                    )
+                }
+
+                composable(
+                    route = MainRoute.UploadReview.route,
+                    arguments = listOf(
+                        navArgument(UploadImageIdArg) { type = NavType.StringType },
+                    ),
+                ) { backStackEntry ->
+                    val imageId = backStackEntry.savedStateHandle.get<String>(UploadImageIdArg).orEmpty()
+                    UploadReviewScreen(
+                        imageId = imageId,
+                        onNavigateBack = { navController.navigateUp() },
                     )
                 }
 

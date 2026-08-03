@@ -1,0 +1,75 @@
+package com.komod.api.data.repository
+
+import com.komod.api.data.api.WardrobeApiService
+import com.komod.api.data.api.model.WardrobeItemDto
+import com.komod.api.data.api.model.toImageStatus
+import com.komod.api.data.storage.StorageService
+import com.komod.api.domain.model.UploadedImageDetail
+import com.komod.api.domain.model.WardrobeItemDetail
+
+class UploadReviewRepositoryImpl(
+    private val wardrobeApiService: WardrobeApiService,
+    private val storageService: StorageService,
+) : UploadReviewRepository {
+    override suspend fun getUploadedImageDetail(imageId: String): UploadedImageDetail {
+        // GET /v1/images/{imageId} 404s on this backend, so the list endpoint
+        // (which already powers the Recent Uploads section) is the source of truth.
+        val dto = wardrobeApiService.getUploadedImages().find { it.imageId == imageId }
+            ?: error("This upload could not be found.")
+        val originalImageUrl = storageService.createSignedUrl(dto.originalImagePath)
+
+        return UploadedImageDetail(
+            imageId = dto.imageId,
+            status = dto.status.toImageStatus(),
+            originalImageUrl = originalImageUrl,
+            items = dto.items.map { itemDto -> itemDto.toDetail(fallbackImageUrl = originalImageUrl) },
+        )
+    }
+
+    private suspend fun WardrobeItemDto.toDetail(fallbackImageUrl: String?): WardrobeItemDetail {
+        val imageUrl = croppedImageStoragePath
+            ?.takeIf { it.isNotBlank() }
+            ?.let { path -> storageService.createSignedUrl(path) }
+            ?: fallbackImageUrl
+
+        return WardrobeItemDetail(
+            id = id,
+            imageId = imageId,
+            imageUrl = imageUrl,
+            status = status,
+            category = category,
+            subcategory = subcategory,
+            itemName = itemName,
+            bodyRegion = bodyRegion,
+            layer = layer,
+            primaryColor = primaryColor,
+            secondaryColors = secondaryColors,
+            accentColors = accentColors,
+            pattern = pattern,
+            material = material,
+            texture = texture,
+            fit = fit,
+            silhouette = silhouette,
+            sleeveLength = sleeveLength,
+            pantLength = pantLength,
+            neckline = neckline,
+            collarType = collarType,
+            closure = closure,
+            formality = formality,
+            style = style,
+            season = season,
+            occasion = occasion,
+            genderStyle = genderStyle,
+            weatherMinTempC = weatherMinTempC,
+            weatherMaxTempC = weatherMaxTempC,
+            weatherRainFriendly = weatherRainFriendly,
+            warmthLevel = warmthLevel,
+            features = features,
+            recommendedPairings = recommendedPairings,
+            embeddingDescription = embeddingDescription,
+            isFavorite = isFavorite,
+            confidence = confidence,
+            createdAt = createdAt,
+        )
+    }
+}
