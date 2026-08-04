@@ -2,6 +2,8 @@ package com.komod.api.presentation.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.komod.api.core.error.ErrorContext
+import com.komod.api.core.error.ErrorMapper
 import com.komod.api.data.repository.AuthRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,7 +21,7 @@ class LoginViewModel(
         viewModelScope.launch {
             authRepository.callbackError.collect { error ->
                 _uiState.value = LoginUiState(
-                    error = error.message ?: "Sign-in failed. Please try again.",
+                    error = ErrorMapper.toUserMessage(error, tag = "LoginViewModel", context = ErrorContext.Auth),
                 )
             }
         }
@@ -37,7 +39,7 @@ class LoginViewModel(
                 _uiState.value = LoginUiState()
             }.onFailure { throwable ->
                 _uiState.value = LoginUiState(
-                    error = throwable.message ?: "Unable to start Google sign-in right now.",
+                    error = ErrorMapper.toUserMessage(throwable, tag = "LoginViewModel", context = ErrorContext.Auth),
                 )
             }
         }

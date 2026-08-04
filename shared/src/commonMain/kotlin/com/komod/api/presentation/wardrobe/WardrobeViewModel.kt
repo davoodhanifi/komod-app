@@ -2,6 +2,7 @@ package com.komod.api.presentation.wardrobe
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.komod.api.core.error.ErrorMapper
 import com.komod.api.data.api.model.ImageStatus
 import com.komod.api.data.repository.AddItemRepository
 import com.komod.api.data.repository.WardrobeRepository
@@ -91,7 +92,7 @@ class WardrobeViewModel(
             .onSuccess { items -> _uiState.value = WardrobeUiState.Success(items) }
             .onFailure { error ->
                 _uiState.value = WardrobeUiState.Error(
-                    message = error.message ?: "Something went wrong. Please try again.",
+                    message = ErrorMapper.toUserMessage(error, tag = "WardrobeViewModel"),
                 )
             }
     }

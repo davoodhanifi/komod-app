@@ -2,6 +2,7 @@ package com.komod.api.presentation.wardrobe
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.komod.api.core.error.ErrorMapper
 import com.komod.api.data.api.model.WardrobeItemStatus
 import com.komod.api.data.repository.WardrobeItemRepository
 import com.komod.api.data.repository.WardrobeItemUpdateBadRequestException
@@ -38,7 +39,7 @@ class WardrobeItemEditViewModel(
                 }
                 .onFailure { error ->
                     _uiState.value = WardrobeItemEditUiState.Error(
-                        message = error.message ?: "Something went wrong. Please try again.",
+                        message = ErrorMapper.toUserMessage(error, tag = "WardrobeItemEditViewModel"),
                     )
                 }
         }
@@ -79,13 +80,19 @@ class WardrobeItemEditViewModel(
                 _effects.emit(WardrobeItemEditEffect.Saved)
             } catch (error: WardrobeItemUpdateNotFoundException) {
                 _uiState.value = state.copy(content = state.content.copy(isSaving = false))
-                _effects.emit(WardrobeItemEditEffect.SaveFailed("This item no longer exists."))
+                _effects.emit(
+                    WardrobeItemEditEffect.SaveFailed(ErrorMapper.toUserMessage(error, tag = "WardrobeItemEditViewModel")),
+                )
             } catch (error: WardrobeItemUpdateBadRequestException) {
                 _uiState.value = state.copy(content = state.content.copy(isSaving = false))
-                _effects.emit(WardrobeItemEditEffect.SaveFailed("Couldn't update the item. Please try again."))
+                _effects.emit(
+                    WardrobeItemEditEffect.SaveFailed(ErrorMapper.toUserMessage(error, tag = "WardrobeItemEditViewModel")),
+                )
             } catch (error: WardrobeItemUpdateNetworkException) {
                 _uiState.value = state.copy(content = state.content.copy(isSaving = false))
-                _effects.emit(WardrobeItemEditEffect.SaveFailed("Something went wrong. Please try again."))
+                _effects.emit(
+                    WardrobeItemEditEffect.SaveFailed(ErrorMapper.toUserMessage(error, tag = "WardrobeItemEditViewModel")),
+                )
             }
         }
     }

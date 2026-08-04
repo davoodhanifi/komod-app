@@ -2,13 +2,12 @@ package com.komod.api.presentation.uploadreview
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.komod.api.core.error.ErrorMapper
 import com.komod.api.data.api.model.WardrobeItemReviewAction
 import com.komod.api.data.api.model.WardrobeItemReviewRequestItem
 import com.komod.api.data.repository.AddItemRepository
 import com.komod.api.data.repository.AuthRepository
 import com.komod.api.data.repository.UploadReviewConflictException
-import com.komod.api.data.repository.UploadReviewForbiddenException
-import com.komod.api.data.repository.UploadReviewNotFoundException
 import com.komod.api.data.repository.UploadReviewRepository
 import com.komod.api.data.repository.UploadReviewUnauthorizedException
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -47,7 +46,7 @@ class UploadReviewViewModel(
                 }
                 .onFailure { error ->
                     _uiState.value = UploadReviewUiState.Error(
-                        message = error.message ?: "Something went wrong. Please try again.",
+                        message = ErrorMapper.toUserMessage(error, tag = "UploadReviewViewModel"),
                     )
                 }
         }
@@ -126,22 +125,19 @@ class UploadReviewViewModel(
                 }
                 .onFailure { error ->
                     when (error) {
-                        is UploadReviewUnauthorizedException -> authRepository.signOut()
+                        is UploadReviewUnauthorizedException -> {
+                            val message = ErrorMapper.toUserMessage(error, tag = "UploadReviewViewModel")
+                            _effects.emit(UploadReviewEffect.ReviewFailed(message))
+                            authRepository.signOut()
+                        }
                         is UploadReviewConflictException -> {
                             addItemRepository.removeUploadedImage(imageId)
                             _effects.emit(UploadReviewEffect.ReviewConflict)
                         }
-                        is UploadReviewForbiddenException -> {
-                            _uiState.value = current.copy(isSubmitting = false)
-                            _effects.emit(UploadReviewEffect.ReviewFailed("You don't have permission to do this."))
-                        }
-                        is UploadReviewNotFoundException -> {
-                            _uiState.value = current.copy(isSubmitting = false)
-                            _effects.emit(UploadReviewEffect.ReviewFailed("This upload could not be found."))
-                        }
                         else -> {
                             _uiState.value = current.copy(isSubmitting = false)
-                            _effects.emit(UploadReviewEffect.ReviewFailed("Something went wrong. Please try again."))
+                            val message = ErrorMapper.toUserMessage(error, tag = "UploadReviewViewModel")
+                            _effects.emit(UploadReviewEffect.ReviewFailed(message))
                         }
                     }
                 }

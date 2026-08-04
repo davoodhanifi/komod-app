@@ -2,6 +2,7 @@ package com.komod.api.presentation.wardrobe
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.komod.api.core.error.ErrorMapper
 import com.komod.api.data.repository.WardrobeItemDeleteBadRequestException
 import com.komod.api.data.repository.WardrobeItemDeleteNetworkException
 import com.komod.api.data.repository.WardrobeItemDeleteNotFoundException
@@ -61,7 +62,7 @@ class WardrobeItemDetailViewModel(
             .onSuccess { item -> _uiState.value = WardrobeItemDetailUiState.Success(item) }
             .onFailure { error ->
                 _uiState.value = WardrobeItemDetailUiState.Error(
-                    message = error.message ?: "Something went wrong. Please try again.",
+                    message = ErrorMapper.toUserMessage(error, tag = "WardrobeItemDetailViewModel"),
                 )
             }
     }
@@ -98,11 +99,11 @@ class WardrobeItemDetailViewModel(
                 val current = _uiState.value as? WardrobeItemDetailUiState.Success ?: return@onSuccess
                 _uiState.value = current.copy(isUpdatingFavorite = false)
                 _effects.emit(WardrobeItemDetailEffect.FavoriteUpdated)
-            }.onFailure {
+            }.onFailure { error ->
                 _uiState.value = state.copy(isUpdatingFavorite = false)
                 _effects.emit(
                     WardrobeItemDetailEffect.FavoriteUpdateFailed(
-                        message = "Couldn't update favorite.\nPlease try again.",
+                        message = ErrorMapper.toUserMessage(error, tag = "WardrobeItemDetailViewModel"),
                     ),
                 )
             }
@@ -127,14 +128,14 @@ class WardrobeItemDetailViewModel(
                 _uiState.value = state.copy(isDeleteDialogVisible = false, isDeleting = false)
                 _effects.emit(
                     WardrobeItemDetailEffect.DeleteFailed(
-                        message = "Couldn't delete the item.\nPlease try again.",
+                        message = ErrorMapper.toUserMessage(error, tag = "WardrobeItemDetailViewModel"),
                     ),
                 )
             } catch (error: WardrobeItemDeleteNetworkException) {
                 _uiState.value = state.copy(isDeleteDialogVisible = false, isDeleting = false)
                 _effects.emit(
                     WardrobeItemDetailEffect.DeleteFailed(
-                        message = "Something went wrong.\nPlease try again.",
+                        message = ErrorMapper.toUserMessage(error, tag = "WardrobeItemDetailViewModel"),
                     ),
                 )
             }

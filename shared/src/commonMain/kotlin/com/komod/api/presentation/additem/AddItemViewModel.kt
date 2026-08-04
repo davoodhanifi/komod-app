@@ -2,6 +2,8 @@ package com.komod.api.presentation.additem
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.komod.api.core.error.ErrorContext
+import com.komod.api.core.error.ErrorMapper
 import com.komod.api.data.repository.AddItemRepository
 import com.komod.api.platform.PickedImage
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -76,6 +78,8 @@ class AddItemViewModel(
                     // navigates back immediately, which would otherwise cancel this
                     // request mid-flight if it were tied to viewModelScope.
                     addItemRepository.triggerAnalysisInBackground(imageInfo.imageId)
+                }.onFailure { error ->
+                    ErrorMapper.toUserMessage(error, tag = "AddItemViewModel", context = ErrorContext.Upload)
                 }.isSuccess
 
                 if (!uploaded) failed += photo

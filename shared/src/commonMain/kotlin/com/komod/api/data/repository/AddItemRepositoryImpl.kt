@@ -1,5 +1,7 @@
 package com.komod.api.data.repository
 
+import com.komod.api.core.error.ErrorContext
+import com.komod.api.core.error.ErrorMapper
 import com.komod.api.data.api.WardrobeApiService
 import com.komod.api.data.api.model.CreateImageResponse
 import com.komod.api.data.api.model.ImageStatus
@@ -59,7 +61,7 @@ class AddItemRepositoryImpl(
             runCatching { analyzeWardrobeItems(imageId) }
                 .onFailure { error ->
                     // The image stays in the local Upload Queue as Pending; retry lands later.
-                    println("AddItemRepository: failed to trigger analysis for image $imageId: ${error.message}")
+                    ErrorMapper.toUserMessage(error, tag = "AddItemRepository", context = ErrorContext.AiProcessing)
                 }
         }
     }

@@ -2,6 +2,7 @@ package com.komod.api.presentation.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.komod.api.core.error.ErrorMapper
 import com.komod.api.data.repository.HomeRepository
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -71,7 +72,7 @@ class HomeViewModel(
                 _uiState.update {
                     it.copy(
                         summaryState = WardrobeSummaryState.Error(
-                            message = error.message ?: "Couldn't load wardrobe summary.",
+                            message = ErrorMapper.toUserMessage(error, tag = "HomeViewModel"),
                         ),
                     )
                 }
@@ -89,7 +90,7 @@ class HomeViewModel(
                 _uiState.update {
                     it.copy(
                         recentItemsState = RecentItemsState.Error(
-                            message = error.message ?: "Couldn't load recent items.",
+                            message = ErrorMapper.toUserMessage(error, tag = "HomeViewModel"),
                         ),
                     )
                 }

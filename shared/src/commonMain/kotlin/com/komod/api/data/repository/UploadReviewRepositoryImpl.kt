@@ -20,7 +20,7 @@ class UploadReviewRepositoryImpl(
         // GET /v1/images/{imageId} 404s on this backend, so the list endpoint
         // (which already powers the Recent Uploads section) is the source of truth.
         val dto = wardrobeApiService.getUploadedImages().find { it.imageId == imageId }
-            ?: error("This upload could not be found.")
+            ?: throw UploadedImageNotFoundException()
         val originalImageUrl = storageService.createSignedUrl(dto.originalImagePath)
 
         return UploadedImageDetail(

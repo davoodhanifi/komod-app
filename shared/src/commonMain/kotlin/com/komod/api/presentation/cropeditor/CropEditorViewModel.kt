@@ -2,7 +2,9 @@ package com.komod.api.presentation.cropeditor
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.komod.api.core.error.ErrorMapper
 import com.komod.api.data.repository.UploadReviewRepository
+import com.komod.api.data.repository.UploadedItemNotFoundException
 import com.komod.api.data.repository.WardrobeItemRepository
 import com.komod.api.data.repository.WardrobeItemUpdateBadRequestException
 import com.komod.api.data.repository.WardrobeItemUpdateNetworkException
@@ -43,7 +45,7 @@ class CropEditorViewModel(
                 // doesn't recognize them yet.
                 val detail = uploadReviewRepository.getUploadedImageDetail(imageId)
                 val item = detail.items.find { it.id == wardrobeItemId }
-                    ?: error("This item could not be found.")
+                    ?: throw UploadedItemNotFoundException()
                 val itemTitle = item.itemName ?: item.category.toWardrobeLabel()
                 Triple(itemTitle, item.boundingBox, detail.originalImageUrl)
             }.onSuccess { (itemTitle, boundingBox, originalImageUrl) ->
@@ -57,7 +59,7 @@ class CropEditorViewModel(
                 )
             }.onFailure { error ->
                 _uiState.value = CropEditorUiState.Error(
-                    message = error.message ?: "Something went wrong. Please try again.",
+                    message = ErrorMapper.toUserMessage(error, tag = "CropEditorViewModel"),
                 )
             }
         }
@@ -89,13 +91,19 @@ class CropEditorViewModel(
                 _effects.emit(CropEditorEffect.CropSaved)
             } catch (error: WardrobeItemUpdateNotFoundException) {
                 _uiState.value = current.copy(isSaving = false)
-                _effects.emit(CropEditorEffect.SaveFailed("This item no longer exists."))
+                _effects.emit(
+                    CropEditorEffect.SaveFailed(ErrorMapper.toUserMessage(error, tag = "CropEditorViewModel")),
+                )
             } catch (error: WardrobeItemUpdateBadRequestException) {
                 _uiState.value = current.copy(isSaving = false)
-                _effects.emit(CropEditorEffect.SaveFailed("Couldn't save this crop. Please try again."))
+                _effects.emit(
+                    CropEditorEffect.SaveFailed(ErrorMapper.toUserMessage(error, tag = "CropEditorViewModel")),
+                )
             } catch (error: WardrobeItemUpdateNetworkException) {
                 _uiState.value = current.copy(isSaving = false)
-                _effects.emit(CropEditorEffect.SaveFailed("Something went wrong. Please try again."))
+                _effects.emit(
+                    CropEditorEffect.SaveFailed(ErrorMapper.toUserMessage(error, tag = "CropEditorViewModel")),
+                )
             }
         }
     }

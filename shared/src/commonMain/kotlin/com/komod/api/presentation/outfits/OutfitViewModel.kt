@@ -2,6 +2,8 @@ package com.komod.api.presentation.outfits
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.komod.api.core.error.ErrorContext
+import com.komod.api.core.error.ErrorMapper
 import com.komod.api.data.repository.OutfitRepository
 import com.komod.api.data.repository.WeatherRepository
 import com.komod.api.data.location.WeatherLocationResult
@@ -68,7 +70,7 @@ class OutfitViewModel(
             }.onFailure { throwable ->
                 _uiState.value = _uiState.value.copy(
                     isGenerating = false,
-                    errorMessage = throwable.message ?: "Something went wrong. Please try again.",
+                    errorMessage = ErrorMapper.toUserMessage(throwable, tag = "OutfitViewModel"),
                 )
             }
         }
@@ -125,7 +127,7 @@ class OutfitViewModel(
                     }.onFailure { throwable ->
                         _uiState.value = _uiState.value.copy(
                             weatherUiState = WeatherUiState.Error(
-                                throwable.message ?: "Unable to load weather right now.",
+                                ErrorMapper.toUserMessage(throwable, tag = "OutfitViewModel", context = ErrorContext.Weather),
                             ),
                         )
                     }
