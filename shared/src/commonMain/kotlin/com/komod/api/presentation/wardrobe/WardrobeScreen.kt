@@ -94,6 +94,7 @@ private val CategoryFilterItemWidth = 72.dp
 fun WardrobeScreen(
     viewModel: WardrobeViewModel = koinViewModel(),
     refreshKey: Int = 0,
+    initialCategory: String? = null,
     onAddItem: () -> Unit,
     onItemClick: (String) -> Unit,
     onUploadClick: (String) -> Unit,
@@ -106,6 +107,12 @@ fun WardrobeScreen(
 
     LaunchedEffect(refreshKey) {
         if (refreshKey > 0) viewModel.refresh()
+    }
+
+    LaunchedEffect(initialCategory) {
+        if (initialCategory != null) {
+            viewModel.selectCategory(initialCategory)
+        }
     }
 
     Scaffold(

@@ -127,6 +127,7 @@ fun HomeScreen(
     viewModel: HomeViewModel = koinViewModel(),
     onGenerateOutfit: (occasion: String) -> Unit,
     onViewWardrobe: () -> Unit,
+    onViewWardrobeCategory: (String) -> Unit,
     onProfileClick: () -> Unit,
     onItemClick: (String) -> Unit,
     refreshKey: Int = 0,
@@ -167,6 +168,7 @@ fun HomeScreen(
             is WardrobeSummaryState.Success -> WardrobeSummarySection(
                 summary = state.summary,
                 onViewAll = onViewWardrobe,
+                onCategoryClick = onViewWardrobeCategory,
             )
             is WardrobeSummaryState.Error -> WardrobeSummaryError(
                 message = state.message,
@@ -440,6 +442,7 @@ private fun OccasionTile(
 fun WardrobeSummarySection(
     summary: WardrobeSummary,
     onViewAll: () -> Unit,
+    onCategoryClick: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Card(
@@ -499,7 +502,9 @@ fun WardrobeSummarySection(
                             iconColor = getCategoryIconColor(category.category),
                             count = category.count,
                             label = category.category.capitalize(),
-                            modifier = Modifier.width(WardrobeSummaryItemWidth),
+                            modifier = Modifier
+                                .width(WardrobeSummaryItemWidth)
+                                .clickable { onCategoryClick(category.category) },
                         )
                     }
                 }

@@ -69,6 +69,7 @@ private const val UploadReviewRefreshArg = "upload_review_refresh_required"
 private const val HomeRefreshArg = "home_refresh_required"
 private const val SelectedOutfitKey = "selected_outfit"
 private const val OccasionArg = "occasion"
+private const val WardrobeCategoryArg = "wardrobe_category"
 
 private sealed class MainRoute(val route: String) {
     data object Home : MainRoute("home")
@@ -239,6 +240,18 @@ fun MainScaffold(
                                 restoreState = true
                             }
                         },
+                        onViewWardrobeCategory = { category ->
+                            // Same tab-switch pattern as onViewWardrobe, but also stashes
+                            // the tapped category so Wardrobe opens pre-filtered to it.
+                            navController.navigate(MainRoute.Wardrobe.route) {
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                            navController.currentBackStackEntry?.savedStateHandle?.set(WardrobeCategoryArg, category)
+                        },
                         onProfileClick = {
                             navController.navigate(MainRoute.Profile.route) {
                                 popUpTo(navController.graph.findStartDestination().id) {
@@ -266,7 +279,19 @@ fun MainScaffold(
                             backStackEntry.savedStateHandle[WardrobeRefreshArg] = false
                         }
                     }
-                    
+
+                    // Set by Home when a wardrobe category tile is tapped; cleared once consumed
+                    // so returning to this tab later (e.g. via bottom nav) doesn't re-apply it.
+                    val requestedCategory by backStackEntry.savedStateHandle
+                        .getStateFlow<String?>(WardrobeCategoryArg, null)
+                        .collectAsState()
+
+                    LaunchedEffect(requestedCategory) {
+                        if (requestedCategory != null) {
+                            backStackEntry.savedStateHandle[WardrobeCategoryArg] = null
+                        }
+                    }
+
                     // Track scroll behavior for wardrobe grid - immediate response
                     LaunchedEffect(wardrobeScrollState.firstVisibleItemIndex, wardrobeScrollState.firstVisibleItemScrollOffset) {
                         val firstVisibleItemIndex = wardrobeScrollState.firstVisibleItemIndex
@@ -278,6 +303,7 @@ fun MainScaffold(
                     WardrobeScreen(
                         refreshKey = wardrobeRefreshKey,
                         lazyGridState = wardrobeScrollState,
+                        initialCategory = requestedCategory,
                         onAddItem = { navController.navigate(MainRoute.AddItem.route) },
                         onItemClick = { itemId ->
                             navController.navigate(MainRoute.WardrobeItemDetail.createRoute(itemId))
