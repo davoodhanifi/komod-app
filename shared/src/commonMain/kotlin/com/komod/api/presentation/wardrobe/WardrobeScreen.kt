@@ -2,6 +2,7 @@ package com.komod.api.presentation.wardrobe
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -180,7 +181,10 @@ fun WardrobeScreen(
                                 modifier = Modifier.fillMaxSize(),
                             )
                         } else if (filteredItems.isEmpty()) {
-                            NoCategoryItemsState(modifier = Modifier.fillMaxSize())
+                            NoCategoryItemsState(
+                                category = selectedCategory,
+                                modifier = Modifier.fillMaxSize(),
+                            )
                         } else {
                             LazyVerticalGrid(
                                 columns = GridCells.Fixed(3),
@@ -197,6 +201,7 @@ fun WardrobeScreen(
                                     WardrobeCard(
                                         item = item,
                                         onClick = { onItemClick(item.id) },
+                                        modifier = Modifier.animateItem(),
                                     )
                                 }
                             }
@@ -265,6 +270,7 @@ private fun CategoryFilterRow(
                 category = category,
                 selected = category == selectedCategory,
                 onClick = { onCategorySelected(category) },
+                modifier = Modifier.animateItem(),
             )
         }
     }
@@ -275,15 +281,27 @@ private fun CategoryFilterItem(
     category: String,
     selected: Boolean,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val icon = if (category == AllCategoriesLabel) painterResource(Res.drawable.hanger) else getCategoryIcon(category)
     val iconColor = if (category == AllCategoriesLabel) Purple else getCategoryIconColor(category)
 
+    val backgroundColor by animateColorAsState(
+        targetValue = if (selected) Purple.copy(alpha = 0.12f) else Color.Transparent,
+        animationSpec = tween(200),
+        label = "categoryFilterBackground",
+    )
+    val labelColor by animateColorAsState(
+        targetValue = if (selected) Purple else GrayText,
+        animationSpec = tween(200),
+        label = "categoryFilterLabel",
+    )
+
     Column(
-        modifier = Modifier
+        modifier = modifier
             .width(CategoryFilterItemWidth)
             .clip(RoundedCornerShape(16.dp))
-            .background(if (selected) Purple.copy(alpha = 0.12f) else Color.Transparent)
+            .background(backgroundColor)
             .clickable(onClick = onClick)
             .padding(horizontal = 8.dp, vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -299,7 +317,7 @@ private fun CategoryFilterItem(
             text = category.toWardrobeLabel(),
             fontSize = 12.sp,
             fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-            color = if (selected) Purple else GrayText,
+            color = labelColor,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
@@ -307,17 +325,24 @@ private fun CategoryFilterItem(
 }
 
 @Composable
-private fun NoCategoryItemsState(modifier: Modifier = Modifier) {
+private fun NoCategoryItemsState(category: String, modifier: Modifier = Modifier) {
     Column(
         modifier = modifier.padding(horizontal = 40.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
         Text(
-            text = "No items in this category",
+            text = "No items in ${category.toWardrobeLabel()} yet.",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
             color = DarkText,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "Try adding more photos or choose another category.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = GrayText,
             textAlign = TextAlign.Center,
         )
     }
