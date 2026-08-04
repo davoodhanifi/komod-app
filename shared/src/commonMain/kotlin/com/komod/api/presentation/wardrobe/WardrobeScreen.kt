@@ -1,5 +1,6 @@
 package com.komod.api.presentation.wardrobe
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -7,7 +8,9 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -244,8 +247,59 @@ private fun RecentUploadsSection(uploads: List<RecentUploadUi>, onUploadClick: (
                     UploadQueueCard(upload = upload, onClick = { onUploadClick(upload.imageId) })
                 }
             }
+
+            AnimatedContent(
+                targetState = uploadStatusMessage(uploads),
+                transitionSpec = { fadeIn(tween(200)) togetherWith fadeOut(tween(200)) },
+                label = "uploadStatusMessage",
+            ) { message ->
+                if (message != null) {
+                    Column(modifier = Modifier.padding(top = 12.dp)) {
+                        Text(
+                            text = message.title,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = GrayText,
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = message.subtitle,
+                            fontSize = 12.sp,
+                            color = GrayText,
+                        )
+                    }
+                }
+            }
         }
     }
+}
+
+private sealed interface UploadStatusMessage {
+    val title: String
+    val subtitle: String
+
+    data class Processing(val count: Int) : UploadStatusMessage {
+        override val title: String
+            get() = "$count ${if (count == 1) "photo is" else "photos are"} being processed ✨"
+        override val subtitle: String
+            get() = "Our AI is carefully finding your wardrobe pieces. This usually takes only a few seconds."
+    }
+
+    data object Ready : UploadStatusMessage {
+        override val title: String = "Your wardrobe is ready! 🎉"
+        override val subtitle: String =
+            "Review your extracted items, keep what you like, and we'll save them to your wardrobe."
+    }
+}
+
+private fun uploadStatusMessage(uploads: List<RecentUploadUi>): UploadStatusMessage? {
+    val processingCount = uploads.count {
+        it.status == ImageStatus.Pending || it.status == ImageStatus.Processing
+    }
+    if (processingCount > 0) return UploadStatusMessage.Processing(processingCount)
+
+    val hasAnalyzed = uploads.any { it.status == ImageStatus.Analyzed }
+    return if (hasAnalyzed) UploadStatusMessage.Ready else null
 }
 
 @Composable
