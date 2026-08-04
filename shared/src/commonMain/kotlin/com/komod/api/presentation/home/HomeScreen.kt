@@ -23,6 +23,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -100,6 +102,7 @@ private val TileSelectedBackground = Color(0xFFEDE7FF)
 private val TileBorderDefault = Color(0xFFE6E8EE)
 private val TileIconDefault = Purple
 private val TileLabelDefault = Color(0xFF1F2937)
+private val WardrobeSummaryItemWidth = 72.dp
 
 private val Res.drawable.tree: DrawableResource
     get() = Res.drawable.sport
@@ -439,11 +442,6 @@ fun WardrobeSummarySection(
     onViewAll: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // Total + top 3 categories = 4 columns (never scrollable)
-    val topCategories = summary.categories
-        .sortedByDescending { it.count }
-        .take(3)
-
     Card(
         modifier = modifier.padding(horizontal = 20.dp).fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
@@ -478,28 +476,32 @@ fun WardrobeSummarySection(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            Row(
+            LazyRow(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                // First column: total items
-                WardrobeSummaryItem(
-                    icon = painterResource(Res.drawable.hanger_filled),
-                    iconColor = Purple,
-                    count = summary.totalItems,
-                    label = "Items",
-                    modifier = Modifier.weight(1f),
-                )
-
-                topCategories.forEach { category ->
-                    WardrobeSummaryDivider()
+                // First item: total items
+                item(key = "total") {
                     WardrobeSummaryItem(
-                        icon = getCategoryIcon(category.category),
-                        iconColor = getCategoryIconColor(category.category),
-                        count = category.count,
-                        label = category.category.capitalize(),
-                        modifier = Modifier.weight(1f),
+                        icon = painterResource(Res.drawable.hanger_filled),
+                        iconColor = Purple,
+                        count = summary.totalItems,
+                        label = "Items",
+                        modifier = Modifier.width(WardrobeSummaryItemWidth),
                     )
+                }
+
+                items(items = summary.categories, key = { it.category }) { category ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        WardrobeSummaryDivider()
+                        WardrobeSummaryItem(
+                            icon = getCategoryIcon(category.category),
+                            iconColor = getCategoryIconColor(category.category),
+                            count = category.count,
+                            label = category.category.capitalize(),
+                            modifier = Modifier.width(WardrobeSummaryItemWidth),
+                        )
+                    }
                 }
             }
         }
