@@ -158,6 +158,13 @@ fun OutfitScreen(
             )
         }
 
+        item {
+            StyleSelector(
+                selectedStyle = uiState.selectedStyle,
+                onClick = { showStyleSheet = true },
+            )
+        }
+
         item { GenerateButton(isGenerating = uiState.isGenerating, onGenerate = viewModel::generateOutfits) }
 
         when {
@@ -239,6 +246,39 @@ private fun OutfitHeader(
 }
 
 @Composable
+private fun StyleSelector(
+    selectedStyle: OutfitStyle?,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp)
+            .padding(top = 4.dp),
+    ) {
+        OutlinedButton(
+            onClick = onClick,
+            shape = RoundedCornerShape(14.dp),
+            border = BorderStroke(1.dp, OutfitBorder),
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Tune,
+                contentDescription = null,
+                tint = OutfitMuted,
+                modifier = Modifier.size(18.dp),
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = "Style: ${selectedStyle?.label ?: "Any"}",
+                color = OutfitText,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium,
+            )
+        }
+    }
+}
+
+@Composable
 fun OutfitFilters(
     selectedOccasion: OutfitOccasion,
     onOccasionSelected: (OutfitOccasion) -> Unit,
@@ -252,7 +292,6 @@ fun OutfitFilters(
             OutfitOccasion.Casual to Res.drawable.shirt,
             OutfitOccasion.Sport to Res.drawable.sport,
             OutfitOccasion.Party to Res.drawable.party,
-            OutfitOccasion.All to Res.drawable.hanger,
         )
         val preferredOrder = listOf(
             OutfitOccasion.Outdoor,
@@ -262,7 +301,6 @@ fun OutfitFilters(
             OutfitOccasion.Casual,
             OutfitOccasion.Sport,
             OutfitOccasion.Party,
-            OutfitOccasion.All,
         )
         preferredOrder
             .filter { it in OutfitOccasion.entries }
@@ -765,8 +803,8 @@ private fun ErrorState(
 
 @Composable
 private fun StyleSheetContent(
-    selectedStyle: OutfitStyle,
-    onStyleSelected: (OutfitStyle) -> Unit,
+    selectedStyle: OutfitStyle?,
+    onStyleSelected: (OutfitStyle?) -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -781,9 +819,15 @@ private fun StyleSheetContent(
             fontWeight = FontWeight.Bold,
         )
         Spacer(modifier = Modifier.height(16.dp))
+        StyleRow(
+            label = "Any style",
+            selected = selectedStyle == null,
+            onClick = { onStyleSelected(null) },
+        )
+        Spacer(modifier = Modifier.height(10.dp))
         OutfitStyle.entries.forEach { style ->
             StyleRow(
-                style = style,
+                label = style.label,
                 selected = style == selectedStyle,
                 onClick = { onStyleSelected(style) },
             )
@@ -794,7 +838,7 @@ private fun StyleSheetContent(
 
 @Composable
 private fun StyleRow(
-    style: OutfitStyle,
+    label: String,
     selected: Boolean,
     onClick: () -> Unit,
 ) {
@@ -808,7 +852,7 @@ private fun StyleRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = style.label,
+            text = label,
             color = OutfitText,
             fontSize = 15.sp,
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,

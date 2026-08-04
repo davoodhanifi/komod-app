@@ -6,7 +6,7 @@ import com.komod.api.domain.model.WeatherCurrent
 interface OutfitRepository {
     suspend fun generateOutfits(
         occasion: String,
-        style: String,
+        style: String? = null,
         weather: WeatherCurrent? = null,
     ): List<Outfit>
 }

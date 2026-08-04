@@ -20,7 +20,7 @@ class OutfitRepositoryImpl(
 ) : OutfitRepository {
     override suspend fun generateOutfits(
         occasion: String,
-        style: String,
+        style: String?,
         weather: com.komod.api.domain.model.WeatherCurrent?,
     ): List<Outfit> {
         val response = outfitApiService.generateOutfits(

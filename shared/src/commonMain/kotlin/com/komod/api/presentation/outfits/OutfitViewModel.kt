@@ -40,7 +40,7 @@ class OutfitViewModel(
         )
     }
 
-    fun selectStyle(style: OutfitStyle) {
+    fun selectStyle(style: OutfitStyle?) {
         _uiState.value = _uiState.value.copy(
             selectedStyle = style,
             errorMessage = null,
@@ -56,7 +56,7 @@ class OutfitViewModel(
                 val state = _uiState.value
                 outfitRepository.generateOutfits(
                     occasion = state.selectedOccasion.apiValue,
-                    style = state.selectedStyle.apiValue,
+                    style = state.selectedStyle?.apiValue,
                     weather = (state.weatherUiState as? WeatherUiState.Loaded)?.weather,
                 )
             }.onSuccess { outfits ->

@@ -6,7 +6,7 @@ import com.komod.api.domain.model.OutfitStyle
 
 data class OutfitUiState(
     val selectedOccasion: OutfitOccasion = OutfitOccasion.Outdoor,
-    val selectedStyle: OutfitStyle = OutfitStyle.Casual,
+    val selectedStyle: OutfitStyle? = null,
     val outfits: List<Outfit> = emptyList(),
     val isGenerating: Boolean = false,
     val errorMessage: String? = null,

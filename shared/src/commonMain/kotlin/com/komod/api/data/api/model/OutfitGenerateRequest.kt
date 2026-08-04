@@ -5,6 +5,6 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class OutfitGenerateRequest(
     val occasion: String,
-    val style: String,
+    val style: String? = null,
     val weather: WeatherContextDto? = null,
 )
