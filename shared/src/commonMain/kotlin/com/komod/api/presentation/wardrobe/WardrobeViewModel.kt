@@ -17,6 +17,8 @@ import kotlinx.coroutines.launch
 
 private const val UploadPollIntervalMs = 5_000L
 
+internal const val AllCategoriesLabel = "All"
+
 class WardrobeViewModel(
     private val wardrobeRepository: WardrobeRepository,
     private val addItemRepository: AddItemRepository,
@@ -29,6 +31,9 @@ class WardrobeViewModel(
 
     private val _recentUploads = MutableStateFlow<List<RecentUploadUi>>(emptyList())
     val recentUploads: StateFlow<List<RecentUploadUi>> = _recentUploads.asStateFlow()
+
+    private val _selectedCategory = MutableStateFlow(AllCategoriesLabel)
+    val selectedCategory: StateFlow<String> = _selectedCategory.asStateFlow()
 
     // Keyed by storage path (not imageId) so a path change from the backend
     // is picked up as a cache miss and re-resolved into a fresh signed URL.
@@ -85,6 +90,10 @@ class WardrobeViewModel(
             refreshUploadedImages()
             _isRefreshing.value = false
         }
+    }
+
+    fun selectCategory(category: String) {
+        _selectedCategory.value = category
     }
 
     private suspend fun fetchItems() {

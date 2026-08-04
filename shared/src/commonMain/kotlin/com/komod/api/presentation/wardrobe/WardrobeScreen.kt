@@ -27,6 +27,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -72,6 +75,8 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.komod.api.data.api.model.ImageStatus
 import com.komod.api.domain.model.WardrobeItem
+import com.komod.api.presentation.home.getCategoryIcon
+import com.komod.api.presentation.home.getCategoryIconColor
 import komod.shared.generated.resources.Res
 import komod.shared.generated.resources.hanger
 import org.jetbrains.compose.resources.painterResource
@@ -82,6 +87,7 @@ private val DarkText = Color(0xFF111827)
 private val GrayText = Color(0xFF6B7280)
 private val CardBg = Color(0xFFF9F9F9)
 private val SkeletonColor = Color(0xFFE5E7EB)
+private val CategoryFilterItemWidth = 72.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -96,6 +102,7 @@ fun WardrobeScreen(
     val uiState by viewModel.uiState.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
     val recentUploads by viewModel.recentUploads.collectAsState()
+    val selectedCategory by viewModel.selectedCategory.collectAsState()
 
     LaunchedEffect(refreshKey) {
         if (refreshKey > 0) viewModel.refresh()
@@ -129,6 +136,17 @@ fun WardrobeScreen(
             }
 
             is WardrobeUiState.Success -> {
+                val categories = remember(state.items) {
+                    listOf(AllCategoriesLabel) + state.items.map { it.category }.distinct()
+                }
+                val filteredItems = remember(state.items, selectedCategory) {
+                    if (selectedCategory == AllCategoriesLabel) {
+                        state.items
+                    } else {
+                        state.items.filter { it.category == selectedCategory }
+                    }
+                }
+
                 PullToRefreshBox(
                     isRefreshing = isRefreshing,
                     onRefresh = { viewModel.refresh() },
@@ -141,11 +159,21 @@ fun WardrobeScreen(
 
                         RecentUploadsSection(uploads = recentUploads, onUploadClick = onUploadClick)
 
+                        if (state.items.isNotEmpty()) {
+                            CategoryFilterRow(
+                                categories = categories,
+                                selectedCategory = selectedCategory,
+                                onCategorySelected = viewModel::selectCategory,
+                            )
+                        }
+
                         if (state.items.isEmpty()) {
                             EmptyState(
                                 onAddItem = onAddItem,
                                 modifier = Modifier.fillMaxSize(),
                             )
+                        } else if (filteredItems.isEmpty()) {
+                            NoCategoryItemsState(modifier = Modifier.fillMaxSize())
                         } else {
                             LazyVerticalGrid(
                                 columns = GridCells.Fixed(3),
@@ -156,7 +184,7 @@ fun WardrobeScreen(
                                 modifier = Modifier.fillMaxSize(),
                             ) {
                                 items(
-                                    items = state.items,
+                                    items = filteredItems,
                                     key = { item -> item.id },
                                 ) { item ->
                                     WardrobeCard(
@@ -209,6 +237,82 @@ private fun WardrobeHeader() {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(modifier = Modifier.height(24.dp))
+    }
+}
+
+@Composable
+private fun CategoryFilterRow(
+    categories: List<String>,
+    selectedCategory: String,
+    onCategorySelected: (String) -> Unit,
+) {
+    LazyRow(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 16.dp),
+        contentPadding = PaddingValues(horizontal = 20.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        items(items = categories, key = { category -> category }) { category ->
+            CategoryFilterItem(
+                category = category,
+                selected = category == selectedCategory,
+                onClick = { onCategorySelected(category) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun CategoryFilterItem(
+    category: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    val icon = if (category == AllCategoriesLabel) painterResource(Res.drawable.hanger) else getCategoryIcon(category)
+    val iconColor = if (category == AllCategoriesLabel) Purple else getCategoryIconColor(category)
+
+    Column(
+        modifier = Modifier
+            .width(CategoryFilterItemWidth)
+            .clip(RoundedCornerShape(16.dp))
+            .background(if (selected) Purple.copy(alpha = 0.12f) else Color.Transparent)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 8.dp, vertical = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Icon(
+            painter = icon,
+            contentDescription = category.toWardrobeLabel(),
+            tint = iconColor,
+            modifier = Modifier.size(28.dp),
+        )
+        Text(
+            text = category.toWardrobeLabel(),
+            fontSize = 12.sp,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+            color = if (selected) Purple else GrayText,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+@Composable
+private fun NoCategoryItemsState(modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier.padding(horizontal = 40.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Text(
+            text = "No items in this category",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = DarkText,
+            textAlign = TextAlign.Center,
+        )
     }
 }
 
