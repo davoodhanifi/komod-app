@@ -24,10 +24,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -35,9 +37,12 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
@@ -139,6 +144,11 @@ fun MainScaffold(
     
     // Bottom bar scroll behavior
     val bottomBarScrollState = remember { BottomBarScrollState() }
+
+    // Measured height of the floating bottom nav bar (system inset included), so screens
+    // can pad their scrollable content instead of guessing a hardcoded clearance value.
+    val density = LocalDensity.current
+    var bottomNavBarHeight by remember { mutableStateOf(0.dp) }
     
     // Track scroll for the current screen
     LaunchedEffect(currentRoute) {
@@ -192,6 +202,9 @@ fun MainScaffold(
             containerColor = Color.White,
             snackbarHost = { SnackbarHost(snackbarHostState) },
         ) { contentPadding ->
+            CompositionLocalProvider(
+                LocalBottomNavBarHeight provides if (showBottomBar) bottomNavBarHeight else 0.dp,
+            ) {
             NavHost(
                 navController = navController,
                 startDestination = MainRoute.Home.route,
@@ -482,8 +495,9 @@ fun MainScaffold(
                     OutfitDetailsPlaceholder()
                 }
             }
+            }
         }
-        
+
         // Floating bottom navigation bar
         if (showBottomBar) {
             BottomNavigationBar(
@@ -502,7 +516,11 @@ fun MainScaffold(
                     }
                 },
                 showLabels = bottomBarScrollState.isExpanded > 0.5f,
-                modifier = Modifier.align(Alignment.BottomCenter)
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .onSizeChanged { size ->
+                        bottomNavBarHeight = with(density) { size.height.toDp() }
+                    },
             )
         }
     }

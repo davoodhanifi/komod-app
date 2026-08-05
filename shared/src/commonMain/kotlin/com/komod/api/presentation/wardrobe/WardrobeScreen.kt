@@ -78,6 +78,7 @@ import com.komod.api.data.api.model.ImageStatus
 import com.komod.api.domain.model.WardrobeItem
 import com.komod.api.presentation.home.getCategoryIcon
 import com.komod.api.presentation.home.getCategoryIconColor
+import com.komod.api.presentation.main.LocalBottomNavBarHeight
 import komod.shared.generated.resources.Res
 import komod.shared.generated.resources.hanger
 import org.jetbrains.compose.resources.painterResource
@@ -189,7 +190,12 @@ fun WardrobeScreen(
                             LazyVerticalGrid(
                                 columns = GridCells.Fixed(3),
                                 state = lazyGridState,
-                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
+                                contentPadding = PaddingValues(
+                                    start = 16.dp,
+                                    end = 16.dp,
+                                    top = 0.dp,
+                                    bottom = LocalBottomNavBarHeight.current + 16.dp,
+                                ),
                                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                                 verticalArrangement = Arrangement.spacedBy(12.dp),
                                 modifier = Modifier.fillMaxSize(),
@@ -669,7 +675,12 @@ private fun ClothingPlaceholder(size: Dp = 48.dp) {
 fun LoadingState(modifier: Modifier = Modifier) {
     LazyVerticalGrid(
         columns = GridCells.Fixed(3),
-        contentPadding = PaddingValues(16.dp),
+        contentPadding = PaddingValues(
+            start = 16.dp,
+            end = 16.dp,
+            top = 16.dp,
+            bottom = LocalBottomNavBarHeight.current + 16.dp,
+        ),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
         modifier = modifier.fillMaxSize(),
