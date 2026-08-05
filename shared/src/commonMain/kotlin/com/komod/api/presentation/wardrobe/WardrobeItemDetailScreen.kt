@@ -1,11 +1,19 @@
 package com.komod.api.presentation.wardrobe
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,10 +29,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.AutoAwesome
@@ -55,21 +65,32 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import coil3.compose.AsyncImage
 import com.komod.api.domain.model.WardrobeItemDetail
 import komod.shared.generated.resources.Res
 import komod.shared.generated.resources.arrow_left
 import komod.shared.generated.resources.delete
 import komod.shared.generated.resources.hanger
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
@@ -218,6 +239,8 @@ private fun DetailContent(
     onDeleteDismiss: () -> Unit,
     onDeleteConfirm: () -> Unit,
 ) {
+    var showImageViewer by remember { mutableStateOf(false) }
+
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = 28.dp),
@@ -226,6 +249,7 @@ private fun DetailContent(
             HeroImage(
                 imageUrl = item.imageUrl,
                 contentDescription = item.itemName ?: item.category,
+                onClick = { showImageViewer = true },
             )
         }
         item {
@@ -296,15 +320,26 @@ private fun DetailContent(
             onConfirm = onDeleteConfirm,
         )
     }
+
+    if (showImageViewer && !item.imageUrl.isNullOrBlank()) {
+        FullScreenImageViewer(
+            imageUrl = item.imageUrl,
+            contentDescription = item.itemName ?: item.category,
+            onDismiss = { showImageViewer = false },
+        )
+    }
 }
 
 @Composable
-private fun HeroImage(imageUrl: String?, contentDescription: String) {
+private fun HeroImage(imageUrl: String?, contentDescription: String, onClick: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(370.dp)
-            .background(Color.White),
+            .height(480.dp)
+            .background(AppBg)
+            .then(
+                if (!imageUrl.isNullOrBlank()) Modifier.clickable(onClick = onClick) else Modifier,
+            ),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
@@ -317,9 +352,98 @@ private fun HeroImage(imageUrl: String?, contentDescription: String) {
             AsyncImage(
                 model = imageUrl,
                 contentDescription = contentDescription,
-                contentScale = ContentScale.Crop,
+                contentScale = ContentScale.Fit,
                 modifier = Modifier.fillMaxSize(),
             )
+        }
+    }
+}
+
+@Composable
+private fun FullScreenImageViewer(
+    imageUrl: String,
+    contentDescription: String,
+    onDismiss: () -> Unit,
+) {
+    var contentVisible by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    LaunchedEffect(Unit) { contentVisible = true }
+
+    val requestClose = {
+        if (contentVisible) {
+            contentVisible = false
+            scope.launch {
+                delay(200)
+                onDismiss()
+            }
+        }
+    }
+
+    Dialog(
+        onDismissRequest = requestClose,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        var scale by remember { mutableStateOf(1f) }
+        var offset by remember { mutableStateOf(Offset.Zero) }
+
+        AnimatedVisibility(
+            visible = contentVisible,
+            enter = fadeIn(tween(220)) + scaleIn(initialScale = 0.92f, animationSpec = tween(220)),
+            exit = fadeOut(tween(180)) + scaleOut(targetScale = 0.92f, animationSpec = tween(180)),
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black)
+                    .pointerInput(Unit) {
+                        detectTapGestures(
+                            onTap = { if (scale <= 1f) requestClose() },
+                            onDoubleTap = {
+                                if (scale > 1f) {
+                                    scale = 1f
+                                    offset = Offset.Zero
+                                } else {
+                                    scale = 3f
+                                }
+                            },
+                        )
+                    }
+                    .pointerInput(Unit) {
+                        detectTransformGestures { _, pan, zoom, _ ->
+                            val newScale = (scale * zoom).coerceIn(1f, 5f)
+                            scale = newScale
+                            offset = if (newScale <= 1f) Offset.Zero else offset + pan
+                        }
+                    },
+                contentAlignment = Alignment.Center,
+            ) {
+                AsyncImage(
+                    model = imageUrl,
+                    contentDescription = contentDescription,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer(
+                            scaleX = scale,
+                            scaleY = scale,
+                            translationX = offset.x,
+                            translationY = offset.y,
+                        ),
+                )
+                IconButton(
+                    onClick = requestClose,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .statusBarsPadding()
+                        .padding(16.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Close,
+                        contentDescription = "Close",
+                        tint = Color.White,
+                    )
+                }
+            }
         }
     }
 }
