@@ -92,6 +92,8 @@ class UploadReviewRepositoryImpl(
             confidence = confidence,
             createdAt = createdAt,
             boundingBox = boundingBox?.toDomain() ?: BoundingBox.FullImage,
+            originalImageStoragePath = originalImageStoragePath,
+            croppedImageStoragePath = croppedImageStoragePath,
         )
     }
 }

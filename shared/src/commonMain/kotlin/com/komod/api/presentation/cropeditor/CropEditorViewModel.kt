@@ -2,7 +2,9 @@ package com.komod.api.presentation.cropeditor
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.komod.api.core.error.AppLogger
 import com.komod.api.core.error.ErrorMapper
+import com.komod.api.core.error.UserFacingMessages
 import com.komod.api.data.repository.UploadReviewRepository
 import com.komod.api.data.repository.UploadedItemNotFoundException
 import com.komod.api.data.repository.WardrobeItemRepository
@@ -40,14 +42,11 @@ class CropEditorViewModel(
         viewModelScope.launch {
             _uiState.value = CropEditorUiState.Loading
             runCatching {
-                // Items in the review flow are still pending approval, so they're only
-                // reachable through the upload's own item list — GET wardrobe-items/{id}
-                // doesn't recognize them yet.
-                val detail = uploadReviewRepository.getUploadedImageDetail(imageId)
-                val item = detail.items.find { it.id == wardrobeItemId }
-                    ?: throw UploadedItemNotFoundException()
-                val itemTitle = item.itemName ?: item.category.toWardrobeLabel()
-                Triple(itemTitle, item.boundingBox, detail.originalImageUrl)
+                // Already-approved items live in the wardrobe and are reachable via
+                // GET wardrobe-items/{id}. Items still awaiting review aren't recognized
+                // by that endpoint yet, so fall back to the upload's own item list, which
+                // is the only place they're reachable from until they're approved.
+                loadApprovedWardrobeItem() ?: loadPendingReviewItem()
             }.onSuccess { (itemTitle, boundingBox, originalImageUrl) ->
                 _uiState.value = CropEditorUiState.Ready(
                     itemTitle = itemTitle,
@@ -63,6 +62,30 @@ class CropEditorViewModel(
                 )
             }
         }
+    }
+
+    private suspend fun loadApprovedWardrobeItem(): Triple<String, BoundingBox, String?>? {
+        return runCatching {
+            val item = wardrobeItemRepository.getWardrobeItem(wardrobeItemId)
+            val itemTitle = item.itemName ?: item.category.toWardrobeLabel()
+            // Prefer the storage path the backend now returns directly on the item — it's
+            // a single signed-URL call. Only fall back to the old imageId-based lookup
+            // (GET images/{imageId}, which 404s for a lot of items on this backend) for
+            // items fetched before that field existed.
+            val originalImageUrl = item.originalImageStoragePath
+                ?.takeIf { it.isNotBlank() }
+                ?.let { path -> wardrobeItemRepository.createSignedUrl(path) }
+                ?: wardrobeItemRepository.getOriginalImageUrl(item.imageId)
+            Triple(itemTitle, item.boundingBox, originalImageUrl)
+        }.getOrNull()
+    }
+
+    private suspend fun loadPendingReviewItem(): Triple<String, BoundingBox, String?> {
+        val detail = uploadReviewRepository.getUploadedImageDetail(imageId)
+        val item = detail.items.find { it.id == wardrobeItemId }
+            ?: throw UploadedItemNotFoundException()
+        val itemTitle = item.itemName ?: item.category.toWardrobeLabel()
+        return Triple(itemTitle, item.boundingBox, detail.originalImageUrl)
     }
 
     fun updateBoundingBox(boundingBox: BoundingBox) {
@@ -90,21 +113,20 @@ class CropEditorViewModel(
                 )
                 _effects.emit(CropEditorEffect.CropSaved)
             } catch (error: WardrobeItemUpdateNotFoundException) {
-                _uiState.value = current.copy(isSaving = false)
-                _effects.emit(
-                    CropEditorEffect.SaveFailed(ErrorMapper.toUserMessage(error, tag = "CropEditorViewModel")),
-                )
+                onSaveFailed(current, error)
             } catch (error: WardrobeItemUpdateBadRequestException) {
-                _uiState.value = current.copy(isSaving = false)
-                _effects.emit(
-                    CropEditorEffect.SaveFailed(ErrorMapper.toUserMessage(error, tag = "CropEditorViewModel")),
-                )
+                onSaveFailed(current, error)
             } catch (error: WardrobeItemUpdateNetworkException) {
-                _uiState.value = current.copy(isSaving = false)
-                _effects.emit(
-                    CropEditorEffect.SaveFailed(ErrorMapper.toUserMessage(error, tag = "CropEditorViewModel")),
-                )
+                onSaveFailed(current, error)
             }
         }
+    }
+
+    // Any save failure just shows a generic message for now — no per-status-code
+    // messaging until that's actually needed.
+    private suspend fun onSaveFailed(current: CropEditorUiState.Ready, error: Throwable) {
+        AppLogger.e("CropEditorViewModel", "Failed to save crop (${error::class.simpleName})", error)
+        _uiState.value = current.copy(isSaving = false)
+        _effects.emit(CropEditorEffect.SaveFailed(UserFacingMessages.Generic))
     }
 }

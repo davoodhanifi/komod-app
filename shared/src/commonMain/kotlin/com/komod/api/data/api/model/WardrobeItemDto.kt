@@ -42,6 +42,7 @@ data class WardrobeItemDto(
     val metadataJson: String,
     val croppedImageId: String? = null,
     val croppedImageStoragePath: String? = null,
+    val originalImageStoragePath: String? = null,
     val boundingBox: BoundingBoxDto? = null,
     val isFavorite: Boolean = false,
     val createdAt: String,

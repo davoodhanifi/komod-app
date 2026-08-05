@@ -404,6 +404,9 @@ fun MainScaffold(
                         wardrobeItemId = itemId,
                         onNavigateBack = { navController.navigateUp() },
                         onEditItem = { navController.navigate(MainRoute.WardrobeItemEdit.createRoute(itemId)) },
+                        onAdjustCrop = { imageId ->
+                            navController.navigate(MainRoute.CropEditor.createRoute(imageId, itemId))
+                        },
                         refreshKey = wardrobeItemRefreshKey,
                         onRefreshWardrobe = {
                             requestRefresh(MainRoute.Wardrobe.route, WardrobeRefreshArg)
@@ -485,7 +488,15 @@ fun MainScaffold(
                         onNavigateBack = { navController.navigateUp() },
                         onShowSnackbar = ::showSnackbar,
                         onCropSaved = {
-                            requestRefresh(MainRoute.UploadReview.route, UploadReviewRefreshArg)
+                            // The crop editor is reused from two different entry points (the
+                            // upload review flow and an already-approved item's detail screen),
+                            // so route the "refresh me" signal to whichever screen we came from
+                            // instead of always assuming upload review.
+                            if (navController.previousBackStackEntry?.destination?.route == MainRoute.WardrobeItemDetail.route) {
+                                requestRefresh(MainRoute.WardrobeItemDetail.route, WardrobeItemRefreshArg)
+                            } else {
+                                requestRefresh(MainRoute.UploadReview.route, UploadReviewRefreshArg)
+                            }
                         },
                     )
                 }

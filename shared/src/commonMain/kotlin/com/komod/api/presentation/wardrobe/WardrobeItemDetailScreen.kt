@@ -41,6 +41,7 @@ import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Checkroom
 import androidx.compose.material.icons.outlined.CloudOff
+import androidx.compose.material.icons.outlined.Crop
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.LocalOffer
 import androidx.compose.material3.AlertDialog
@@ -109,6 +110,7 @@ fun WardrobeItemDetailScreen(
     wardrobeItemId: String,
     onNavigateBack: () -> Unit,
     onEditItem: () -> Unit,
+    onAdjustCrop: (imageId: String) -> Unit,
     onRefreshWardrobe: () -> Unit,
     onRefreshHome: () -> Unit,
     refreshKey: Int = 0,
@@ -225,6 +227,7 @@ fun WardrobeItemDetailScreen(
                     isDeleting = state.isDeleting,
                     onDeleteDismiss = { viewModel.onEvent(WardrobeItemDetailEvent.DeleteDismissed) },
                     onDeleteConfirm = { viewModel.onEvent(WardrobeItemDetailEvent.DeleteConfirmed) },
+                    onAdjustCrop = { onAdjustCrop(state.item.imageId) },
                 )
             }
         }
@@ -238,6 +241,7 @@ private fun DetailContent(
     isDeleting: Boolean,
     onDeleteDismiss: () -> Unit,
     onDeleteConfirm: () -> Unit,
+    onAdjustCrop: () -> Unit,
 ) {
     var showImageViewer by remember { mutableStateOf(false) }
 
@@ -250,6 +254,7 @@ private fun DetailContent(
                 imageUrl = item.imageUrl,
                 contentDescription = item.itemName ?: item.category,
                 onClick = { showImageViewer = true },
+                onAdjustCrop = onAdjustCrop,
             )
         }
         item {
@@ -331,7 +336,12 @@ private fun DetailContent(
 }
 
 @Composable
-private fun HeroImage(imageUrl: String?, contentDescription: String, onClick: () -> Unit) {
+private fun HeroImage(
+    imageUrl: String?,
+    contentDescription: String,
+    onClick: () -> Unit,
+    onAdjustCrop: () -> Unit,
+) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -355,6 +365,30 @@ private fun HeroImage(imageUrl: String?, contentDescription: String, onClick: ()
                 contentScale = ContentScale.Fit,
                 modifier = Modifier.fillMaxSize(),
             )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(16.dp)
+                    .clip(RoundedCornerShape(50))
+                    .background(Color.Black.copy(alpha = 0.45f))
+                    .clickable(onClick = onAdjustCrop)
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Crop,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(14.dp),
+                )
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    text = "Adjust Crop",
+                    color = Color.White,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                )
+            }
         }
     }
 }

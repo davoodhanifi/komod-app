@@ -27,15 +27,11 @@ class WardrobeItemRepositoryImpl(
 
         val imageUrl = dto.croppedImageStoragePath
             ?.takeIf { it.isNotBlank() }
-            ?.let { path ->
-                runCatching {
-                    supabaseClient.storage.from(WARDROBE_BUCKET).createSignedUrl(path, 1.hours)
-                }.getOrNull()
-            }
-            ?: runCatching {
-                val image = wardrobeApiService.getImage(dto.imageId)
-                supabaseClient.storage.from(WARDROBE_BUCKET).createSignedUrl(image.storagePath, 1.hours)
-            }.getOrNull()
+            ?.let { path -> createSignedUrl(path) }
+            ?: dto.originalImageStoragePath
+                ?.takeIf { it.isNotBlank() }
+                ?.let { path -> createSignedUrl(path) }
+            ?: getOriginalImageUrl(dto.imageId)
 
         return WardrobeItemDetail(
             id = dto.id,
@@ -76,7 +72,22 @@ class WardrobeItemRepositoryImpl(
             confidence = dto.confidence,
             createdAt = dto.createdAt,
             boundingBox = dto.boundingBox?.toDomain() ?: BoundingBox.FullImage,
+            originalImageStoragePath = dto.originalImageStoragePath,
+            croppedImageStoragePath = dto.croppedImageStoragePath,
         ).also { wardrobeItemCache.putAll(listOf(it.toWardrobeItem())) }
+    }
+
+    override suspend fun getOriginalImageUrl(imageId: String): String? {
+        return runCatching {
+            val image = wardrobeApiService.getImage(imageId)
+            image.storagePath
+        }.getOrNull()?.let { path -> createSignedUrl(path) }
+    }
+
+    override suspend fun createSignedUrl(storagePath: String): String? {
+        return runCatching {
+            supabaseClient.storage.from(WARDROBE_BUCKET).createSignedUrl(storagePath, 1.hours)
+        }.getOrNull()
     }
 
     override suspend fun setWardrobeItemFavorite(id: String, favorite: Boolean) {

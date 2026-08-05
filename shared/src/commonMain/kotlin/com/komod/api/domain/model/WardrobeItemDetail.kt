@@ -39,4 +39,9 @@ data class WardrobeItemDetail(
     val confidence: Double,
     val createdAt: String,
     val boundingBox: BoundingBox,
+    // Raw (unsigned) storage paths, kept alongside the already-signed [imageUrl] so the
+    // upcoming Crop Editor flow can request the original photo and know whether a crop
+    // already exists, without re-deriving these from the DTO layer.
+    val originalImageStoragePath: String? = null,
+    val croppedImageStoragePath: String? = null,
 )

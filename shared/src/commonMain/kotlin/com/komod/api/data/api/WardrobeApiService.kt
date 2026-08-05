@@ -2,7 +2,6 @@ package com.komod.api.data.api
 
 import com.komod.api.data.api.model.AnalyzeWardrobeRequest
 import com.komod.api.data.api.model.BoundingBoxDto
-import com.komod.api.data.api.model.BoundingBoxUpdateResponse
 import com.komod.api.data.api.model.CreateImageResponse
 import com.komod.api.data.api.model.ImageDto
 import com.komod.api.data.api.model.RecentItemDto
@@ -70,11 +69,12 @@ class WardrobeApiService(
     suspend fun updateWardrobeItemBoundingBox(
         id: String,
         request: BoundingBoxDto,
-    ): BoundingBoxUpdateResponse {
-        // On success this is wrapped in ResponseData like the GET endpoints. On failure
-        // it's a bare ProblemDetails payload with no "data" field, so the status is
-        // checked explicitly first rather than letting a blind `.body()` call fail with
-        // a confusing deserialization error instead of the real HTTP failure.
+    ) {
+        // No caller needs the response body — the item is refetched separately to pick
+        // up the new cropped image — and its shape isn't guaranteed to stay in sync with
+        // the backend, so only the HTTP status is checked. Parsing an unused body here
+        // was turning successful saves into a user-facing "something went wrong" error
+        // whenever that shape drifted.
         val response = httpClient.patch("wardrobe-items/$id/bounding-box") {
             contentType(ContentType.Application.Json)
             setBody(request)
@@ -87,7 +87,6 @@ class WardrobeApiService(
                 ServerResponseException(response, text)
             }
         }
-        return response.body<ResponseData<BoundingBoxUpdateResponse>>().data
     }
 
     suspend fun setWardrobeItemFavorite(
