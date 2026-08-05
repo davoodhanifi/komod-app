@@ -11,9 +11,13 @@ import com.komod.api.data.location.WeatherLocationService
 import com.komod.api.data.preferences.WeatherPreferences
 import com.komod.api.domain.model.OutfitOccasion
 import com.komod.api.domain.model.OutfitStyle
+import com.komod.api.domain.model.Outfit
 import com.komod.api.platform.AppSettingsOpener
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -27,6 +31,9 @@ class OutfitViewModel(
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(OutfitUiState())
     val uiState: StateFlow<OutfitUiState> = _uiState.asStateFlow()
+
+    private val _effects = MutableSharedFlow<OutfitEffect>()
+    val effects: SharedFlow<OutfitEffect> = _effects.asSharedFlow()
 
     init {
         if (weatherPreferences.isEnabled()) {
@@ -71,6 +78,32 @@ class OutfitViewModel(
                 _uiState.value = _uiState.value.copy(
                     isGenerating = false,
                     errorMessage = ErrorMapper.toUserMessage(throwable, tag = "OutfitViewModel"),
+                )
+            }
+        }
+    }
+
+    fun saveOutfit(outfit: Outfit) {
+        val state = _uiState.value
+        if (outfit.id in state.savingOutfitIds || outfit.id in state.savedOutfitIds) return
+
+        _uiState.update { it.copy(savingOutfitIds = it.savingOutfitIds + outfit.id) }
+        viewModelScope.launch {
+            runCatching {
+                outfitRepository.saveOutfit(outfit)
+            }.onSuccess {
+                _uiState.update {
+                    it.copy(
+                        savingOutfitIds = it.savingOutfitIds - outfit.id,
+                        savedOutfitIds = it.savedOutfitIds + outfit.id,
+                    )
+                }
+            }.onFailure { throwable ->
+                _uiState.update { it.copy(savingOutfitIds = it.savingOutfitIds - outfit.id) }
+                _effects.emit(
+                    OutfitEffect.ShowSnackbar(
+                        ErrorMapper.toUserMessage(throwable, tag = "OutfitViewModel"),
+                    ),
                 )
             }
         }

@@ -1,6 +1,7 @@
 package com.komod.api.data.repository
 
 import com.komod.api.data.api.OutfitApiService
+import com.komod.api.data.api.model.SaveOutfitRequest
 import com.komod.api.domain.model.Outfit
 import com.komod.api.domain.model.OutfitItem
 import com.komod.api.domain.model.WardrobeItem
@@ -10,6 +11,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.storage.storage
+import kotlin.random.Random
 import kotlin.time.Duration.Companion.hours
 
 class OutfitRepositoryImpl(
@@ -31,6 +33,7 @@ class OutfitRepositoryImpl(
 
         return response.outfits.map { dto ->
             Outfit(
+                id = randomOutfitId(),
                 name = dto.name,
                 reason = dto.reason,
                 matchScore = stableMatchScore(seed = dto.name + dto.wardrobeItemIds.joinToString()),
@@ -38,6 +41,16 @@ class OutfitRepositoryImpl(
                 items = hydrateItems(dto.items, dto.wardrobeItemIds),
             )
         }
+    }
+
+    override suspend fun saveOutfit(outfit: Outfit) {
+        outfitApiService.saveOutfit(
+            SaveOutfitRequest(
+                name = outfit.name,
+                reason = outfit.reason,
+                wardrobeItemIds = outfit.wardrobeItemIds,
+            ),
+        )
     }
 
     private suspend fun hydrateItems(
@@ -95,6 +108,10 @@ class OutfitRepositoryImpl(
     private fun stableMatchScore(seed: String): Int {
         val bucket = seed.hashCode().absoluteValue % 10
         return 90 + bucket
+    }
+
+    private fun randomOutfitId(): String {
+        return Random.nextBytes(16).joinToString("") { (it.toInt() and 0xFF).toString(16).padStart(2, '0') }
     }
 }
 

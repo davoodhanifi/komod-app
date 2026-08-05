@@ -32,6 +32,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.outlined.Checkroom
@@ -40,6 +41,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -86,13 +88,13 @@ import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.viewmodel.koinViewModel
 
-private val OutfitPurple = Color(0xFF7C5CFC)
-private val OutfitPurpleSoft = Color(0xFFF0ECFF)
-private val OutfitText = Color(0xFF111827)
-private val OutfitMuted = Color(0xFF6B7280)
-private val OutfitSurface = Color(0xFFF7F5F2)
+internal val OutfitPurple = Color(0xFF7C5CFC)
+internal val OutfitPurpleSoft = Color(0xFFF0ECFF)
+internal val OutfitText = Color(0xFF111827)
+internal val OutfitMuted = Color(0xFF6B7280)
+internal val OutfitSurface = Color(0xFFF7F5F2)
 private val OutfitChipSurface = Color(0xFFF3F4F6)
-private val OutfitBorder = Color(0xFFE5E7EB)
+internal val OutfitBorder = Color(0xFFE5E7EB)
 private val OutfitSkeleton = Color(0xFFE5E7EB)
 private val FilterTileSelectedBackground = Color(0xFFEDE7FF)
 private val FilterTileBorderDefault = Color(0xFFE6E8EE)
@@ -109,10 +111,19 @@ fun OutfitScreen(
     initialOccasion: String? = null,
     viewModel: OutfitViewModel = koinViewModel(),
     onOpenDetails: (Outfit) -> Unit,
+    onShowSnackbar: (String) -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showStyleSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    LaunchedEffect(viewModel) {
+        viewModel.effects.collect { effect ->
+            when (effect) {
+                is OutfitEffect.ShowSnackbar -> onShowSnackbar(effect.message)
+            }
+        }
+    }
 
     LaunchedEffect(initialOccasion) {
         if (initialOccasion != null) {
@@ -187,11 +198,14 @@ fun OutfitScreen(
                 item { Spacer(modifier = Modifier.height(4.dp)) }
                 items(
                     items = uiState.outfits,
-                    key = { outfit -> outfit.name + outfit.wardrobeItemIds.joinToString() },
+                    key = { outfit -> outfit.id },
                 ) { outfit ->
                     OutfitCard(
                         outfit = outfit,
                         onTryThis = { onOpenDetails(outfit) },
+                        isSaving = outfit.id in uiState.savingOutfitIds,
+                        isSaved = outfit.id in uiState.savedOutfitIds,
+                        onSaveOutfit = { viewModel.saveOutfit(outfit) },
                     )
                 }
             }
@@ -430,6 +444,9 @@ fun OutfitCard(
     outfit: Outfit,
     onTryThis: () -> Unit,
     modifier: Modifier = Modifier,
+    isSaving: Boolean = false,
+    isSaved: Boolean = false,
+    onSaveOutfit: () -> Unit = {},
 ) {
     val shape = RoundedCornerShape(28.dp)
     Card(
@@ -470,6 +487,83 @@ fun OutfitCard(
                         .weight(0.58f)
                         .height(218.dp),
                 )
+            }
+            Spacer(modifier = Modifier.height(18.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+                SaveOutfitButton(
+                    isSaving = isSaving,
+                    isSaved = isSaved,
+                    onClick = onSaveOutfit,
+                    modifier = Modifier.weight(1f),
+                )
+                Button(
+                    onClick = onTryThis,
+                    enabled = !isSaving,
+                    shape = RoundedCornerShape(18.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = OutfitPurple),
+                    contentPadding = PaddingValues(horizontal = 18.dp, vertical = 14.dp),
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.AutoAwesome,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(text = "Try This", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SaveOutfitButton(
+    isSaving: Boolean,
+    isSaved: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    OutlinedButton(
+        onClick = onClick,
+        enabled = !isSaving && !isSaved,
+        shape = RoundedCornerShape(18.dp),
+        border = BorderStroke(1.dp, OutfitBorder),
+        colors = ButtonDefaults.outlinedButtonColors(
+            contentColor = OutfitText,
+            disabledContentColor = if (isSaved) OutfitPurple else OutfitMuted,
+        ),
+        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 14.dp),
+        modifier = modifier,
+    ) {
+        when {
+            isSaving -> {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(16.dp),
+                    strokeWidth = 2.dp,
+                    color = OutfitMuted,
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(text = "Saving...", fontSize = 15.sp, fontWeight = FontWeight.Medium)
+            }
+            isSaved -> {
+                Icon(
+                    imageVector = Icons.Filled.Check,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(text = "Saved Outfit", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+            }
+            else -> {
+                Icon(
+                    painter = painterResource(Res.drawable.hanger),
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(text = "Save Outfit", fontSize = 15.sp, fontWeight = FontWeight.Medium)
             }
         }
     }

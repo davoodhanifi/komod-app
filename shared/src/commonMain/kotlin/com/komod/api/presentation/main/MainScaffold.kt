@@ -55,16 +55,17 @@ import com.komod.api.data.repository.AuthRepository
 import com.komod.api.presentation.additem.AddItemScreen
 import com.komod.api.presentation.cropeditor.CropEditorScreen
 import com.komod.api.presentation.home.HomeScreen
+import com.komod.api.presentation.outfits.OutfitDetailsScreen
 import com.komod.api.presentation.outfits.OutfitScreen
+import com.komod.api.presentation.outfits.OutfitViewModel
 import com.komod.api.presentation.profile.ProfileScreen
 import com.komod.api.presentation.uploadreview.UploadReviewScreen
 import com.komod.api.presentation.wardrobe.WardrobeItemEditScreen
 import com.komod.api.presentation.wardrobe.WardrobeItemDetailScreen
 import com.komod.api.presentation.wardrobe.WardrobeScreen
 import kotlinx.coroutines.launch
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
 import org.koin.compose.koinInject
+import org.koin.compose.viewmodel.koinViewModel
 
 private const val WardrobeItemIdArg = "wardrobeItemId"
 private const val UploadImageIdArg = "imageId"
@@ -72,7 +73,7 @@ private const val WardrobeRefreshArg = "wardrobe_refresh_required"
 private const val WardrobeItemRefreshArg = "wardrobe_item_refresh_required"
 private const val UploadReviewRefreshArg = "upload_review_refresh_required"
 private const val HomeRefreshArg = "home_refresh_required"
-private const val SelectedOutfitKey = "selected_outfit"
+private const val OutfitIdArg = "outfitId"
 private const val OccasionArg = "occasion"
 private const val WardrobeCategoryArg = "wardrobe_category"
 
@@ -95,7 +96,9 @@ private sealed class MainRoute(val route: String) {
         fun createRoute(imageId: String, wardrobeItemId: String): String =
             "wardrobe/upload-review/$imageId/crop/$wardrobeItemId"
     }
-    data object OutfitDetails : MainRoute("outfits/details")
+    data object OutfitDetails : MainRoute("outfits/details/{$OutfitIdArg}") {
+        fun createRoute(outfitId: String): String = "outfits/details/$outfitId"
+    }
 }
 
 @Composable
@@ -134,6 +137,10 @@ fun MainScaffold(
     val navController = rememberNavController()
     val snackbarHostState = remember { SnackbarHostState() }
     val snackbarScope = rememberCoroutineScope()
+    // Hoisted so the Outfits list and Outfit Details routes share one instance: Details
+    // needs the same in-memory generated outfits (no refetch) and the same saved/saving
+    // state so a save from either screen is reflected in both for the rest of the session.
+    val outfitViewModel: OutfitViewModel = koinViewModel()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
     
@@ -340,13 +347,11 @@ fun MainScaffold(
                     val occasion = backStackEntry.savedStateHandle.get<String>(OccasionArg)
                     OutfitScreen(
                         initialOccasion = occasion,
+                        viewModel = outfitViewModel,
                         onOpenDetails = { outfit ->
-                            navController.currentBackStackEntry?.savedStateHandle?.set(
-                                SelectedOutfitKey,
-                                Json.encodeToString(outfit.toNavigationPayload()),
-                            )
-                            navController.navigate(MainRoute.OutfitDetails.route)
+                            navController.navigate(MainRoute.OutfitDetails.createRoute(outfit.id))
                         },
+                        onShowSnackbar = ::showSnackbar,
                     )
                 }
 
@@ -501,9 +506,26 @@ fun MainScaffold(
                     )
                 }
 
-                composable(MainRoute.OutfitDetails.route) { backStackEntry ->
-                    backStackEntry.savedStateHandle.get<String>(SelectedOutfitKey)
-                    OutfitDetailsPlaceholder()
+                composable(
+                    route = MainRoute.OutfitDetails.route,
+                    arguments = listOf(
+                        navArgument(OutfitIdArg) { type = NavType.StringType },
+                    ),
+                ) { backStackEntry ->
+                    val outfitId = backStackEntry.savedStateHandle.get<String>(OutfitIdArg).orEmpty()
+                    val outfitUiState by outfitViewModel.uiState.collectAsState()
+                    val outfit = outfitUiState.outfits.find { it.id == outfitId }
+
+                    if (outfit != null) {
+                        OutfitDetailsScreen(
+                            outfit = outfit,
+                            viewModel = outfitViewModel,
+                            onNavigateBack = { navController.navigateUp() },
+                            onShowSnackbar = ::showSnackbar,
+                        )
+                    } else {
+                        LaunchedEffect(Unit) { navController.navigateUp() }
+                    }
                 }
             }
             }
@@ -537,23 +559,6 @@ fun MainScaffold(
     }
 }
 
-@Serializable
-private data class OutfitNavigationPayload(
-    val name: String,
-    val reason: String,
-    val matchScore: Int,
-    val wardrobeItemIds: List<String>,
-)
-
-private fun com.komod.api.domain.model.Outfit.toNavigationPayload(): OutfitNavigationPayload {
-    return OutfitNavigationPayload(
-        name = name,
-        reason = reason,
-        matchScore = matchScore,
-        wardrobeItemIds = wardrobeItemIds,
-    )
-}
-
 @Composable
 private fun MainTabPlaceholder(
     title: String,
@@ -582,22 +587,3 @@ private fun MainTabPlaceholder(
     }
 }
 
-@Composable
-private fun OutfitDetailsPlaceholder() {
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Text(
-            text = "Outfit Details",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-        )
-        Text(
-            text = "Coming soon",
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(top = 8.dp),
-        )
-    }
-}

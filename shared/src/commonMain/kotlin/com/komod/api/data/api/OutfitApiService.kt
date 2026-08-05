@@ -3,6 +3,7 @@ package com.komod.api.data.api
 import com.komod.api.data.api.model.OutfitGenerateRequest
 import com.komod.api.data.api.model.OutfitGenerateResponse
 import com.komod.api.data.api.model.ResponseData
+import com.komod.api.data.api.model.SaveOutfitRequest
 import com.komod.api.data.api.model.WeatherContextDto
 import com.komod.api.domain.model.WeatherCurrent
 import io.ktor.client.HttpClient
@@ -47,6 +48,21 @@ class OutfitApiService(
             }
         }
         return response.body<ResponseData<OutfitGenerateResponse>>().data
+    }
+
+    suspend fun saveOutfit(request: SaveOutfitRequest) {
+        val response = httpClient.post("outfits") {
+            contentType(ContentType.Application.Json)
+            setBody(request)
+        }
+        if (!response.status.isSuccess()) {
+            val text = response.bodyAsText()
+            throw if (response.status.value in 400..499) {
+                ClientRequestException(response, text)
+            } else {
+                ServerResponseException(response, text)
+            }
+        }
     }
 }
 

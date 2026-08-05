@@ -9,4 +9,6 @@ interface OutfitRepository {
         style: String? = null,
         weather: WeatherCurrent? = null,
     ): List<Outfit>
+
+    suspend fun saveOutfit(outfit: Outfit)
 }
