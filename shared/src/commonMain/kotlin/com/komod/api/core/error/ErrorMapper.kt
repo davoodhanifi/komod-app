@@ -1,5 +1,8 @@
 package com.komod.api.core.error
 
+import com.komod.api.data.repository.OutfitDeleteBadRequestException
+import com.komod.api.data.repository.OutfitDeleteNetworkException
+import com.komod.api.data.repository.OutfitDeleteNotFoundException
 import com.komod.api.data.repository.UploadReviewConflictException
 import com.komod.api.data.repository.UploadReviewForbiddenException
 import com.komod.api.data.repository.UploadReviewNetworkException
@@ -60,6 +63,10 @@ object ErrorMapper {
         is WardrobeItemUpdateBadRequestException -> "Couldn't save your changes. Please try again."
         is WardrobeItemDeleteNetworkException -> mapCauseOrFallback(throwable, context)
         is WardrobeItemUpdateNetworkException -> mapCauseOrFallback(throwable, context)
+
+        is OutfitDeleteNotFoundException -> "This outfit no longer exists."
+        is OutfitDeleteBadRequestException -> "Couldn't update this outfit. Please try again."
+        is OutfitDeleteNetworkException -> mapCauseOrFallback(throwable, context)
 
         is ClientRequestException ->
             if (throwable.response.status == HttpStatusCode.Unauthorized) {

@@ -61,6 +61,7 @@ fun OutfitDetailsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val isSaving = outfit.id in uiState.savingOutfitIds
+    val isUnsaving = outfit.id in uiState.unsavingOutfitIds
     val isSaved = outfit.id in uiState.savedOutfitIds
 
     LaunchedEffect(viewModel) {
@@ -91,8 +92,8 @@ fun OutfitDetailsScreen(
         bottomBar = {
             Surface(color = Color.White, tonalElevation = 2.dp) {
                 Button(
-                    onClick = { viewModel.saveOutfit(outfit) },
-                    enabled = !isSaving && !isSaved,
+                    onClick = { viewModel.toggleSaveOutfit(outfit) },
+                    enabled = !isSaving && !isUnsaving,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = OutfitPurple,
                         contentColor = Color.White,
@@ -106,14 +107,14 @@ fun OutfitDetailsScreen(
                     contentPadding = PaddingValues(vertical = 16.dp),
                 ) {
                     when {
-                        isSaving -> {
+                        isSaving || isUnsaving -> {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(18.dp),
                                 strokeWidth = 2.dp,
                                 color = Color.White,
                             )
                             Spacer(modifier = Modifier.width(12.dp))
-                            Text(text = "Saving...", fontWeight = FontWeight.SemiBold)
+                            Text(text = if (isSaving) "Saving..." else "Removing...", fontWeight = FontWeight.SemiBold)
                         }
                         isSaved -> {
                             Icon(

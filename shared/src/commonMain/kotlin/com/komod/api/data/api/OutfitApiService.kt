@@ -4,12 +4,14 @@ import com.komod.api.data.api.model.OutfitGenerateRequest
 import com.komod.api.data.api.model.OutfitGenerateResponse
 import com.komod.api.data.api.model.ResponseData
 import com.komod.api.data.api.model.SaveOutfitRequest
+import com.komod.api.data.api.model.SaveOutfitResponse
 import com.komod.api.data.api.model.WeatherContextDto
 import com.komod.api.domain.model.WeatherCurrent
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.plugins.ClientRequestException
 import io.ktor.client.plugins.ServerResponseException
+import io.ktor.client.request.delete
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
@@ -50,7 +52,7 @@ class OutfitApiService(
         return response.body<ResponseData<OutfitGenerateResponse>>().data
     }
 
-    suspend fun saveOutfit(request: SaveOutfitRequest) {
+    suspend fun saveOutfit(request: SaveOutfitRequest): String {
         val response = httpClient.post("outfits") {
             contentType(ContentType.Application.Json)
             setBody(request)
@@ -63,6 +65,11 @@ class OutfitApiService(
                 ServerResponseException(response, text)
             }
         }
+        return response.body<ResponseData<SaveOutfitResponse>>().data.id
+    }
+
+    suspend fun deleteOutfit(id: String) {
+        httpClient.delete("outfits/$id")
     }
 }
 

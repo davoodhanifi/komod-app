@@ -10,5 +10,7 @@ interface OutfitRepository {
         weather: WeatherCurrent? = null,
     ): List<Outfit>
 
-    suspend fun saveOutfit(outfit: Outfit)
+    suspend fun saveOutfit(outfit: Outfit): String
+
+    suspend fun unsaveOutfit(savedOutfitId: String)
 }

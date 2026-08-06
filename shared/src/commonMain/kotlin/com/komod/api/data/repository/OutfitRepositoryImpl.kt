@@ -6,6 +6,8 @@ import com.komod.api.domain.model.Outfit
 import com.komod.api.domain.model.OutfitItem
 import com.komod.api.domain.model.WardrobeItem
 import com.komod.api.domain.model.WardrobeItemDetail
+import io.ktor.client.plugins.ResponseException
+import io.ktor.http.HttpStatusCode
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -43,14 +45,28 @@ class OutfitRepositoryImpl(
         }
     }
 
-    override suspend fun saveOutfit(outfit: Outfit) {
-        outfitApiService.saveOutfit(
+    override suspend fun saveOutfit(outfit: Outfit): String {
+        return outfitApiService.saveOutfit(
             SaveOutfitRequest(
                 name = outfit.name,
                 reason = outfit.reason,
                 wardrobeItemIds = outfit.wardrobeItemIds,
             ),
         )
+    }
+
+    override suspend fun unsaveOutfit(savedOutfitId: String) {
+        try {
+            outfitApiService.deleteOutfit(savedOutfitId)
+        } catch (error: ResponseException) {
+            when (error.response.status) {
+                HttpStatusCode.NotFound -> throw OutfitDeleteNotFoundException()
+                HttpStatusCode.BadRequest -> throw OutfitDeleteBadRequestException()
+                else -> throw OutfitDeleteNetworkException(error)
+            }
+        } catch (error: kotlinx.io.IOException) {
+            throw OutfitDeleteNetworkException(error)
+        }
     }
 
     private suspend fun hydrateItems(

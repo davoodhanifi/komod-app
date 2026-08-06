@@ -204,8 +204,9 @@ fun OutfitScreen(
                         outfit = outfit,
                         onTryThis = { onOpenDetails(outfit) },
                         isSaving = outfit.id in uiState.savingOutfitIds,
+                        isUnsaving = outfit.id in uiState.unsavingOutfitIds,
                         isSaved = outfit.id in uiState.savedOutfitIds,
-                        onSaveOutfit = { viewModel.saveOutfit(outfit) },
+                        onSaveOutfit = { viewModel.toggleSaveOutfit(outfit) },
                     )
                 }
             }
@@ -445,6 +446,7 @@ fun OutfitCard(
     onTryThis: () -> Unit,
     modifier: Modifier = Modifier,
     isSaving: Boolean = false,
+    isUnsaving: Boolean = false,
     isSaved: Boolean = false,
     onSaveOutfit: () -> Unit = {},
 ) {
@@ -492,13 +494,14 @@ fun OutfitCard(
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
                 SaveOutfitButton(
                     isSaving = isSaving,
+                    isUnsaving = isUnsaving,
                     isSaved = isSaved,
                     onClick = onSaveOutfit,
                     modifier = Modifier.weight(1f),
                 )
                 Button(
                     onClick = onTryThis,
-                    enabled = !isSaving,
+                    enabled = !isSaving && !isUnsaving,
                     shape = RoundedCornerShape(18.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = OutfitPurple),
                     contentPadding = PaddingValues(horizontal = 18.dp, vertical = 14.dp),
@@ -521,13 +524,15 @@ fun OutfitCard(
 @Composable
 private fun SaveOutfitButton(
     isSaving: Boolean,
+    isUnsaving: Boolean,
     isSaved: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val isBusy = isSaving || isUnsaving
     OutlinedButton(
         onClick = onClick,
-        enabled = !isSaving && !isSaved,
+        enabled = !isBusy,
         shape = RoundedCornerShape(18.dp),
         border = BorderStroke(1.dp, OutfitBorder),
         colors = ButtonDefaults.outlinedButtonColors(
@@ -538,14 +543,14 @@ private fun SaveOutfitButton(
         modifier = modifier,
     ) {
         when {
-            isSaving -> {
+            isBusy -> {
                 CircularProgressIndicator(
                     modifier = Modifier.size(16.dp),
                     strokeWidth = 2.dp,
                     color = OutfitMuted,
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(text = "Saving...", fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                Text(text = if (isSaving) "Saving..." else "Removing...", fontSize = 15.sp, fontWeight = FontWeight.Medium)
             }
             isSaved -> {
                 Icon(

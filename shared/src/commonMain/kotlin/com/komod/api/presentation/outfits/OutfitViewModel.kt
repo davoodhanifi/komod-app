@@ -83,23 +83,58 @@ class OutfitViewModel(
         }
     }
 
-    fun saveOutfit(outfit: Outfit) {
+    fun toggleSaveOutfit(outfit: Outfit) {
+        if (outfit.id in _uiState.value.savedOutfitIds) {
+            unsaveOutfit(outfit)
+        } else {
+            saveOutfit(outfit)
+        }
+    }
+
+    private fun saveOutfit(outfit: Outfit) {
         val state = _uiState.value
-        if (outfit.id in state.savingOutfitIds || outfit.id in state.savedOutfitIds) return
+        if (outfit.id in state.savingOutfitIds || outfit.id in state.unsavingOutfitIds || outfit.id in state.savedOutfitIds) return
 
         _uiState.update { it.copy(savingOutfitIds = it.savingOutfitIds + outfit.id) }
         viewModelScope.launch {
             runCatching {
                 outfitRepository.saveOutfit(outfit)
-            }.onSuccess {
+            }.onSuccess { savedOutfitId ->
                 _uiState.update {
                     it.copy(
                         savingOutfitIds = it.savingOutfitIds - outfit.id,
-                        savedOutfitIds = it.savedOutfitIds + outfit.id,
+                        savedOutfitIds = it.savedOutfitIds + (outfit.id to savedOutfitId),
                     )
                 }
             }.onFailure { throwable ->
                 _uiState.update { it.copy(savingOutfitIds = it.savingOutfitIds - outfit.id) }
+                _effects.emit(
+                    OutfitEffect.ShowSnackbar(
+                        ErrorMapper.toUserMessage(throwable, tag = "OutfitViewModel"),
+                    ),
+                )
+            }
+        }
+    }
+
+    private fun unsaveOutfit(outfit: Outfit) {
+        val state = _uiState.value
+        val savedOutfitId = state.savedOutfitIds[outfit.id] ?: return
+        if (outfit.id in state.savingOutfitIds || outfit.id in state.unsavingOutfitIds) return
+
+        _uiState.update { it.copy(unsavingOutfitIds = it.unsavingOutfitIds + outfit.id) }
+        viewModelScope.launch {
+            runCatching {
+                outfitRepository.unsaveOutfit(savedOutfitId)
+            }.onSuccess {
+                _uiState.update {
+                    it.copy(
+                        unsavingOutfitIds = it.unsavingOutfitIds - outfit.id,
+                        savedOutfitIds = it.savedOutfitIds - outfit.id,
+                    )
+                }
+            }.onFailure { throwable ->
+                _uiState.update { it.copy(unsavingOutfitIds = it.unsavingOutfitIds - outfit.id) }
                 _effects.emit(
                     OutfitEffect.ShowSnackbar(
                         ErrorMapper.toUserMessage(throwable, tag = "OutfitViewModel"),
