@@ -83,6 +83,21 @@ class OutfitViewModel(
         }
     }
 
+    // Lets other entry points (e.g. tapping a Saved Outfits card on Home) reuse the
+    // Outfit Details route, which looks outfits up by id from this ViewModel's list.
+    // Since the outfit already came from GET /v1/outfits, its id is itself the
+    // server-assigned saved outfit id, so it's recorded as already-saved (self-mapped)
+    // rather than eligible to be saved again.
+    fun showSavedOutfitDetails(outfit: Outfit) {
+        _uiState.update { state ->
+            val outfits = if (state.outfits.any { it.id == outfit.id }) state.outfits else state.outfits + outfit
+            state.copy(
+                outfits = outfits,
+                savedOutfitIds = state.savedOutfitIds + (outfit.id to outfit.id),
+            )
+        }
+    }
+
     fun toggleSaveOutfit(outfit: Outfit) {
         if (outfit.id in _uiState.value.savedOutfitIds) {
             unsaveOutfit(outfit)

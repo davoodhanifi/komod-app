@@ -31,15 +31,18 @@ class HomeViewModel(
                 it.copy(
                     summaryState = WardrobeSummaryState.Loading,
                     recentItemsState = RecentItemsState.Loading,
+                    savedOutfitsState = SavedOutfitsState.Loading,
                 )
             }
 
-            // Load both concurrently
+            // Load concurrently
             val summaryDeferred = async { fetchSummary() }
             val recentItemsDeferred = async { fetchRecentItems() }
+            val savedOutfitsDeferred = async { fetchSavedOutfits() }
 
             summaryDeferred.await()
             recentItemsDeferred.await()
+            savedOutfitsDeferred.await()
         }
     }
 
@@ -94,6 +97,21 @@ class HomeViewModel(
                         ),
                     )
                 }
+            }
+    }
+
+    private suspend fun fetchSavedOutfits() {
+        runCatching { homeRepository.getSavedOutfits() }
+            .onSuccess { outfits ->
+                _uiState.update {
+                    it.copy(savedOutfitsState = SavedOutfitsState.Success(outfits))
+                }
+            }
+            .onFailure { error ->
+                // Logged for diagnostics, but the message itself is discarded: a failed
+                // saved-outfits load hides the section entirely rather than showing an error.
+                ErrorMapper.toUserMessage(error, tag = "HomeViewModel")
+                _uiState.update { it.copy(savedOutfitsState = SavedOutfitsState.Error) }
             }
     }
 }

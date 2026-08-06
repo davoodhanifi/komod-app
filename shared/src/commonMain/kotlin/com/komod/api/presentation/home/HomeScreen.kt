@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -80,9 +81,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import com.komod.api.domain.model.OutfitItem
 import com.komod.api.domain.model.RecentItem
+import com.komod.api.domain.model.SavedOutfit
 import com.komod.api.domain.model.User
 import com.komod.api.domain.model.WardrobeSummary
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.ui.graphics.painter.Painter
 import komod.shared.generated.resources.hanger_filled
 import komod.shared.generated.resources.long_sleeve_shirt
@@ -90,6 +95,8 @@ import komod.shared.generated.resources.shorts_pants
 import komod.shared.generated.resources.t_shirt
 import komod.shared.generated.resources.tank_top
 import komod.shared.generated.resources.user_filled
+import kotlin.time.Clock
+import kotlin.time.Instant
 import org.jetbrains.compose.resources.DrawableResource
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -130,6 +137,8 @@ fun HomeScreen(
     onViewWardrobeCategory: (String) -> Unit,
     onProfileClick: () -> Unit,
     onItemClick: (String) -> Unit,
+    onOutfitClick: (SavedOutfit) -> Unit = {},
+    onViewOutfits: () -> Unit = {},
     refreshKey: Int = 0,
     scrollState: androidx.compose.foundation.ScrollState = rememberScrollState(),
 ) {
@@ -189,6 +198,28 @@ fun HomeScreen(
                 message = state.message,
                 onRetry = viewModel::retryLoadRecentItems,
             )
+        }
+
+        when (val state = uiState.savedOutfitsState) {
+            is SavedOutfitsState.Loading -> {
+                Spacer(modifier = Modifier.height(32.dp))
+                SavedOutfitsSkeleton()
+            }
+            is SavedOutfitsState.Success -> {
+                Spacer(modifier = Modifier.height(32.dp))
+                if (state.outfits.isEmpty()) {
+                    SavedOutfitsEmptyState(onGenerateOutfit = onViewOutfits)
+                } else {
+                    SavedOutfitsSection(
+                        outfits = state.outfits,
+                        onOutfitClick = onOutfitClick,
+                        onViewAll = onViewOutfits,
+                    )
+                }
+            }
+            // Hidden entirely on failure — no backend error is surfaced, and the rest
+            // of the Home screen keeps rendering normally.
+            is SavedOutfitsState.Error -> Unit
         }
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -666,6 +697,244 @@ private fun RecentItemTile(
     }
 }
 
+private val SavedOutfitCardWidth = 152.dp
+
+@Composable
+fun SavedOutfitsSection(
+    outfits: List<SavedOutfit>,
+    onOutfitClick: (SavedOutfit) -> Unit,
+    onViewAll: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val displayOutfits = outfits.take(5)
+
+    Card(
+        modifier = modifier.padding(horizontal = 20.dp).fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 16.dp),
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onViewAll),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "Saved Outfits",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = DarkText,
+                )
+                Text(
+                    text = "View all →",
+                    color = Purple,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            LazyRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                items(items = displayOutfits, key = { it.id }) { outfit ->
+                    SavedOutfitCard(
+                        outfit = outfit,
+                        onClick = { onOutfitClick(outfit) },
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SavedOutfitCard(
+    outfit: SavedOutfit,
+    onClick: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .width(SavedOutfitCardWidth)
+            .clickable(onClick = onClick),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Box(modifier = Modifier.fillMaxWidth().height(96.dp)) {
+            SavedOutfitPreview(
+                items = outfit.items,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(14.dp)),
+            )
+            if (outfit.isFavorite) {
+                Icon(
+                    imageVector = Icons.Filled.Favorite,
+                    contentDescription = "Favorite",
+                    tint = Color.White,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(6.dp)
+                        .size(18.dp)
+                        .clip(CircleShape)
+                        .background(Purple)
+                        .padding(3.dp),
+                )
+            }
+        }
+        Text(
+            text = outfit.name,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = DarkText,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Text(
+            text = relativeSavedDate(outfit.createdAt),
+            fontSize = 11.sp,
+            color = GrayText,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+@Composable
+private fun SavedOutfitPreview(
+    items: List<OutfitItem>,
+    modifier: Modifier = Modifier,
+) {
+    val previewItems = items.take(3).filter { !it.imageUrl.isNullOrBlank() }
+
+    Row(
+        modifier = modifier.background(Color(0xFFF3F4F6)),
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        if (previewItems.isEmpty()) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Icon(
+                    painter = painterResource(Res.drawable.hanger_filled),
+                    contentDescription = null,
+                    tint = Color(0xFFD1D5DB),
+                    modifier = Modifier.size(28.dp),
+                )
+            }
+        } else {
+            previewItems.forEach { item ->
+                AsyncImage(
+                    model = item.imageUrl,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun SavedOutfitsSkeleton(modifier: Modifier = Modifier) {
+    Card(
+        modifier = modifier.padding(horizontal = 20.dp).fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 16.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                ShimmerBox(modifier = Modifier.width(120.dp).height(18.dp))
+                ShimmerBox(modifier = Modifier.width(60.dp).height(14.dp))
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                repeat(3) {
+                    Column(
+                        modifier = Modifier.width(SavedOutfitCardWidth),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        ShimmerBox(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(96.dp)
+                                .clip(RoundedCornerShape(14.dp)),
+                        )
+                        ShimmerBox(modifier = Modifier.width(90.dp).height(13.dp))
+                        ShimmerBox(modifier = Modifier.width(60.dp).height(11.dp))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun SavedOutfitsEmptyState(
+    onGenerateOutfit: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier.padding(horizontal = 20.dp).fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 16.dp),
+        ) {
+            Text(
+                text = "Saved Outfits",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = DarkText,
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    text = "You haven't saved any outfits yet.",
+                    fontSize = 14.sp,
+                    color = GrayText,
+                    textAlign = TextAlign.Center,
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(
+                    onClick = onGenerateOutfit,
+                    colors = ButtonDefaults.buttonColors(containerColor = Purple),
+                    shape = RoundedCornerShape(12.dp),
+                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
+                ) {
+                    Text(text = "Generate your first outfit ✨", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                }
+            }
+        }
+    }
+}
+
 @Composable
 fun WardrobeSummarySkeleton(modifier: Modifier = Modifier) {
     Card(
@@ -956,6 +1225,17 @@ fun formatDate(isoDate: String): String {
         "$monthName $day, $year"
     } catch (_: Exception) {
         isoDate
+    }
+}
+
+fun relativeSavedDate(isoDate: String): String {
+    val createdAt = Instant.parseOrNull(isoDate) ?: return formatDate(isoDate)
+    val diffDays = (Clock.System.now() - createdAt).inWholeDays
+    return when {
+        diffDays <= 0 -> "Today"
+        diffDays == 1L -> "Yesterday"
+        diffDays < 7 -> "$diffDays days ago"
+        else -> formatDate(isoDate)
     }
 }
 

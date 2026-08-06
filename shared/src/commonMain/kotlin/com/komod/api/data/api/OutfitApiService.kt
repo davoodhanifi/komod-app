@@ -1,5 +1,6 @@
 package com.komod.api.data.api
 
+import com.komod.api.data.api.model.OutfitDto
 import com.komod.api.data.api.model.OutfitGenerateRequest
 import com.komod.api.data.api.model.OutfitGenerateResponse
 import com.komod.api.data.api.model.ResponseData
@@ -12,6 +13,7 @@ import io.ktor.client.call.body
 import io.ktor.client.plugins.ClientRequestException
 import io.ktor.client.plugins.ServerResponseException
 import io.ktor.client.request.delete
+import io.ktor.client.request.get
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
@@ -70,6 +72,11 @@ class OutfitApiService(
 
     suspend fun deleteOutfit(id: String) {
         httpClient.delete("outfits/$id")
+    }
+
+    suspend fun getOutfits(): List<OutfitDto> {
+        return httpClient.get("outfits")
+            .body<ResponseData<List<OutfitDto>>>().data
     }
 }
 

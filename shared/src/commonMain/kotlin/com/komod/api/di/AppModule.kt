@@ -72,7 +72,14 @@ fun appModule() = module {
     single<WardrobeItemRepository> { WardrobeItemRepositoryImpl(wardrobeApiService = get(), supabaseClient = get(), wardrobeItemCache = get()) }
     single<WeatherRepository> { WeatherRepositoryImpl(weatherApi = get()) }
     single<OutfitRepository> { OutfitRepositoryImpl(outfitApiService = get(), supabaseClient = get(), wardrobeItemRepository = get(), wardrobeItemCache = get()) }
-    single<HomeRepository> { HomeRepositoryImpl(wardrobeApiService = get(), supabaseClient = get()) }
+    single<HomeRepository> {
+        HomeRepositoryImpl(
+            wardrobeApiService = get(),
+            outfitApiService = get(),
+            supabaseClient = get(),
+            wardrobeItemCache = get(),
+        )
+    }
     single<UploadReviewRepository> { UploadReviewRepositoryImpl(wardrobeApiService = get(), storageService = get()) }
     viewModel { LoginViewModel(get()) }
     viewModel { AddItemViewModel(get()) }

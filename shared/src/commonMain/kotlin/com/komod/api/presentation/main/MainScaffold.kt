@@ -52,6 +52,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.komod.api.data.repository.AuthRepository
+import com.komod.api.domain.model.toOutfit
 import com.komod.api.presentation.additem.AddItemScreen
 import com.komod.api.presentation.cropeditor.CropEditorScreen
 import com.komod.api.presentation.home.HomeScreen
@@ -283,6 +284,19 @@ fun MainScaffold(
                         },
                         onItemClick = { itemId ->
                             navController.navigate(MainRoute.WardrobeItemDetail.createRoute(itemId))
+                        },
+                        onOutfitClick = { savedOutfit ->
+                            outfitViewModel.showSavedOutfitDetails(savedOutfit.toOutfit())
+                            navController.navigate(MainRoute.OutfitDetails.createRoute(savedOutfit.id))
+                        },
+                        onViewOutfits = {
+                            navController.navigate(MainRoute.Outfits.route) {
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
                         },
                         refreshKey = homeRefreshKey,
                     )
