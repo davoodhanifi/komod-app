@@ -4,6 +4,8 @@ class WardrobeItemUpdateNotFoundException : RuntimeException()
 
 class WardrobeItemUpdateBadRequestException : RuntimeException()
 
+class WardrobeItemUpdateConflictException : RuntimeException()
+
 class WardrobeItemUpdateNetworkException(
     cause: Throwable,
 ) : RuntimeException(cause)

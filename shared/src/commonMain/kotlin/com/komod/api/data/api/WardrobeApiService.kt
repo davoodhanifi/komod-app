@@ -1,7 +1,6 @@
 package com.komod.api.data.api
 
 import com.komod.api.data.api.model.AnalyzeWardrobeRequest
-import com.komod.api.data.api.model.BoundingBoxDto
 import com.komod.api.data.api.model.CreateImageResponse
 import com.komod.api.data.api.model.ImageDto
 import com.komod.api.data.api.model.RecentItemDto
@@ -17,12 +16,16 @@ import io.ktor.client.call.body
 import io.ktor.client.plugins.ClientRequestException
 import io.ktor.client.plugins.ServerResponseException
 import io.ktor.client.request.delete
+import io.ktor.client.request.forms.MultiPartFormDataContent
+import io.ktor.client.request.forms.formData
 import io.ktor.client.request.get
 import io.ktor.client.request.patch
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
+import io.ktor.http.Headers
+import io.ktor.http.HttpHeaders
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
 
@@ -66,18 +69,30 @@ class WardrobeApiService(
         }
     }
 
-    suspend fun updateWardrobeItemBoundingBox(
+    suspend fun uploadWardrobeItemCroppedImage(
         id: String,
-        request: BoundingBoxDto,
+        imageBytes: ByteArray,
     ) {
         // No caller needs the response body — the item is refetched separately to pick
         // up the new cropped image — and its shape isn't guaranteed to stay in sync with
         // the backend, so only the HTTP status is checked. Parsing an unused body here
         // was turning successful saves into a user-facing "something went wrong" error
         // whenever that shape drifted.
-        val response = httpClient.patch("wardrobe-items/$id/bounding-box") {
-            contentType(ContentType.Application.Json)
-            setBody(request)
+        val response = httpClient.patch("wardrobe-items/$id/cropped-image") {
+            setBody(
+                MultiPartFormDataContent(
+                    formData {
+                        append(
+                            key = "image",
+                            value = imageBytes,
+                            headers = Headers.build {
+                                append(HttpHeaders.ContentType, "image/jpeg")
+                                append(HttpHeaders.ContentDisposition, "filename=\"crop.jpg\"")
+                            },
+                        )
+                    },
+                ),
+            )
         }
         if (!response.status.isSuccess()) {
             val text = response.bodyAsText()

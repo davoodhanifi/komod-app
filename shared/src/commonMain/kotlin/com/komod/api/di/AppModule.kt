@@ -5,6 +5,7 @@ import com.komod.api.data.api.WardrobeApiService
 import com.komod.api.data.api.OutfitApiService
 import com.komod.api.data.api.WeatherApi
 import com.komod.api.data.api.provideKtorClient
+import com.komod.api.data.api.providePlainHttpClient
 import com.komod.api.data.auth.SupabaseAuthDataSource
 import com.komod.api.data.repository.AddItemRepository
 import com.komod.api.data.repository.AddItemRepositoryImpl
@@ -40,7 +41,10 @@ import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.storage.Storage
 import org.koin.core.module.dsl.viewModel
+import org.koin.core.qualifier.named
 import org.koin.dsl.module
+
+val PlainHttpClientQualifier = named("plainHttpClient")
 
 fun appModule() = module {
     single {
@@ -58,6 +62,7 @@ fun appModule() = module {
     single { SupabaseAuthDataSource(get()) }
     single<AuthRepository> { AuthRepositoryImpl(get()) }
     single { provideKtorClient(get()) }
+    single(PlainHttpClientQualifier) { providePlainHttpClient() }
     single { WardrobeApiService(get()) }
     single { OutfitApiService(get()) }
     single { WeatherApi(get()) }
@@ -69,7 +74,14 @@ fun appModule() = module {
     single { StorageService(supabaseClient = get()) }
     single<AddItemRepository> { AddItemRepositoryImpl(get(), get(), get()) }
     single<WardrobeRepository> { WardrobeRepositoryImpl(wardrobeApiService = get(), supabaseClient = get(), wardrobeItemCache = get()) }
-    single<WardrobeItemRepository> { WardrobeItemRepositoryImpl(wardrobeApiService = get(), supabaseClient = get(), wardrobeItemCache = get()) }
+    single<WardrobeItemRepository> {
+        WardrobeItemRepositoryImpl(
+            wardrobeApiService = get(),
+            supabaseClient = get(),
+            wardrobeItemCache = get(),
+            plainHttpClient = get(PlainHttpClientQualifier),
+        )
+    }
     single<WeatherRepository> { WeatherRepositoryImpl(weatherApi = get()) }
     single<OutfitRepository> { OutfitRepositoryImpl(outfitApiService = get(), supabaseClient = get(), wardrobeItemRepository = get(), wardrobeItemCache = get()) }
     single<HomeRepository> {

@@ -14,6 +14,7 @@ import com.komod.api.data.repository.WardrobeItemDeleteBadRequestException
 import com.komod.api.data.repository.WardrobeItemDeleteNetworkException
 import com.komod.api.data.repository.WardrobeItemDeleteNotFoundException
 import com.komod.api.data.repository.WardrobeItemUpdateBadRequestException
+import com.komod.api.data.repository.WardrobeItemUpdateConflictException
 import com.komod.api.data.repository.WardrobeItemUpdateNetworkException
 import com.komod.api.data.repository.WardrobeItemUpdateNotFoundException
 import io.ktor.client.network.sockets.ConnectTimeoutException
@@ -61,6 +62,7 @@ object ErrorMapper {
         is WardrobeItemUpdateNotFoundException -> "This item no longer exists."
         is WardrobeItemDeleteBadRequestException,
         is WardrobeItemUpdateBadRequestException -> "Couldn't save your changes. Please try again."
+        is WardrobeItemUpdateConflictException -> "This item was updated elsewhere. Please go back and try again."
         is WardrobeItemDeleteNetworkException -> mapCauseOrFallback(throwable, context)
         is WardrobeItemUpdateNetworkException -> mapCauseOrFallback(throwable, context)
 

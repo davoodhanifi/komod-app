@@ -14,8 +14,14 @@ interface WardrobeItemRepository {
         id: String,
         request: WardrobeItemUpdateRequest,
     ): WardrobeItemDetail
-    suspend fun updateWardrobeItemBoundingBox(
+    /**
+     * Downloads the full-resolution original image from [originalImageUrl], crops the
+     * normalized [boundingBox] region out of it locally, and uploads the result as the
+     * item's new cropped image. Never operates on a thumbnail or preview.
+     */
+    suspend fun uploadCroppedImage(
         id: String,
+        originalImageUrl: String,
         boundingBox: BoundingBox,
     )
 }

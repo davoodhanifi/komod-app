@@ -2,13 +2,13 @@ package com.komod.api.presentation.cropeditor
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.komod.api.core.error.AppLogger
 import com.komod.api.core.error.ErrorMapper
 import com.komod.api.core.error.UserFacingMessages
 import com.komod.api.data.repository.UploadReviewRepository
 import com.komod.api.data.repository.UploadedItemNotFoundException
 import com.komod.api.data.repository.WardrobeItemRepository
 import com.komod.api.data.repository.WardrobeItemUpdateBadRequestException
+import com.komod.api.data.repository.WardrobeItemUpdateConflictException
 import com.komod.api.data.repository.WardrobeItemUpdateNetworkException
 import com.komod.api.data.repository.WardrobeItemUpdateNotFoundException
 import com.komod.api.domain.model.BoundingBox
@@ -104,11 +104,18 @@ class CropEditorViewModel(
         val current = _uiState.value as? CropEditorUiState.Ready ?: return
         if (current.isSaving) return
 
+        val originalImageUrl = current.originalImageUrl
+        if (originalImageUrl == null) {
+            viewModelScope.launch { _effects.emit(CropEditorEffect.SaveFailed(UserFacingMessages.Generic)) }
+            return
+        }
+
         viewModelScope.launch {
             _uiState.value = current.copy(isSaving = true)
             try {
-                wardrobeItemRepository.updateWardrobeItemBoundingBox(
+                wardrobeItemRepository.uploadCroppedImage(
                     id = wardrobeItemId,
+                    originalImageUrl = originalImageUrl,
                     boundingBox = current.cropState.currentBoundingBox,
                 )
                 _effects.emit(CropEditorEffect.CropSaved)
@@ -116,17 +123,16 @@ class CropEditorViewModel(
                 onSaveFailed(current, error)
             } catch (error: WardrobeItemUpdateBadRequestException) {
                 onSaveFailed(current, error)
+            } catch (error: WardrobeItemUpdateConflictException) {
+                onSaveFailed(current, error)
             } catch (error: WardrobeItemUpdateNetworkException) {
                 onSaveFailed(current, error)
             }
         }
     }
 
-    // Any save failure just shows a generic message for now — no per-status-code
-    // messaging until that's actually needed.
     private suspend fun onSaveFailed(current: CropEditorUiState.Ready, error: Throwable) {
-        AppLogger.e("CropEditorViewModel", "Failed to save crop (${error::class.simpleName})", error)
         _uiState.value = current.copy(isSaving = false)
-        _effects.emit(CropEditorEffect.SaveFailed(UserFacingMessages.Generic))
+        _effects.emit(CropEditorEffect.SaveFailed(ErrorMapper.toUserMessage(error, tag = "CropEditorViewModel")))
     }
 }

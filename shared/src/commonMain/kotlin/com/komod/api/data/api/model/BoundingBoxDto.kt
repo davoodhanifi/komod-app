@@ -17,10 +17,3 @@ fun BoundingBoxDto.toDomain(): BoundingBox = BoundingBox(
     width = width.toFloat(),
     height = height.toFloat(),
 )
-
-fun BoundingBox.toDto(): BoundingBoxDto = BoundingBoxDto(
-    x = x.toDouble(),
-    y = y.toDouble(),
-    width = width.toDouble(),
-    height = height.toDouble(),
-)
