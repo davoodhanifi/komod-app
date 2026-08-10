@@ -1156,7 +1156,7 @@ fun getCategoryIcon(category: String) = when (category.lowercase()) {
     "shoe", "shoes", "sneaker", "sneakers" -> painterResource(Res.drawable.shoes)
     "jacket", "jackets", "blazer", "blazers", "outerwear", "coat", "coats" -> painterResource(Res.drawable.suit)
     "hoodie", "hoodies", "sweatshirt", "sweatshirts", "sweater", "sweaters" -> painterResource(Res.drawable.hoodie)
-    "pant", "pants", "trouser", "trousers" -> painterResource(Res.drawable.pants)
+    "pant", "pants", "jean", "jeans", "trouser", "trousers", "chino", "chinos" -> painterResource(Res.drawable.pants)
     "short", "shorts" -> painterResource(Res.drawable.shorts_pants)
     "dress", "dresses" -> painterResource(Res.drawable.dress)
     "hat", "hats", "cap", "caps" -> painterResource(Res.drawable.hat)
@@ -1183,7 +1183,7 @@ fun getCategoryIconColor(category: String): Color {
         "jacket", "jackets", "blazer", "blazers", "outerwear", "coat", "coats",
         "suit", "suits" -> Color(0xFF4CAF50)
         "hoodie", "hoodies", "sweatshirt", "sweatshirts", "sweater", "sweaters" -> Color(0xFF9C27B0)
-        "pant", "pants", "trouser", "trousers", "short", "shorts" -> Color(0xFF009688)
+        "pant", "pants", "jean", "jeans", "trouser", "trousers", "chino", "chinos", "short", "shorts" -> Color(0xFF009688)
         "dress", "dresses" -> Color(0xFFE91E63)
         "hat", "hats", "cap", "caps" -> Color(0xFFFFC107)
         "bag", "bags", "handbag", "handbags" -> Color(0xFFFF6F00)

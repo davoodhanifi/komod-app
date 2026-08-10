@@ -44,6 +44,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.komod.api.domain.model.WeatherCurrent
+import com.komod.api.domain.model.WeatherLocation
 import komod.shared.generated.resources.Res
 import komod.shared.generated.resources.arrow_right
 import komod.shared.generated.resources.cloud_fog_stroke_rounded
@@ -259,6 +260,18 @@ private fun WeatherBody(
 
             // Temperature + condition
             Column(modifier = Modifier.weight(1f)) {
+                val locationLabel = weatherLocationLabel(weather.location)
+                if (locationLabel != null) {
+                    Text(
+                        text = locationLabel,
+                        color = mutedColor,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                }
                 Row(
                     verticalAlignment = Alignment.Bottom,
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -453,6 +466,17 @@ private fun weatherIcon(weather: WeatherCurrent): DrawableResource {
                 else -> Res.drawable.cloud_stroke_rounded
             }
         }
+    }
+}
+
+private fun weatherLocationLabel(location: WeatherLocation): String? {
+    val neighborhood = location.neighborhood?.takeIf { it.isNotBlank() }
+    val city = location.city?.takeIf { it.isNotBlank() }
+    return when {
+        neighborhood != null && city != null -> "$neighborhood, $city"
+        city != null -> city
+        neighborhood != null -> neighborhood
+        else -> null
     }
 }
 
