@@ -4,7 +4,6 @@ import com.komod.api.data.api.WardrobeApiService
 import com.komod.api.data.api.model.WardrobeItemDto
 import com.komod.api.data.api.model.WardrobeItemReviewRequestItem
 import com.komod.api.data.api.model.toDomain
-import com.komod.api.data.api.model.toImageStatus
 import com.komod.api.data.storage.StorageService
 import com.komod.api.domain.model.BoundingBox
 import com.komod.api.domain.model.UploadedImageDetail
@@ -25,7 +24,7 @@ class UploadReviewRepositoryImpl(
 
         return UploadedImageDetail(
             imageId = dto.imageId,
-            status = dto.status.toImageStatus(),
+            status = dto.status,
             originalImageUrl = originalImageUrl,
             items = dto.items.map { itemDto -> itemDto.toDetail(fallbackImageUrl = originalImageUrl) },
         )

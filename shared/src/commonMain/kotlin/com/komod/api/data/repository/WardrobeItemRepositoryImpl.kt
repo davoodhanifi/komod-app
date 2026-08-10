@@ -2,6 +2,7 @@ package com.komod.api.data.repository
 
 import com.komod.api.data.api.WardrobeApiService
 import com.komod.api.data.api.model.WardrobeItemUpdateRequest
+import com.komod.api.data.api.model.preferredThumbnailStoragePath
 import com.komod.api.data.api.model.toDomain
 import com.komod.api.domain.model.BoundingBox
 import com.komod.api.domain.model.WardrobeItemDetail
@@ -29,12 +30,7 @@ class WardrobeItemRepositoryImpl(
     override suspend fun getWardrobeItem(id: String): WardrobeItemDetail {
         val dto = wardrobeApiService.getWardrobeItemById(id)
 
-        val imageUrl = dto.croppedImageStoragePath
-            ?.takeIf { it.isNotBlank() }
-            ?.let { path -> createSignedUrl(path) }
-            ?: dto.originalImageStoragePath
-                ?.takeIf { it.isNotBlank() }
-                ?.let { path -> createSignedUrl(path) }
+        val imageUrl = dto.preferredThumbnailStoragePath()?.let { path -> createSignedUrl(path) }
             ?: getOriginalImageUrl(dto.imageId)
 
         return WardrobeItemDetail(

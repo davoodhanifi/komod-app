@@ -2,6 +2,7 @@ package com.komod.api.presentation.wardrobe
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.komod.api.core.error.AppLogger
 import com.komod.api.core.error.ErrorMapper
 import com.komod.api.data.api.model.ImageStatus
 import com.komod.api.data.repository.AddItemRepository
@@ -92,6 +93,15 @@ class WardrobeViewModel(
         }
     }
 
+    // Called every time the Wardrobe screen (re)enters composition — including
+    // returning from Add Item — independent of the nav-level savedStateHandle signal
+    // that also triggers refresh(). Deliberately narrow (just the uploads list, not the
+    // full wardrobe-items fetch) so it's cheap enough to fire on every entry as a
+    // guaranteed, low-risk backstop.
+    fun refreshRecentUploads() {
+        viewModelScope.launch { refreshUploadedImages() }
+    }
+
     fun selectCategory(category: String) {
         _selectedCategory.value = category
     }
@@ -106,8 +116,17 @@ class WardrobeViewModel(
             }
     }
 
-    // Best-effort: the wardrobe grid's own loading/error state must not depend on this.
+    // Best-effort: the wardrobe grid's own loading/error state must not depend on this,
+    // and a transient failure (network blip, or a malformed response) must not mark any
+    // upload Failed — only an explicit Status == Failed from the backend does that. The
+    // failure is still logged, though, so it doesn't silently disappear; polling retries
+    // on the next tick regardless.
     private suspend fun refreshUploadedImages() {
         runCatching { addItemRepository.refreshUploadedImages() }
+            .onFailure { error ->
+                // A logging failure must never propagate out of here — this runs inside
+                // the poll loop, and an uncaught exception here would silently kill it.
+                runCatching { AppLogger.e("WardrobeViewModel", "Failed to refresh uploaded images", error) }
+            }
     }
 }

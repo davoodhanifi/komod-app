@@ -1,5 +1,6 @@
 package com.komod.api.data.api
 
+import com.komod.api.data.api.model.AnalyzeWardrobeImageResultDto
 import com.komod.api.data.api.model.AnalyzeWardrobeRequest
 import com.komod.api.data.api.model.CreateImageResponse
 import com.komod.api.data.api.model.ImageDto
@@ -38,11 +39,31 @@ class WardrobeApiService(
         }.body<ResponseData<CreateImageResponse>>().data
     }
 
-    suspend fun analyzeWardrobeItems(imageId: String) {
-        httpClient.post("wardrobe-items/analyze") {
+    // Queues background analysis and returns immediately with the queued status — the
+    // wardrobe items themselves are extracted later and only show up via
+    // getUploadedImages(). Callers must not treat this response as containing item IDs.
+    //
+    // The status is checked explicitly *before* attempting to parse the body as the
+    // success envelope: an error response (e.g. 412 for an already-queued image) has a
+    // ProblemDetails-shaped body, not a ResponseData<AnalyzeWardrobeImageResultDto> one,
+    // and letting .body<T>() run against it first throws an unrelated
+    // SerializationException instead of the expected ClientRequestException/
+    // ServerResponseException — silently miscategorizing a normal HTTP error as a parse
+    // failure.
+    suspend fun analyzeWardrobeItems(imageId: String): AnalyzeWardrobeImageResultDto {
+        val response = httpClient.post("wardrobe-items/analyze") {
             contentType(ContentType.Application.Json)
             setBody(AnalyzeWardrobeRequest(imageId = imageId))
         }
+        if (!response.status.isSuccess()) {
+            val text = response.bodyAsText()
+            throw if (response.status.value in 400..499) {
+                ClientRequestException(response, text)
+            } else {
+                ServerResponseException(response, text)
+            }
+        }
+        return response.body<ResponseData<AnalyzeWardrobeImageResultDto>>().data
     }
 
     suspend fun getWardrobeItems(): List<WardrobeItemDto> {
@@ -145,9 +166,20 @@ class WardrobeApiService(
             .body<ResponseData<ImageDto>>().data
     }
 
+    // Same reasoning as analyzeWardrobeItems: check the status before parsing the body,
+    // so a transient server error during polling surfaces as a proper ResponseException
+    // rather than an unrelated SerializationException.
     suspend fun getUploadedImages(): List<UploadedImageDto> {
-        return httpClient.get("images/uploaded")
-            .body<ResponseData<List<UploadedImageDto>>>().data
+        val response = httpClient.get("images/uploaded")
+        if (!response.status.isSuccess()) {
+            val text = response.bodyAsText()
+            throw if (response.status.value in 400..499) {
+                ClientRequestException(response, text)
+            } else {
+                ServerResponseException(response, text)
+            }
+        }
+        return response.body<ResponseData<List<UploadedImageDto>>>().data
     }
 
     suspend fun reviewWardrobeItems(request: ReviewWardrobeItemsRequest) {

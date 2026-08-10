@@ -111,6 +111,14 @@ fun WardrobeScreen(
         if (refreshKey > 0) viewModel.refresh()
     }
 
+    // Belt-and-suspenders: fires every time this composable (re)enters composition —
+    // cold start and every return from a screen pushed on top of it (e.g. Add Item) —
+    // independent of the nav-level savedStateHandle signal above. Recent Uploads must
+    // never depend on that signal alone to catch up after an upload.
+    LaunchedEffect(Unit) {
+        viewModel.refreshRecentUploads()
+    }
+
     LaunchedEffect(initialCategory) {
         if (initialCategory != null) {
             viewModel.selectCategory(initialCategory)
@@ -132,101 +140,96 @@ fun WardrobeScreen(
         },
         containerColor = Color.White,
     ) { padding ->
-        when (val state = uiState) {
-            WardrobeUiState.Loading -> {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding),
-                ) {
-                    WardrobeHeader()
-                    LoadingState(modifier = Modifier.fillMaxSize())
-                }
-            }
+        // Recent Uploads is driven by UploadedImageStore, not by the wardrobe-items
+        // fetch below — it must render regardless of whether that fetch is Loading,
+        // Success, or Error, or a same-session upload silently disappears from view
+        // whenever an unrelated grid refresh is mid-flight or fails.
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding),
+        ) {
+            WardrobeHeader()
+            RecentUploadsSection(uploads = recentUploads, onUploadClick = onUploadClick)
 
-            is WardrobeUiState.Success -> {
-                val categories = remember(state.items) {
-                    listOf(AllCategoriesLabel) + state.items.map { it.category }.distinct()
+            when (val state = uiState) {
+                WardrobeUiState.Loading -> {
+                    LoadingState(modifier = Modifier.weight(1f))
                 }
-                val filteredItems = remember(state.items, selectedCategory) {
-                    if (selectedCategory == AllCategoriesLabel) {
-                        state.items
-                    } else {
-                        state.items.filter { it.category == selectedCategory }
+
+                is WardrobeUiState.Success -> {
+                    val categories = remember(state.items) {
+                        listOf(AllCategoriesLabel) + state.items.map { it.category }.distinct()
                     }
-                }
-
-                PullToRefreshBox(
-                    isRefreshing = isRefreshing,
-                    onRefresh = { viewModel.refresh() },
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding),
-                ) {
-                    Column(modifier = Modifier.fillMaxSize()) {
-                        WardrobeHeader()
-
-                        RecentUploadsSection(uploads = recentUploads, onUploadClick = onUploadClick)
-
-                        if (state.items.isNotEmpty()) {
-                            CategoryFilterRow(
-                                categories = categories,
-                                selectedCategory = selectedCategory,
-                                onCategorySelected = viewModel::selectCategory,
-                            )
-                        }
-
-                        if (state.items.isEmpty()) {
-                            EmptyState(
-                                onAddItem = onAddItem,
-                                modifier = Modifier.fillMaxSize(),
-                            )
-                        } else if (filteredItems.isEmpty()) {
-                            NoCategoryItemsState(
-                                category = selectedCategory,
-                                modifier = Modifier.fillMaxSize(),
-                            )
+                    val filteredItems = remember(state.items, selectedCategory) {
+                        if (selectedCategory == AllCategoriesLabel) {
+                            state.items
                         } else {
-                            LazyVerticalGrid(
-                                columns = GridCells.Fixed(3),
-                                state = lazyGridState,
-                                contentPadding = PaddingValues(
-                                    start = 16.dp,
-                                    end = 16.dp,
-                                    top = 0.dp,
-                                    bottom = LocalBottomNavBarHeight.current + 16.dp,
-                                ),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                verticalArrangement = Arrangement.spacedBy(12.dp),
-                                modifier = Modifier.fillMaxSize(),
-                            ) {
-                                items(
-                                    items = filteredItems,
-                                    key = { item -> item.id },
-                                ) { item ->
-                                    WardrobeCard(
-                                        item = item,
-                                        onClick = { onItemClick(item.id) },
-                                        modifier = Modifier.animateItem(),
-                                    )
+                            state.items.filter { it.category == selectedCategory }
+                        }
+                    }
+
+                    PullToRefreshBox(
+                        isRefreshing = isRefreshing,
+                        onRefresh = { viewModel.refresh() },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                    ) {
+                        Column(modifier = Modifier.fillMaxSize()) {
+                            if (state.items.isNotEmpty()) {
+                                CategoryFilterRow(
+                                    categories = categories,
+                                    selectedCategory = selectedCategory,
+                                    onCategorySelected = viewModel::selectCategory,
+                                )
+                            }
+
+                            if (state.items.isEmpty()) {
+                                EmptyState(
+                                    onAddItem = onAddItem,
+                                    modifier = Modifier.fillMaxSize(),
+                                )
+                            } else if (filteredItems.isEmpty()) {
+                                NoCategoryItemsState(
+                                    category = selectedCategory,
+                                    modifier = Modifier.fillMaxSize(),
+                                )
+                            } else {
+                                LazyVerticalGrid(
+                                    columns = GridCells.Fixed(3),
+                                    state = lazyGridState,
+                                    contentPadding = PaddingValues(
+                                        start = 16.dp,
+                                        end = 16.dp,
+                                        top = 0.dp,
+                                        bottom = LocalBottomNavBarHeight.current + 16.dp,
+                                    ),
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                                    modifier = Modifier.fillMaxSize(),
+                                ) {
+                                    items(
+                                        items = filteredItems,
+                                        key = { item -> item.id },
+                                    ) { item ->
+                                        WardrobeCard(
+                                            item = item,
+                                            onClick = { onItemClick(item.id) },
+                                            modifier = Modifier.animateItem(),
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
                 }
-            }
 
-            is WardrobeUiState.Error -> {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding),
-                ) {
-                    WardrobeHeader()
+                is WardrobeUiState.Error -> {
                     ErrorState(
                         message = state.message,
                         onRetry = viewModel::loadItems,
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier.weight(1f),
                     )
                 }
             }
@@ -485,7 +488,7 @@ private fun UploadQueueCard(upload: RecentUploadUi, onClick: () -> Unit) {
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        text = if (upload.status == ImageStatus.Pending) "Uploading" else "Analyzing",
+                        text = if (upload.status == ImageStatus.Pending) "Uploading" else "Extracting items...",
                         color = Color.White,
                         fontSize = 9.sp,
                         maxLines = 1,
