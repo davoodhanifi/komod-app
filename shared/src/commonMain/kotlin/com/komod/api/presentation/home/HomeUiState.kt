@@ -29,4 +29,8 @@ data class HomeUiState(
     val recentItemsState: RecentItemsState = RecentItemsState.Loading,
     val savedOutfitsState: SavedOutfitsState = SavedOutfitsState.Loading,
     val selectedOccasion: String? = "Outdoor",
+    // Null means "not determined yet / not shown" (e.g. wardrobe summary itself hasn't
+    // resolved, or generation failed) — distinct from OutfitOfTheDayState.Loading, which
+    // renders a skeleton because we're actively generating today's outfit.
+    val outfitOfTheDayState: OutfitOfTheDayState? = null,
 )

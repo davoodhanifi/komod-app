@@ -93,10 +93,10 @@ class OutfitRepositoryImpl(
             }
         }
 
-        return resolveFallbackItems(wardrobeItemIds)
+        return hydrateOutfitItems(wardrobeItemIds)
     }
 
-    private suspend fun resolveFallbackItems(wardrobeItemIds: List<String>): List<OutfitItem> = coroutineScope {
+    override suspend fun hydrateOutfitItems(wardrobeItemIds: List<String>): List<OutfitItem> = coroutineScope {
         wardrobeItemIds.distinct().map { id ->
             async {
                 val wardrobeItem = wardrobeItemCache.getOrLoad(id) {

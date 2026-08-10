@@ -280,7 +280,14 @@ private fun WeatherBody(
         ) {
             // Weather illustration
             Icon(
-                painter = painterResource(weatherIcon(weather)),
+                painter = painterResource(
+                    weatherIcon(
+                        condition = weather.condition,
+                        weatherCode = weather.weatherCode,
+                        isRaining = weather.isRaining,
+                        isSnowing = weather.isSnowing,
+                    ),
+                ),
                 contentDescription = weather.condition,
                 tint = iconTintUnspecified,
                 modifier = Modifier.size(70.dp),
@@ -498,8 +505,13 @@ private fun SkeletonLine(
     )
 }
 
-private fun weatherIcon(weather: WeatherCurrent): DrawableResource {
-    return when (normalizeCondition(weather.condition)) {
+internal fun weatherIcon(
+    condition: String,
+    weatherCode: Int,
+    isRaining: Boolean,
+    isSnowing: Boolean,
+): DrawableResource {
+    return when (normalizeCondition(condition)) {
         "clear" -> Res.drawable.sun_01_stroke_rounded
         "partlycloudy" -> Res.drawable.sun_cloud_02_stroke_rounded
         "cloudy" -> Res.drawable.cloud_stroke_rounded
@@ -507,7 +519,7 @@ private fun weatherIcon(weather: WeatherCurrent): DrawableResource {
         "snow" -> Res.drawable.snow_stroke_rounded
         "thunderstorm" -> Res.drawable.cloud_lightning_stroke_rounded
         "fog" -> Res.drawable.cloud_fog_stroke_rounded
-        else -> when (weather.weatherCode) {
+        else -> when (weatherCode) {
             0 -> Res.drawable.sun_01_stroke_rounded
             1 -> Res.drawable.sun_cloud_02_stroke_rounded
             2 -> Res.drawable.cloud_stroke_rounded
@@ -516,8 +528,8 @@ private fun weatherIcon(weather: WeatherCurrent): DrawableResource {
             5 -> Res.drawable.cloud_lightning_stroke_rounded
             6 -> Res.drawable.cloud_fog_stroke_rounded
             else -> when {
-                weather.isSnowing -> Res.drawable.snow_stroke_rounded
-                weather.isRaining -> Res.drawable.rain_stroke_rounded
+                isSnowing -> Res.drawable.snow_stroke_rounded
+                isRaining -> Res.drawable.rain_stroke_rounded
                 else -> Res.drawable.cloud_stroke_rounded
             }
         }

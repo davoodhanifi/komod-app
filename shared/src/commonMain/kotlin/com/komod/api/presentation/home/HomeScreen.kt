@@ -172,6 +172,11 @@ fun HomeScreen(
 
         Spacer(modifier = Modifier.height(32.dp))
 
+        uiState.outfitOfTheDayState?.let { state ->
+            OutfitOfTheDayCard(state = state, onViewOutfit = { onGenerateOutfit("Outdoor") })
+            Spacer(modifier = Modifier.height(32.dp))
+        }
+
         when (val state = uiState.summaryState) {
             is WardrobeSummaryState.Loading -> WardrobeSummarySkeleton()
             is WardrobeSummaryState.Success -> WardrobeSummarySection(
