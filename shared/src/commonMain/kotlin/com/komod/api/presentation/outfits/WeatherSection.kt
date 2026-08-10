@@ -1,8 +1,6 @@
 package com.komod.api.presentation.outfits
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -37,6 +35,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
@@ -46,7 +45,6 @@ import androidx.compose.ui.unit.sp
 import com.komod.api.domain.model.WeatherCurrent
 import com.komod.api.domain.model.WeatherLocation
 import komod.shared.generated.resources.Res
-import komod.shared.generated.resources.arrow_right
 import komod.shared.generated.resources.cloud_fog_stroke_rounded
 import komod.shared.generated.resources.cloud_lightning_stroke_rounded
 import komod.shared.generated.resources.cloud_stroke_rounded
@@ -84,8 +82,6 @@ fun WeatherSection(
             onToggleWeather(false)
         },
     )
-    var isExpanded by remember { mutableStateOf(true) }
-
     // Cache last known weather so we can show it even when weather is disabled
     var lastKnownWeather by remember { mutableStateOf<WeatherCurrent?>(null) }
     if (uiState is WeatherUiState.Loaded) {
@@ -112,15 +108,13 @@ fun WeatherSection(
         WeatherUiState.WeatherDisabled -> WeatherHeroCard(
             checked = false,
             isEnabled = false,
-            expanded = isExpanded,
+            location = lastKnownWeather?.location,
             onToggleChecked = onToggle,
-            onExpandToggle = { isExpanded = !isExpanded },
             bodyContent = {
                 val cached = lastKnownWeather
                 if (cached != null) {
                     WeatherBody(
                         weather = cached,
-                        expanded = isExpanded,
                         isEnabled = false,
                     )
                 }
@@ -130,18 +124,16 @@ fun WeatherSection(
         WeatherUiState.Loading -> WeatherHeroCard(
             checked = true,
             isEnabled = true,
-            expanded = true,
+            location = null,
             onToggleChecked = onToggle,
-            onExpandToggle = { isExpanded = !isExpanded },
             bodyContent = { WeatherSkeleton() },
         )
 
         is WeatherUiState.Error -> WeatherHeroCard(
             checked = true,
             isEnabled = true,
-            expanded = isExpanded,
+            location = null,
             onToggleChecked = onToggle,
-            onExpandToggle = { isExpanded = !isExpanded },
             bodyContent = {
                 WeatherErrorBody(
                     message = uiState.message,
@@ -153,13 +145,11 @@ fun WeatherSection(
         is WeatherUiState.Loaded -> WeatherHeroCard(
             checked = true,
             isEnabled = true,
-            expanded = isExpanded,
+            location = uiState.weather.location,
             onToggleChecked = onToggle,
-            onExpandToggle = { isExpanded = !isExpanded },
             bodyContent = {
                 WeatherBody(
                     weather = uiState.weather,
-                    expanded = isExpanded,
                     isEnabled = true,
                 )
             },
@@ -171,18 +161,12 @@ fun WeatherSection(
 private fun WeatherHeroCard(
     checked: Boolean,
     isEnabled: Boolean,
-    expanded: Boolean,
+    location: WeatherLocation?,
     onToggleChecked: (Boolean) -> Unit,
-    onExpandToggle: () -> Unit,
     bodyContent: @Composable () -> Unit,
 ) {
     val cardBg = if (isEnabled) Color.White else WeatherDisabledBg
     val contentAlpha = if (isEnabled) 1f else 0.65f
-    val arrowRotation by animateFloatAsState(
-        targetValue = if (expanded) 90f else 0f,
-        animationSpec = tween(200),
-        label = "weather-arrow",
-    )
 
     Card(
         modifier = Modifier
@@ -198,32 +182,46 @@ private fun WeatherHeroCard(
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp, vertical = 16.dp),
         ) {
-            // Header row — "Use weather" toggle right-aligned
+            // Header row — location on the left, "Use weather" toggle on the right
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top,
             ) {
-                Text(
-                    text = "Use weather",
-                    color = if (isEnabled) WeatherMuted else WeatherDisabledText,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium,
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                androidx.compose.material3.Switch(
-                    checked = checked,
-                    onCheckedChange = onToggleChecked,
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = Color.White,
-                        checkedTrackColor = WeatherPurple,
-                        uncheckedThumbColor = Color.White,
-                        uncheckedTrackColor = WeatherDisabledIcon,
-                    ),
-                )
+                if (location != null) {
+                    WeatherLocationLabel(
+                        location = location,
+                        isEnabled = isEnabled,
+                        modifier = Modifier
+                            .weight(1f, fill = false)
+                            .padding(end = 12.dp),
+                    )
+                } else {
+                    Spacer(modifier = Modifier.width(1.dp))
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "Use weather",
+                        color = if (isEnabled) WeatherMuted else WeatherDisabledText,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    androidx.compose.material3.Switch(
+                        checked = checked,
+                        onCheckedChange = onToggleChecked,
+                        modifier = Modifier.scale(0.8f),
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Color.White,
+                            checkedTrackColor = WeatherPurple,
+                            uncheckedThumbColor = Color.White,
+                            uncheckedTrackColor = WeatherDisabledIcon,
+                        ),
+                    )
+                }
             }
 
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             // Main weather body
             bodyContent()
@@ -232,9 +230,41 @@ private fun WeatherHeroCard(
 }
 
 @Composable
+private fun WeatherLocationLabel(
+    location: WeatherLocation,
+    isEnabled: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    val neighborhood = location.neighborhood?.takeIf { it.isNotBlank() }
+    val city = cleanCityName(location.city)
+    val primary = neighborhood ?: city ?: return
+    val secondary = if (neighborhood != null) city else null
+
+    Column(modifier = modifier) {
+        Text(
+            text = primary,
+            color = if (isEnabled) WeatherText else WeatherDisabledText,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        if (secondary != null) {
+            Text(
+                text = secondary,
+                color = if (isEnabled) WeatherMuted else WeatherDisabledText,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+@Composable
 private fun WeatherBody(
     weather: WeatherCurrent,
-    expanded: Boolean,
     isEnabled: Boolean,
 ) {
     val textColor = if (isEnabled) WeatherText else WeatherDisabledText
@@ -243,7 +273,7 @@ private fun WeatherBody(
     val iconTintUnspecified = if (isEnabled) Color.Unspecified else WeatherDisabledIcon
 
     Column(modifier = Modifier.fillMaxWidth()) {
-        // Main info row: icon | temp + condition | rain/wind stats
+        // Main info row: icon | temp + condition
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -258,69 +288,93 @@ private fun WeatherBody(
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            // Temperature + condition
+            // Temperature (+ Fahrenheit) and condition
             Column(modifier = Modifier.weight(1f)) {
-                val locationLabel = weatherLocationLabel(weather.location)
-                if (locationLabel != null) {
-                    Text(
-                        text = locationLabel,
-                        color = mutedColor,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Spacer(modifier = Modifier.height(2.dp))
-                }
                 Row(
                     verticalAlignment = Alignment.Bottom,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
-                        Text(
-                            text = "${weather.temperatureC.roundToInt()}°",
-                            color = textColor,
-                            fontSize = 42.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            lineHeight = 46.sp,
-                        )
-                        Text(
-                            text = weather.condition,
-                            color = mutedColor,
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Medium,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-                Spacer(modifier = Modifier.width(12.dp))
-
-                Row(verticalAlignment = Alignment.Bottom) {
                     Text(
-                        text = "Feels like ${weather.feelsLikeC.roundToInt()}°",
-                        color = mutedColor,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium,
+                        text = "${weather.temperatureC.roundToInt()}°",
+                        color = textColor,
+                        fontSize = 42.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        lineHeight = 46.sp,
                     )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text(text = "|", color = Color(0xFFD0D5DD), fontSize = 13.sp)
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Icon(
-                        painter = painterResource(Res.drawable.slow_winds_stroke_rounded),
-                        contentDescription = "Wind",
-                        tint = iconTint,
-                        modifier = Modifier.size(16.dp),
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = "${weather.windSpeedKmh.roundToInt()} km/h",
+                        text = fahrenheitLabel(weather.temperatureC),
                         color = mutedColor,
-                        fontSize = 13.sp,
+                        fontSize = 15.sp,
                         fontWeight = FontWeight.Medium,
+                        modifier = Modifier.padding(bottom = 6.dp),
                     )
                 }
+                Text(
+                    text = weather.condition,
+                    color = mutedColor,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
         }
 
+        Spacer(modifier = Modifier.height(14.dp))
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(1.dp)
+                .background(WeatherBorder),
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Feels like (left wing) | Wind (right wing)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Row(
+                modifier = Modifier.weight(1f),
+                horizontalArrangement = Arrangement.Start,
+            ) {
+                Text(
+                    text = "Feels like ${weather.feelsLikeC.roundToInt()}° ${fahrenheitLabel(weather.feelsLikeC)}",
+                    color = mutedColor,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+
+            Box(
+                modifier = Modifier
+                    .width(1.dp)
+                    .height(16.dp)
+                    .background(WeatherBorder),
+            )
+
+            Row(
+                modifier = Modifier.weight(1f),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    painter = painterResource(Res.drawable.slow_winds_stroke_rounded),
+                    contentDescription = "Wind",
+                    tint = iconTint,
+                    modifier = Modifier.size(16.dp),
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = "${weather.windSpeedKmh.roundToInt()} km/h",
+                    color = mutedColor,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                )
+            }
+        }
     }
 }
 
@@ -375,11 +429,12 @@ private fun PermissionRequiredBanner(
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium,
                 )
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(4.dp))
                 androidx.compose.material3.Switch(
                     checked = false,
                     enabled = false,
                     onCheckedChange = {},
+                    modifier = Modifier.scale(0.8f),
                     colors = SwitchDefaults.colors(
                         disabledUncheckedThumbColor = Color.White,
                         disabledUncheckedTrackColor = WeatherDisabledIcon,
@@ -469,15 +524,18 @@ private fun weatherIcon(weather: WeatherCurrent): DrawableResource {
     }
 }
 
-private fun weatherLocationLabel(location: WeatherLocation): String? {
-    val neighborhood = location.neighborhood?.takeIf { it.isNotBlank() }
-    val city = location.city?.takeIf { it.isNotBlank() }
-    return when {
-        neighborhood != null && city != null -> "$neighborhood, $city"
-        city != null -> city
-        neighborhood != null -> neighborhood
-        else -> null
-    }
+private fun fahrenheitLabel(celsius: Double): String {
+    val fahrenheit = (celsius * 9.0 / 5.0 + 32.0).roundToInt()
+    return "($fahrenheit°F)"
+}
+
+private fun cleanCityName(city: String?): String? {
+    return city
+        ?.trim()
+        ?.removePrefix("Gemeente ")
+        ?.removePrefix("gemeente ")
+        ?.trim()
+        ?.takeIf { it.isNotBlank() }
 }
 
 private fun normalizeCondition(value: String): String {
