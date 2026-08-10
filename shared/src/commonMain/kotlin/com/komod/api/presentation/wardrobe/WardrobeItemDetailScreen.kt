@@ -365,30 +365,33 @@ private fun HeroImage(
                 contentScale = ContentScale.Fit,
                 modifier = Modifier.fillMaxSize(),
             )
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(16.dp)
-                    .clip(RoundedCornerShape(50))
-                    .background(Color.Black.copy(alpha = 0.45f))
-                    .clickable(onClick = onAdjustCrop)
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.Crop,
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(14.dp),
-                )
-                Spacer(Modifier.width(6.dp))
-                Text(
-                    text = "Adjust Crop",
-                    color = Color.White,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium,
-                )
-            }
+            // Temporarily disabled: AI catalog image generation now handles
+            // item extraction/cropping automatically.
+            // TODO: Re-enable if manual crop adjustment is needed again.
+            // Row(
+            //     verticalAlignment = Alignment.CenterVertically,
+            //     modifier = Modifier
+            //         .align(Alignment.TopEnd)
+            //         .padding(16.dp)
+            //         .clip(RoundedCornerShape(50))
+            //         .background(Color.Black.copy(alpha = 0.45f))
+            //         .clickable(onClick = onAdjustCrop)
+            //         .padding(horizontal = 12.dp, vertical = 8.dp),
+            // ) {
+            //     Icon(
+            //         imageVector = Icons.Outlined.Crop,
+            //         contentDescription = null,
+            //         tint = Color.White,
+            //         modifier = Modifier.size(14.dp),
+            //     )
+            //     Spacer(Modifier.width(6.dp))
+            //     Text(
+            //         text = "Adjust Crop",
+            //         color = Color.White,
+            //         fontSize = 12.sp,
+            //         fontWeight = FontWeight.Medium,
+            //     )
+            // }
         }
     }
 }

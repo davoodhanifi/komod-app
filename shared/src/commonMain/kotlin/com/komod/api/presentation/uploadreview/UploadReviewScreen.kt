@@ -421,17 +421,20 @@ private fun DetectedItemCard(
                     )
                 }
             }
-            Text(
-                text = "Adjust Crop",
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.SemiBold,
-                color = if (enabled) Purple else GrayText,
-                modifier = Modifier
-                    .padding(top = 6.dp)
-                    .clip(RoundedCornerShape(6.dp))
-                    .clickable(enabled = enabled, onClick = onAdjustCrop)
-                    .padding(vertical = 2.dp, horizontal = 2.dp),
-            )
+            // Temporarily disabled: AI catalog image generation now handles
+            // item extraction/cropping automatically.
+            // TODO: Re-enable if manual crop adjustment is needed again.
+            // Text(
+            //     text = "Adjust Crop",
+            //     style = MaterialTheme.typography.labelSmall,
+            //     fontWeight = FontWeight.SemiBold,
+            //     color = if (enabled) Purple else GrayText,
+            //     modifier = Modifier
+            //         .padding(top = 6.dp)
+            //         .clip(RoundedCornerShape(6.dp))
+            //         .clickable(enabled = enabled, onClick = onAdjustCrop)
+            //         .padding(vertical = 2.dp, horizontal = 2.dp),
+            // )
         }
         Column(
             modifier = Modifier

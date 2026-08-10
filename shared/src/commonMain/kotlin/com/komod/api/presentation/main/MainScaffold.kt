@@ -423,8 +423,11 @@ fun MainScaffold(
                         wardrobeItemId = itemId,
                         onNavigateBack = { navController.navigateUp() },
                         onEditItem = { navController.navigate(MainRoute.WardrobeItemEdit.createRoute(itemId)) },
-                        onAdjustCrop = { imageId ->
-                            navController.navigate(MainRoute.CropEditor.createRoute(imageId, itemId))
+                        onAdjustCrop = {
+                            // Temporarily disabled: AI catalog image generation now handles
+                            // item extraction/cropping automatically.
+                            // TODO: Re-enable if manual crop adjustment is needed again.
+                            // navController.navigate(MainRoute.CropEditor.createRoute(imageId, itemId))
                         },
                         refreshKey = wardrobeItemRefreshKey,
                         onRefreshWardrobe = {
@@ -486,8 +489,11 @@ fun MainScaffold(
                         onReviewCompleted = {
                             requestRefresh(MainRoute.Wardrobe.route, WardrobeRefreshArg)
                         },
-                        onAdjustCrop = { wardrobeItemId ->
-                            navController.navigate(MainRoute.CropEditor.createRoute(imageId, wardrobeItemId))
+                        onAdjustCrop = {
+                            // Temporarily disabled: AI catalog image generation now handles
+                            // item extraction/cropping automatically.
+                            // TODO: Re-enable if manual crop adjustment is needed again.
+                            // navController.navigate(MainRoute.CropEditor.createRoute(imageId, wardrobeItemId))
                         },
                     )
                 }
