@@ -81,6 +81,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import com.komod.api.domain.model.Outfit
 import com.komod.api.domain.model.OutfitItem
 import com.komod.api.domain.model.RecentItem
 import com.komod.api.domain.model.SavedOutfit
@@ -139,6 +140,7 @@ fun HomeScreen(
     onItemClick: (String) -> Unit,
     onOutfitClick: (SavedOutfit) -> Unit = {},
     onViewOutfits: () -> Unit = {},
+    onViewOutfitOfTheDay: (Outfit) -> Unit = {},
     refreshKey: Int = 0,
     scrollState: androidx.compose.foundation.ScrollState = rememberScrollState(),
 ) {
@@ -173,7 +175,7 @@ fun HomeScreen(
         Spacer(modifier = Modifier.height(32.dp))
 
         uiState.outfitOfTheDayState?.let { state ->
-            OutfitOfTheDayCard(state = state, onViewOutfit = { onGenerateOutfit("Outdoor") })
+            OutfitOfTheDayCard(state = state, onViewOutfit = onViewOutfitOfTheDay)
             Spacer(modifier = Modifier.height(32.dp))
         }
 

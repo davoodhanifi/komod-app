@@ -33,6 +33,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import com.komod.api.domain.model.Outfit
 import com.komod.api.domain.model.OutfitItem
 import com.komod.api.domain.model.WardrobeSummary
 import com.komod.api.presentation.outfits.weatherIcon
@@ -58,14 +59,26 @@ sealed interface OutfitOfTheDayState {
     data object Loading : OutfitOfTheDayState
     data object NotEnoughItems : OutfitOfTheDayState
     data class Available(
+        val id: String,
         val occasionLabel: String,
         val name: String,
         val reason: String,
+        val matchScore: Int,
+        val wardrobeItemIds: List<String>,
         val items: List<OutfitItem>,
         val weather: OutfitOfTheDayWeather?,
         val locationPermissionDenied: Boolean,
     ) : OutfitOfTheDayState
 }
+
+fun OutfitOfTheDayState.Available.toOutfit(): Outfit = Outfit(
+    id = id,
+    name = name,
+    reason = reason,
+    matchScore = matchScore,
+    wardrobeItemIds = wardrobeItemIds,
+    items = items,
+)
 
 data class OutfitOfTheDayWeather(
     val temperatureC: Double,
@@ -78,7 +91,7 @@ data class OutfitOfTheDayWeather(
 @Composable
 fun OutfitOfTheDayCard(
     state: OutfitOfTheDayState,
-    onViewOutfit: () -> Unit,
+    onViewOutfit: (Outfit) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     OutfitOfTheDayShell(modifier = modifier) {
@@ -194,7 +207,7 @@ private fun LoadingBody() {
 @Composable
 private fun AvailableBody(
     state: OutfitOfTheDayState.Available,
-    onViewOutfit: () -> Unit,
+    onViewOutfit: (Outfit) -> Unit,
 ) {
     Column {
         Row(
@@ -258,7 +271,7 @@ private fun AvailableBody(
             color = OutfitPurple,
             fontSize = 13.sp,
             fontWeight = FontWeight.Medium,
-            modifier = Modifier.clickable(onClick = onViewOutfit),
+            modifier = Modifier.clickable(onClick = { onViewOutfit(state.toOutfit()) }),
         )
     }
 }

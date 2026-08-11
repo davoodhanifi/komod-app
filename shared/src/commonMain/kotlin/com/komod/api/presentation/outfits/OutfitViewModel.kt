@@ -98,6 +98,16 @@ class OutfitViewModel(
         }
     }
 
+    // For outfits that exist only client-side and were never persisted (e.g. Home's
+    // Outfit of the Day) — unlike showSavedOutfitDetails, this does NOT mark the outfit
+    // as already-saved, since its id is a locally-generated one, not a real saved-outfit id.
+    fun showGeneratedOutfitDetails(outfit: Outfit) {
+        _uiState.update { state ->
+            val outfits = if (state.outfits.any { it.id == outfit.id }) state.outfits else state.outfits + outfit
+            state.copy(outfits = outfits)
+        }
+    }
+
     fun toggleSaveOutfit(outfit: Outfit) {
         if (outfit.id in _uiState.value.savedOutfitIds) {
             unsaveOutfit(outfit)

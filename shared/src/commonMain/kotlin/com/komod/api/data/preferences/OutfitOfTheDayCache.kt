@@ -7,8 +7,10 @@ import kotlinx.serialization.json.Json
 data class CachedOutfitOfTheDay(
     val date: String,
     val occasion: String,
+    val id: String,
     val name: String,
     val reason: String,
+    val matchScore: Int,
     val wardrobeItemIds: List<String>,
     val temperatureC: Double?,
     val condition: String?,

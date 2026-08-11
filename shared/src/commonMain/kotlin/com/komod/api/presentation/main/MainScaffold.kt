@@ -289,6 +289,10 @@ fun MainScaffold(
                             outfitViewModel.showSavedOutfitDetails(savedOutfit.toOutfit())
                             navController.navigate(MainRoute.OutfitDetails.createRoute(savedOutfit.id))
                         },
+                        onViewOutfitOfTheDay = { outfit ->
+                            outfitViewModel.showGeneratedOutfitDetails(outfit)
+                            navController.navigate(MainRoute.OutfitDetails.createRoute(outfit.id))
+                        },
                         onViewOutfits = {
                             navController.navigate(MainRoute.Outfits.route) {
                                 popUpTo(navController.graph.findStartDestination().id) {

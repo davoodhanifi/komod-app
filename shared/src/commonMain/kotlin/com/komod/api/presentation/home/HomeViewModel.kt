@@ -161,8 +161,10 @@ class HomeViewModel(
             CachedOutfitOfTheDay(
                 date = today,
                 occasion = OutfitOccasion.Outdoor.apiValue,
+                id = outfit.id,
                 name = outfit.name,
                 reason = outfit.reason,
+                matchScore = outfit.matchScore,
                 wardrobeItemIds = outfit.wardrobeItemIds,
                 temperatureC = weather?.temperatureC,
                 condition = weather?.condition,
@@ -176,9 +178,12 @@ class HomeViewModel(
         _uiState.update {
             it.copy(
                 outfitOfTheDayState = OutfitOfTheDayState.Available(
+                    id = outfit.id,
                     occasionLabel = OutfitOccasion.Outdoor.label,
                     name = outfit.name,
                     reason = outfit.reason,
+                    matchScore = outfit.matchScore,
+                    wardrobeItemIds = outfit.wardrobeItemIds,
                     items = outfit.items,
                     weather = weather,
                     locationPermissionDenied = locationPermissionDenied,
@@ -201,9 +206,12 @@ class HomeViewModel(
         }
 
         return OutfitOfTheDayState.Available(
+            id = id,
             occasionLabel = OutfitOccasion.Outdoor.label,
             name = name,
             reason = reason,
+            matchScore = matchScore,
+            wardrobeItemIds = wardrobeItemIds,
             items = items,
             weather = cachedWeather,
             locationPermissionDenied = locationPermissionDenied,
