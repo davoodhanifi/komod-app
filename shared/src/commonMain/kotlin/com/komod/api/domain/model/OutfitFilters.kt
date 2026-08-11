@@ -7,11 +7,14 @@ enum class OutfitOccasion(
     All("all", "All"),
     Office("office", "Office"),
     Casual("daily", "Casual"),
-    Date("date-night", "Date"),
+    Date("date", "Date"),
     Travel("travel", "Travel"),
     Outdoor("outdoor", "Outdoor"),
     Sport("sport", "Sport"),
     Party("party", "Party"),
+    Business("business", "Business"),
+    Wedding("wedding", "Wedding"),
+    Holiday("holiday", "Holiday"),
 }
 
 enum class OutfitStyle(

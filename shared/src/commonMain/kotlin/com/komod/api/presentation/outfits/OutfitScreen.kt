@@ -77,13 +77,16 @@ import com.komod.api.domain.model.OutfitItem
 import com.komod.api.domain.model.OutfitOccasion
 import com.komod.api.domain.model.OutfitStyle
 import komod.shared.generated.resources.Res
+import komod.shared.generated.resources.business
 import komod.shared.generated.resources.date
 import komod.shared.generated.resources.hanger
+import komod.shared.generated.resources.holiday
 import komod.shared.generated.resources.office
 import komod.shared.generated.resources.party
 import komod.shared.generated.resources.shirt
 import komod.shared.generated.resources.sport
 import komod.shared.generated.resources.travel
+import komod.shared.generated.resources.wedding
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.viewmodel.koinViewModel
@@ -307,6 +310,9 @@ fun OutfitFilters(
             OutfitOccasion.Casual to Res.drawable.shirt,
             OutfitOccasion.Sport to Res.drawable.sport,
             OutfitOccasion.Party to Res.drawable.party,
+            OutfitOccasion.Business to Res.drawable.business,
+            OutfitOccasion.Wedding to Res.drawable.wedding,
+            OutfitOccasion.Holiday to Res.drawable.holiday,
         )
         val preferredOrder = listOf(
             OutfitOccasion.Outdoor,
@@ -316,6 +322,9 @@ fun OutfitFilters(
             OutfitOccasion.Casual,
             OutfitOccasion.Sport,
             OutfitOccasion.Party,
+            OutfitOccasion.Business,
+            OutfitOccasion.Wedding,
+            OutfitOccasion.Holiday,
         )
         preferredOrder
             .filter { it in OutfitOccasion.entries }
