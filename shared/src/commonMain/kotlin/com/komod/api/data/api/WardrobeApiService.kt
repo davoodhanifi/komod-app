@@ -3,6 +3,7 @@ package com.komod.api.data.api
 import com.komod.api.data.api.model.AnalyzeWardrobeImageResultDto
 import com.komod.api.data.api.model.AnalyzeWardrobeRequest
 import com.komod.api.data.api.model.CreateImageResponse
+import com.komod.api.data.api.model.DeleteWardrobeItemsRequest
 import com.komod.api.data.api.model.ImageDto
 import com.komod.api.data.api.model.RecentItemDto
 import com.komod.api.data.api.model.ResponseData
@@ -78,6 +79,13 @@ class WardrobeApiService(
 
     suspend fun deleteWardrobeItem(id: String) {
         httpClient.delete("wardrobe-items/$id")
+    }
+
+    suspend fun deleteWardrobeItems(request: DeleteWardrobeItemsRequest) {
+        httpClient.delete("wardrobe-items") {
+            contentType(ContentType.Application.Json)
+            setBody(request)
+        }
     }
 
     suspend fun deleteUploadedImage(imageId: String) {

@@ -14,6 +14,8 @@ import com.komod.api.data.repository.UploadedImageDeleteNetworkException
 import com.komod.api.data.repository.UploadedImageDeleteNotFoundException
 import com.komod.api.data.repository.UploadedImageNotFoundException
 import com.komod.api.data.repository.UploadedItemNotFoundException
+import com.komod.api.data.repository.WardrobeItemsBulkDeleteBadRequestException
+import com.komod.api.data.repository.WardrobeItemsBulkDeleteNetworkException
 import com.komod.api.data.repository.WardrobeItemDeleteBadRequestException
 import com.komod.api.data.repository.WardrobeItemDeleteNetworkException
 import com.komod.api.data.repository.WardrobeItemDeleteNotFoundException
@@ -78,6 +80,9 @@ object ErrorMapper {
         is UploadedImageDeleteForbiddenException -> "You don't have permission to do this."
         is UploadedImageDeleteConflictException -> "This item has already been processed and can't be removed this way."
         is UploadedImageDeleteNetworkException -> mapCauseOrFallback(throwable, context)
+
+        is WardrobeItemsBulkDeleteBadRequestException -> "Couldn't delete these items. Please try again."
+        is WardrobeItemsBulkDeleteNetworkException -> mapCauseOrFallback(throwable, context)
 
         is ClientRequestException ->
             if (throwable.response.status == HttpStatusCode.Unauthorized) {

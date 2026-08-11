@@ -1,5 +1,6 @@
 package com.komod.api.presentation.wardrobe
 
+import androidx.lifecycle.viewModelScope
 import com.komod.api.data.api.model.CreateImageResponse
 import com.komod.api.data.api.model.ImageStatus
 import com.komod.api.data.repository.AddItemRepository
@@ -7,6 +8,7 @@ import com.komod.api.data.repository.WardrobeRepository
 import com.komod.api.domain.model.UploadedImage
 import com.komod.api.domain.model.WardrobeItem
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -31,6 +33,7 @@ private fun uploadedImage(id: String, status: ImageStatus) = UploadedImage(
 
 private class FakeWardrobeRepository : WardrobeRepository {
     override suspend fun getWardrobeItems(): List<WardrobeItem> = emptyList()
+    override suspend fun deleteWardrobeItems(ids: List<String>) = error("not used by these tests")
 }
 
 // A FIFO queue of outcomes for refreshUploadedImages(): each call pops one entry and
@@ -83,6 +86,13 @@ private class FakeAddItemRepository(initialImages: List<UploadedImage>) : AddIte
 class WardrobeViewModelPollingTest {
     private val testDispatcher = StandardTestDispatcher()
 
+    // WardrobeViewModel's init{} starts an unbounded collectLatest (pollWhileUploadsActive)
+    // that never completes on its own. Dispatchers.Main is a process-global redirect, so a
+    // ViewModel left running past its own test can resurface against a *different* test's
+    // scheduler once that test calls Dispatchers.setMain — cancelling here prevents that
+    // cross-test leak.
+    private val createdViewModels = mutableListOf<WardrobeViewModel>()
+
     @BeforeTest
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
@@ -90,13 +100,24 @@ class WardrobeViewModelPollingTest {
 
     @AfterTest
     fun tearDown() {
+        createdViewModels.forEach { it.viewModelScope.cancel() }
+        createdViewModels.clear()
         Dispatchers.resetMain()
+    }
+
+    private fun createViewModel(
+        wardrobeRepository: WardrobeRepository,
+        addItemRepository: AddItemRepository,
+    ): WardrobeViewModel {
+        val viewModel = WardrobeViewModel(wardrobeRepository, addItemRepository)
+        createdViewModels += viewModel
+        return viewModel
     }
 
     @Test
     fun `polling transitions a Processing image to Analyzed and then stops`() = runTest(testDispatcher) {
         val addItemRepository = FakeAddItemRepository(listOf(uploadedImage("img-1", ImageStatus.Processing)))
-        WardrobeViewModel(FakeWardrobeRepository(), addItemRepository)
+        createViewModel(FakeWardrobeRepository(), addItemRepository)
         // NOT advanceUntilIdle(): the poll loop's while(true) { delay(5000); ... } is
         // already active once the seeded image is Pending/Processing, and it reschedules
         // itself forever — advanceUntilIdle() would try to drain that queue and never
@@ -119,7 +140,7 @@ class WardrobeViewModelPollingTest {
     @Test
     fun `polling transitions a Processing image to Failed and then stops`() = runTest(testDispatcher) {
         val addItemRepository = FakeAddItemRepository(listOf(uploadedImage("img-2", ImageStatus.Processing)))
-        WardrobeViewModel(FakeWardrobeRepository(), addItemRepository)
+        createViewModel(FakeWardrobeRepository(), addItemRepository)
         runCurrent()
 
         addItemRepository.refreshQueue += { listOf(uploadedImage("img-2", ImageStatus.Failed)) }
@@ -137,7 +158,7 @@ class WardrobeViewModelPollingTest {
     @Test
     fun `a temporary poll failure does not mark the image Failed and polling continues`() = runTest(testDispatcher) {
         val addItemRepository = FakeAddItemRepository(listOf(uploadedImage("img-3", ImageStatus.Processing)))
-        WardrobeViewModel(FakeWardrobeRepository(), addItemRepository)
+        createViewModel(FakeWardrobeRepository(), addItemRepository)
         runCurrent()
 
         addItemRepository.refreshQueue += { throw RuntimeException("transient network blip") }
@@ -155,7 +176,7 @@ class WardrobeViewModelPollingTest {
     @Test
     fun `polling does not run more than one loop at a time`() = runTest(testDispatcher) {
         val addItemRepository = FakeAddItemRepository(listOf(uploadedImage("img-4", ImageStatus.Processing)))
-        WardrobeViewModel(FakeWardrobeRepository(), addItemRepository)
+        createViewModel(FakeWardrobeRepository(), addItemRepository)
         runCurrent()
         val countAfterInit = addItemRepository.refreshCallCount
 
@@ -178,7 +199,7 @@ class WardrobeViewModelPollingTest {
     @Test
     fun `confirming a delete removes the upload and closes the dialog`() = runTest(testDispatcher) {
         val addItemRepository = FakeAddItemRepository(listOf(uploadedImage("img-5", ImageStatus.Processing)))
-        val viewModel = WardrobeViewModel(FakeWardrobeRepository(), addItemRepository)
+        val viewModel = createViewModel(FakeWardrobeRepository(), addItemRepository)
         runCurrent()
 
         viewModel.requestDeleteUpload("img-5")

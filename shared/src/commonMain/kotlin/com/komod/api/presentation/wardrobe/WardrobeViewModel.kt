@@ -54,6 +54,18 @@ class WardrobeViewModel(
     private val _effects = MutableSharedFlow<WardrobeEffect>()
     val effects: SharedFlow<WardrobeEffect> = _effects.asSharedFlow()
 
+    private val _selectionMode = MutableStateFlow(false)
+    val selectionMode: StateFlow<Boolean> = _selectionMode.asStateFlow()
+
+    private val _selectedItemIds = MutableStateFlow<Set<String>>(emptySet())
+    val selectedItemIds: StateFlow<Set<String>> = _selectedItemIds.asStateFlow()
+
+    private val _isBulkDeleting = MutableStateFlow(false)
+    val isBulkDeleting: StateFlow<Boolean> = _isBulkDeleting.asStateFlow()
+
+    private val _bulkDeleteConfirmVisible = MutableStateFlow(false)
+    val bulkDeleteConfirmVisible: StateFlow<Boolean> = _bulkDeleteConfirmVisible.asStateFlow()
+
     // Keyed by storage path (not imageId) so a path change from the backend
     // is picked up as a cache miss and re-resolved into a fresh signed URL.
     private val thumbnailUrlCache = mutableMapOf<String, String?>()
@@ -157,6 +169,69 @@ class WardrobeViewModel(
                     // deleted) between the long-press and this call — refetch so the
                     // Upload Queue reflects reality instead of a stale, now-wrong tile.
                     refreshUploadedImages()
+                }
+        }
+    }
+
+    fun enterSelectionMode() {
+        _selectionMode.value = true
+    }
+
+    fun exitSelectionMode() {
+        if (_isBulkDeleting.value) return
+        _selectionMode.value = false
+        _selectedItemIds.value = emptySet()
+        _bulkDeleteConfirmVisible.value = false
+    }
+
+    fun toggleItemSelection(itemId: String) {
+        val current = _selectedItemIds.value
+        _selectedItemIds.value = if (itemId in current) current - itemId else current + itemId
+    }
+
+    fun requestBulkDelete() {
+        if (_selectedItemIds.value.isEmpty() || _isBulkDeleting.value) return
+        _bulkDeleteConfirmVisible.value = true
+    }
+
+    fun dismissBulkDeleteConfirm() {
+        if (_isBulkDeleting.value) return
+        _bulkDeleteConfirmVisible.value = false
+    }
+
+    fun confirmBulkDelete() {
+        if (_isBulkDeleting.value) return
+        val ids = _selectedItemIds.value
+        if (ids.isEmpty()) return
+
+        _isBulkDeleting.value = true
+        viewModelScope.launch {
+            runCatching { wardrobeRepository.deleteWardrobeItems(ids.toList()) }
+                .onSuccess {
+                    val current = _uiState.value
+                    if (current is WardrobeUiState.Success) {
+                        _uiState.value = current.copy(items = current.items.filterNot { it.id in ids })
+                    }
+                    _isBulkDeleting.value = false
+                    _bulkDeleteConfirmVisible.value = false
+                    _selectionMode.value = false
+                    _selectedItemIds.value = emptySet()
+                    // Quiet reconciliation with the backend — fetchItems() doesn't touch
+                    // Loading/isRefreshing, so this can't flash the skeleton or disrupt
+                    // the grid the user is already looking at.
+                    fetchItems()
+                }
+                .onFailure { error ->
+                    // Selection and selected items are left untouched so the user can
+                    // retry via the same Delete action, matching how confirmDeleteUpload
+                    // handles failure above.
+                    _isBulkDeleting.value = false
+                    _bulkDeleteConfirmVisible.value = false
+                    _effects.emit(
+                        WardrobeEffect.ShowMessage(
+                            ErrorMapper.toUserMessage(error, tag = "WardrobeViewModel"),
+                        ),
+                    )
                 }
         }
     }
