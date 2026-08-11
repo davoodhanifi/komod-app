@@ -300,8 +300,9 @@ private fun CropCanvas(
     }
 }
 
+/** Draws the darkened scrim + draggable crop rectangle + resize handles over an image. */
 @Composable
-private fun CropBoxOverlay(
+internal fun CropBoxOverlay(
     boundingBox: BoundingBox,
     containerSize: IntSize,
     enabled: Boolean,
@@ -409,7 +410,7 @@ private fun CropBoxOverlay(
 }
 
 @Composable
-private fun CropHandle(
+internal fun CropHandle(
     enabled: Boolean,
     offsetPx: Offset,
     onDrag: (Offset) -> Unit,
@@ -444,7 +445,7 @@ private fun CropHandle(
     }
 }
 
-private fun pxToDp(px: Float, density: androidx.compose.ui.unit.Density): Dp = with(density) { px.toDp() }
+internal fun pxToDp(px: Float, density: androidx.compose.ui.unit.Density): Dp = with(density) { px.toDp() }
 
 @Composable
 private fun CropEditorLoadingContent() {

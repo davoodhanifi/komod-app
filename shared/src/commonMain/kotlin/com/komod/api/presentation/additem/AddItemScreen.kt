@@ -49,8 +49,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.komod.api.domain.model.BoundingBox
 import com.komod.api.platform.ImagePickerLauncher
 import com.komod.api.platform.rememberImagePickerLauncher
+import com.komod.api.presentation.cropeditor.PreUploadCropScreen
 import komod.shared.generated.resources.Res
 import komod.shared.generated.resources.arrow_left
 import komod.shared.generated.resources.arrow_right
@@ -92,6 +94,9 @@ fun AddItemScreen(
                     )
                     onNavigateBack()
                 }
+
+                is AddItemEffect.CropFailed ->
+                    onShowSnackbar("Couldn't apply a crop, so that photo will upload as originally taken.")
             }
         }
     }
@@ -101,6 +106,41 @@ fun AddItemScreen(
             launcher = imagePickerLauncher,
             onNavigateBack = onNavigateBack,
         )
+
+        is AddItemUiState.Reviewing -> {
+            val activePhoto = state.photos.firstOrNull { it.id == state.activeCropPhotoId }
+            val isSinglePhoto = state.photos.size == 1
+
+            if (activePhoto != null) {
+                PreUploadCropScreen(
+                    photo = activePhoto.original,
+                    initialBoundingBox = activePhoto.cropBox ?: BoundingBox.FullImage,
+                    title = "Crop Photo",
+                    subtitle = if (isSinglePhoto) null else {
+                        val index = state.photos.indexOfFirst { it.id == activePhoto.id } + 1
+                        "Photo $index of ${state.photos.size}"
+                    },
+                    primaryButtonLabel = if (isSinglePhoto) "Continue Uploading" else "Save Crop",
+                    isSaving = state.savingCropPhotoId == activePhoto.id,
+                    onBack = { if (isSinglePhoto) viewModel.reset() else viewModel.closeCrop() },
+                    onConfirm = { boundingBox ->
+                        if (isSinglePhoto) {
+                            viewModel.confirmCropAndContinue(activePhoto.id, boundingBox)
+                        } else {
+                            viewModel.applyCrop(activePhoto.id, boundingBox)
+                        }
+                    },
+                )
+            } else {
+                ReviewPhotosScreen(
+                    photos = state.photos,
+                    onCropClick = { photoId -> viewModel.openCrop(photoId) },
+                    onDeleteClick = { photoId -> viewModel.removePhoto(photoId) },
+                    onContinueUploading = { viewModel.continueUploading() },
+                    onBack = { viewModel.reset() },
+                )
+            }
+        }
 
         is AddItemUiState.Uploading -> AddItemUploadingContent(
             state = state,
