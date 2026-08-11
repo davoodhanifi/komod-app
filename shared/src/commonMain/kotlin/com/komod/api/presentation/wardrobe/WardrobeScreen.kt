@@ -506,6 +506,15 @@ private fun RecentUploadsSection(
                 }
             }
 
+            if (uploads.any { it.status != ImageStatus.Analyzed }) {
+                Text(
+                    text = "Long press an upload to cancel.",
+                    fontSize = 11.sp,
+                    color = GrayText,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+            }
+
             AnimatedContent(
                 targetState = uploadStatusMessage(uploads),
                 transitionSpec = { fadeIn(tween(200)) togetherWith fadeOut(tween(200)) },
