@@ -166,13 +166,13 @@ fun HomeScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        GenerateOutfitCard(
-            selectedOccasion = uiState.selectedOccasion,
-            onOccasionSelected = viewModel::selectOccasion,
-            onGenerateClick = onGenerateOutfit,
-        )
-
-        Spacer(modifier = Modifier.height(32.dp))
+        // GenerateOutfitCard(
+        //     selectedOccasion = uiState.selectedOccasion,
+        //     onOccasionSelected = viewModel::selectOccasion,
+        //     onGenerateClick = onGenerateOutfit,
+        // )
+        //
+        // Spacer(modifier = Modifier.height(32.dp))
 
         uiState.outfitOfTheDayState?.let { state ->
             OutfitOfTheDayCard(state = state, onViewOutfit = onViewOutfitOfTheDay)
