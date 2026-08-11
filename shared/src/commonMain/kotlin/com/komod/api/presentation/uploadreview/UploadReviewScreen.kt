@@ -71,7 +71,6 @@ import com.komod.api.domain.model.WardrobeItemDetail
 import com.komod.api.presentation.wardrobe.toWardrobeLabel
 import komod.shared.generated.resources.Res
 import komod.shared.generated.resources.arrow_left
-import komod.shared.generated.resources.arrow_right
 import komod.shared.generated.resources.hanger
 import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.viewmodel.koinViewModel
@@ -207,7 +206,10 @@ private fun UploadReviewReadyContent(
             .fillMaxSize()
             .verticalScroll(rememberScrollState()),
     ) {
-        UploadedImageHero(imageUrl = state.detail.originalImageUrl)
+        UploadedImageHero(
+            imageUrl = state.detail.originalImageUrl,
+            onClick = { previewImageUrl = state.detail.originalImageUrl },
+        )
 
         if (state.detail.items.isEmpty()) {
             EmptyItemsContent(
@@ -319,12 +321,13 @@ private fun UploadReviewReadyContent(
 }
 
 @Composable
-private fun UploadedImageHero(imageUrl: String?) {
+private fun UploadedImageHero(imageUrl: String?, onClick: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .aspectRatio(1.3f)
-            .background(Color(0xFFF3F4F6)),
+            .background(Color(0xFFF3F4F6))
+            .clickable(enabled = imageUrl != null, onClick = onClick),
     ) {
         Icon(
             painter = painterResource(Res.drawable.hanger),
@@ -477,11 +480,6 @@ private fun DetectedItemCard(
                 )
             }
         }
-        Icon(
-            painter = painterResource(Res.drawable.arrow_right),
-            contentDescription = null,
-            tint = GrayText,
-        )
     }
 }
 
