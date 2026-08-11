@@ -208,7 +208,12 @@ fun MainScaffold(
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
             containerColor = Color.White,
-            snackbarHost = { SnackbarHost(snackbarHostState) },
+            snackbarHost = {
+                SnackbarHost(
+                    hostState = snackbarHostState,
+                    modifier = Modifier.padding(bottom = if (showBottomBar) bottomNavBarHeight else 0.dp),
+                )
+            },
         ) { contentPadding ->
             CompositionLocalProvider(
                 LocalBottomNavBarHeight provides if (showBottomBar) bottomNavBarHeight else 0.dp,
