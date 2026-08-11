@@ -33,6 +33,7 @@ sealed interface WardrobeItemEditUiState {
 
 sealed interface WardrobeItemEditEffect {
     data object Saved : WardrobeItemEditEffect
+    data object ItemNotFound : WardrobeItemEditEffect
     data class SaveFailed(val message: String) : WardrobeItemEditEffect
 }
 
@@ -70,7 +71,7 @@ internal fun WardrobeItemEditFormState.toUpdateRequest(): WardrobeItemUpdateRequ
         formality = formality.takeIf { it != originalFormality && it in WardrobeFormalityOptions },
         season = seasons.takeIf { it != originalSeasons && it.all { value -> value in WardrobeSeasonOptions } }?.toList(),
         occasion = occasions.takeIf { it != originalOccasions && it.all { value -> value in WardrobeOccasionOptions } }?.toList(),
-        status = status.takeIf { it != originalStatus },
+        status = status.takeIf { it != originalStatus }?.ordinal,
     )
 }
 

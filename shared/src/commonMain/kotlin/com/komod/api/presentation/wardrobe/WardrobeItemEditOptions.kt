@@ -80,3 +80,4 @@ internal val WardrobeOccasionOptions = listOf(
 )
 
 internal val WardrobeStatusOptions = com.komod.api.data.api.model.WardrobeItemStatus.entries
+    .filterNot { it == com.komod.api.data.api.model.WardrobeItemStatus.Uploaded }

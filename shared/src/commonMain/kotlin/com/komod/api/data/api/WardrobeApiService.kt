@@ -72,9 +72,22 @@ class WardrobeApiService(
             .body<ResponseData<List<WardrobeItemDto>>>().data
     }
 
+    // Same reasoning as analyzeWardrobeItems: the backend returns 404 once an item's
+    // status moves away from Active, and that error body isn't shaped like
+    // ResponseData<WardrobeItemDto> — checking the status first keeps that a
+    // ClientRequestException callers can catch, instead of an unrelated
+    // SerializationException.
     suspend fun getWardrobeItemById(id: String): WardrobeItemDto {
-        return httpClient.get("wardrobe-items/$id")
-            .body<ResponseData<WardrobeItemDto>>().data
+        val response = httpClient.get("wardrobe-items/$id")
+        if (!response.status.isSuccess()) {
+            val text = response.bodyAsText()
+            throw if (response.status.value in 400..499) {
+                ClientRequestException(response, text)
+            } else {
+                ServerResponseException(response, text)
+            }
+        }
+        return response.body<ResponseData<WardrobeItemDto>>().data
     }
 
     suspend fun deleteWardrobeItem(id: String) {

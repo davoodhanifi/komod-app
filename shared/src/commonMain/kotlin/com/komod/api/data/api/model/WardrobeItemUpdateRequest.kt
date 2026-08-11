@@ -10,5 +10,5 @@ data class WardrobeItemUpdateRequest(
     val formality: String? = null,
     val season: List<String>? = null,
     val occasion: List<String>? = null,
-    val status: WardrobeItemStatus? = null,
+    val status: Int? = null,
 )

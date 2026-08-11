@@ -4,6 +4,7 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 enum class WardrobeItemStatus {
+    Uploaded,
     Active,
     Archived,
     Sold,

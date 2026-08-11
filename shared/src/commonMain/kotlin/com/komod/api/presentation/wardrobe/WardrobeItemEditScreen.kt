@@ -75,6 +75,7 @@ private val EditChipBg = Color(0xFFF4F1FF)
 fun WardrobeItemEditScreen(
     wardrobeItemId: String,
     onNavigateBack: () -> Unit,
+    onNavigateToWardrobeList: () -> Unit,
     onRefreshDetail: () -> Unit,
     onRefreshWardrobe: () -> Unit,
     onRefreshHome: () -> Unit,
@@ -92,6 +93,12 @@ fun WardrobeItemEditScreen(
                     onRefreshWardrobe()
                     onRefreshHome()
                     onNavigateBack()
+                }
+                WardrobeItemEditEffect.ItemNotFound -> {
+                    onShowSnackbar("This item no longer exists.")
+                    onRefreshWardrobe()
+                    onRefreshHome()
+                    onNavigateToWardrobeList()
                 }
                 is WardrobeItemEditEffect.SaveFailed -> onShowSnackbar(effect.message)
             }

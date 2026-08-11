@@ -203,6 +203,20 @@ fun MainScaffold(
         }
     }
 
+    // Always lands on the Wardrobe tab regardless of how the current screen was
+    // reached (e.g. Home can push straight to WardrobeItemDetail without ever
+    // creating a "wardrobe" back stack entry, so popBackStack(Wardrobe.route)
+    // would silently no-op from there).
+    fun navigateToWardrobeList() {
+        navController.navigate(MainRoute.Wardrobe.route) {
+            popUpTo(navController.graph.findStartDestination().id) {
+                saveState = true
+            }
+            launchSingleTop = true
+            restoreState = true
+        }
+    }
+
     val currentUser by authRepository.currentUser.collectAsState()
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -432,6 +446,7 @@ fun MainScaffold(
                     WardrobeItemDetailScreen(
                         wardrobeItemId = itemId,
                         onNavigateBack = { navController.navigateUp() },
+                        onNavigateToWardrobeList = ::navigateToWardrobeList,
                         onEditItem = { navController.navigate(MainRoute.WardrobeItemEdit.createRoute(itemId)) },
                         onAdjustCrop = {
                             // Temporarily disabled: AI catalog image generation now handles
@@ -460,6 +475,7 @@ fun MainScaffold(
                     WardrobeItemEditScreen(
                         wardrobeItemId = itemId,
                         onNavigateBack = { navController.navigateUp() },
+                        onNavigateToWardrobeList = ::navigateToWardrobeList,
                         onRefreshDetail = {
                             requestRefresh(MainRoute.WardrobeItemDetail.route, WardrobeItemRefreshArg)
                         },

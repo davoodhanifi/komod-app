@@ -7,6 +7,8 @@ import com.komod.api.data.repository.WardrobeItemDeleteBadRequestException
 import com.komod.api.data.repository.WardrobeItemDeleteNetworkException
 import com.komod.api.data.repository.WardrobeItemDeleteNotFoundException
 import com.komod.api.data.repository.WardrobeItemRepository
+import io.ktor.client.plugins.ClientRequestException
+import io.ktor.http.HttpStatusCode
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -61,6 +63,10 @@ class WardrobeItemDetailViewModel(
         runCatching { repository.getWardrobeItem(itemId) }
             .onSuccess { item -> _uiState.value = WardrobeItemDetailUiState.Success(item) }
             .onFailure { error ->
+                if (error is ClientRequestException && error.response.status == HttpStatusCode.NotFound) {
+                    _effects.emit(WardrobeItemDetailEffect.ItemMissing)
+                    return@onFailure
+                }
                 _uiState.value = WardrobeItemDetailUiState.Error(
                     message = ErrorMapper.toUserMessage(error, tag = "WardrobeItemDetailViewModel"),
                 )

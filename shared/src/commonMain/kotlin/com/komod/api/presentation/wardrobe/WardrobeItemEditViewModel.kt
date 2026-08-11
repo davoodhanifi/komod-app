@@ -80,9 +80,7 @@ class WardrobeItemEditViewModel(
                 _effects.emit(WardrobeItemEditEffect.Saved)
             } catch (error: WardrobeItemUpdateNotFoundException) {
                 _uiState.value = state.copy(content = state.content.copy(isSaving = false))
-                _effects.emit(
-                    WardrobeItemEditEffect.SaveFailed(ErrorMapper.toUserMessage(error, tag = "WardrobeItemEditViewModel")),
-                )
+                _effects.emit(WardrobeItemEditEffect.ItemNotFound)
             } catch (error: WardrobeItemUpdateBadRequestException) {
                 _uiState.value = state.copy(content = state.content.copy(isSaving = false))
                 _effects.emit(

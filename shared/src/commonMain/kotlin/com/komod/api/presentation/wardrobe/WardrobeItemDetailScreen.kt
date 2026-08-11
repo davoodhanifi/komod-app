@@ -110,6 +110,7 @@ private val Skeleton = Color(0xFFE9EDF4)
 fun WardrobeItemDetailScreen(
     wardrobeItemId: String,
     onNavigateBack: () -> Unit,
+    onNavigateToWardrobeList: () -> Unit,
     onEditItem: () -> Unit,
     onAdjustCrop: (imageId: String) -> Unit,
     onRefreshWardrobe: () -> Unit,
@@ -151,7 +152,7 @@ fun WardrobeItemDetailScreen(
                     onShowSnackbar("This item no longer exists.")
                     onRefreshWardrobe()
                     onRefreshHome()
-                    onNavigateBack()
+                    onNavigateToWardrobeList()
                 }
                 is WardrobeItemDetailEffect.DeleteFailed -> {
                     onShowSnackbar(effect.message)
