@@ -8,6 +8,10 @@ import com.komod.api.data.repository.UploadReviewForbiddenException
 import com.komod.api.data.repository.UploadReviewNetworkException
 import com.komod.api.data.repository.UploadReviewNotFoundException
 import com.komod.api.data.repository.UploadReviewUnauthorizedException
+import com.komod.api.data.repository.UploadedImageDeleteConflictException
+import com.komod.api.data.repository.UploadedImageDeleteForbiddenException
+import com.komod.api.data.repository.UploadedImageDeleteNetworkException
+import com.komod.api.data.repository.UploadedImageDeleteNotFoundException
 import com.komod.api.data.repository.UploadedImageNotFoundException
 import com.komod.api.data.repository.UploadedItemNotFoundException
 import com.komod.api.data.repository.WardrobeItemDeleteBadRequestException
@@ -69,6 +73,11 @@ object ErrorMapper {
         is OutfitDeleteNotFoundException -> "This outfit no longer exists."
         is OutfitDeleteBadRequestException -> "Couldn't update this outfit. Please try again."
         is OutfitDeleteNetworkException -> mapCauseOrFallback(throwable, context)
+
+        is UploadedImageDeleteNotFoundException -> "This upload could not be found."
+        is UploadedImageDeleteForbiddenException -> "You don't have permission to do this."
+        is UploadedImageDeleteConflictException -> "This item has already been processed and can't be removed this way."
+        is UploadedImageDeleteNetworkException -> mapCauseOrFallback(throwable, context)
 
         is ClientRequestException ->
             if (throwable.response.status == HttpStatusCode.Unauthorized) {

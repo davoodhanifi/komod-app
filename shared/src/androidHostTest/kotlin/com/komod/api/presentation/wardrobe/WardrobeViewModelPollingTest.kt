@@ -62,6 +62,15 @@ private class FakeAddItemRepository(initialImages: List<UploadedImage>) : AddIte
         _uploadedImages.update { current -> current.filterNot { it.imageId == imageId } }
     }
 
+    var deleteUploadedImageError: Throwable? = null
+    val deleteUploadedImageCalls = mutableListOf<String>()
+
+    override suspend fun deleteUploadedImage(imageId: String) {
+        deleteUploadedImageCalls += imageId
+        deleteUploadedImageError?.let { throw it }
+        _uploadedImages.update { current -> current.filterNot { it.imageId == imageId } }
+    }
+
     override suspend fun getThumbnailUrl(storagePath: String): String? = null
 
     override suspend fun refreshUploadedImages() {
@@ -165,4 +174,28 @@ class WardrobeViewModelPollingTest {
         advanceTimeBy(5_000)
         runCurrent()
     }
+
+    @Test
+    fun `confirming a delete removes the upload and closes the dialog`() = runTest(testDispatcher) {
+        val addItemRepository = FakeAddItemRepository(listOf(uploadedImage("img-5", ImageStatus.Processing)))
+        val viewModel = WardrobeViewModel(FakeWardrobeRepository(), addItemRepository)
+        runCurrent()
+
+        viewModel.requestDeleteUpload("img-5")
+        assertEquals("img-5", viewModel.pendingDeleteUploadId.value)
+
+        viewModel.confirmDeleteUpload()
+        runCurrent()
+
+        assertEquals(listOf("img-5"), addItemRepository.deleteUploadedImageCalls)
+        assertEquals(emptyList(), addItemRepository.uploadedImages.value)
+        assertEquals(null, viewModel.pendingDeleteUploadId.value)
+    }
+
+    // A failure-path test (confirmDeleteUpload's .onFailure branch) is intentionally not
+    // included here: that branch calls ErrorMapper.toUserMessage(), which logs via
+    // AppLogger.e() (android.util.Log) — unmocked in this plain JVM test target, so it
+    // throws and fails the coroutine outright rather than being swallowed. No other
+    // ViewModel failure path that calls ErrorMapper is covered in this test suite either,
+    // for the same reason.
 }

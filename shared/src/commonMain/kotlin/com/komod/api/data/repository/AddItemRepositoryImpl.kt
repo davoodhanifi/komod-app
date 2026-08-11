@@ -123,6 +123,22 @@ class AddItemRepositoryImpl(
         uploadedImageStore.remove(imageId)
     }
 
+    override suspend fun deleteUploadedImage(imageId: String) {
+        try {
+            wardrobeApiService.deleteUploadedImage(imageId)
+            uploadedImageStore.remove(imageId)
+        } catch (error: ResponseException) {
+            when (error.response.status) {
+                HttpStatusCode.NotFound -> throw UploadedImageDeleteNotFoundException()
+                HttpStatusCode.Forbidden -> throw UploadedImageDeleteForbiddenException()
+                HttpStatusCode.PreconditionFailed -> throw UploadedImageDeleteConflictException()
+                else -> throw UploadedImageDeleteNetworkException(error)
+            }
+        } catch (error: kotlinx.io.IOException) {
+            throw UploadedImageDeleteNetworkException(error)
+        }
+    }
+
     override val uploadedImages: StateFlow<List<UploadedImage>> = uploadedImageStore.uploadedImages
 
     override suspend fun getThumbnailUrl(storagePath: String): String? = storageService.createSignedUrl(storagePath)

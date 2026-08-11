@@ -80,6 +80,10 @@ class WardrobeApiService(
         httpClient.delete("wardrobe-items/$id")
     }
 
+    suspend fun deleteUploadedImage(imageId: String) {
+        httpClient.delete("images/$imageId")
+    }
+
     suspend fun updateWardrobeItem(
         id: String,
         request: WardrobeItemUpdateRequest,

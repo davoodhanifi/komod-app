@@ -349,6 +349,7 @@ fun MainScaffold(
                         onUploadClick = { imageId ->
                             navController.navigate(MainRoute.UploadReview.createRoute(imageId))
                         },
+                        onShowSnackbar = ::showSnackbar,
                     )
                 }
 

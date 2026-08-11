@@ -12,8 +12,10 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -43,14 +45,17 @@ import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.outlined.Checkroom
 import androidx.compose.material.icons.outlined.CloudOff
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -80,6 +85,7 @@ import com.komod.api.presentation.home.getCategoryIcon
 import com.komod.api.presentation.home.getCategoryIconColor
 import com.komod.api.presentation.main.LocalBottomNavBarHeight
 import komod.shared.generated.resources.Res
+import komod.shared.generated.resources.delete
 import komod.shared.generated.resources.hanger
 import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.viewmodel.koinViewModel
@@ -100,15 +106,26 @@ fun WardrobeScreen(
     onAddItem: () -> Unit,
     onItemClick: (String) -> Unit,
     onUploadClick: (String) -> Unit,
+    onShowSnackbar: (String) -> Unit = {},
     lazyGridState: androidx.compose.foundation.lazy.grid.LazyGridState = rememberLazyGridState(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
     val recentUploads by viewModel.recentUploads.collectAsState()
     val selectedCategory by viewModel.selectedCategory.collectAsState()
+    val pendingDeleteUploadId by viewModel.pendingDeleteUploadId.collectAsState()
+    val deletingUploadIds by viewModel.deletingUploadIds.collectAsState()
 
     LaunchedEffect(refreshKey) {
         if (refreshKey > 0) viewModel.refresh()
+    }
+
+    LaunchedEffect(Unit) {
+        viewModel.effects.collect { effect ->
+            when (effect) {
+                is WardrobeEffect.ShowMessage -> onShowSnackbar(effect.message)
+            }
+        }
     }
 
     // Belt-and-suspenders: fires every time this composable (re)enters composition —
@@ -150,7 +167,11 @@ fun WardrobeScreen(
                 .padding(padding),
         ) {
             WardrobeHeader()
-            RecentUploadsSection(uploads = recentUploads, onUploadClick = onUploadClick)
+            RecentUploadsSection(
+                uploads = recentUploads,
+                onUploadClick = onUploadClick,
+                onUploadLongPress = viewModel::requestDeleteUpload,
+            )
 
             when (val state = uiState) {
                 WardrobeUiState.Loading -> {
@@ -234,6 +255,14 @@ fun WardrobeScreen(
                 }
             }
         }
+    }
+
+    if (pendingDeleteUploadId != null) {
+        DeleteUploadConfirmDialog(
+            isDeleting = pendingDeleteUploadId in deletingUploadIds,
+            onDismiss = viewModel::dismissDeleteUpload,
+            onConfirm = viewModel::confirmDeleteUpload,
+        )
     }
 }
 
@@ -358,7 +387,11 @@ private fun NoCategoryItemsState(category: String, modifier: Modifier = Modifier
 }
 
 @Composable
-private fun RecentUploadsSection(uploads: List<RecentUploadUi>, onUploadClick: (String) -> Unit) {
+private fun RecentUploadsSection(
+    uploads: List<RecentUploadUi>,
+    onUploadClick: (String) -> Unit,
+    onUploadLongPress: (String) -> Unit,
+) {
     if (uploads.isEmpty()) return
 
     Card(
@@ -389,7 +422,11 @@ private fun RecentUploadsSection(uploads: List<RecentUploadUi>, onUploadClick: (
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 uploads.forEach { upload ->
-                    UploadQueueCard(upload = upload, onClick = { onUploadClick(upload.imageId) })
+                    UploadQueueCard(
+                        upload = upload,
+                        onClick = { onUploadClick(upload.imageId) },
+                        onLongPress = { onUploadLongPress(upload.imageId) },
+                    )
                 }
             }
 
@@ -447,15 +484,22 @@ private fun uploadStatusMessage(uploads: List<RecentUploadUi>): UploadStatusMess
     return if (hasAnalyzed) UploadStatusMessage.Ready else null
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun UploadQueueCard(upload: RecentUploadUi, onClick: () -> Unit) {
+private fun UploadQueueCard(upload: RecentUploadUi, onClick: () -> Unit, onLongPress: () -> Unit) {
     val isActive = upload.status == ImageStatus.Pending || upload.status == ImageStatus.Processing
     val isAnalyzed = upload.status == ImageStatus.Analyzed
 
     Card(
         modifier = Modifier
             .size(76.dp)
-            .clickable(enabled = isAnalyzed, onClick = onClick),
+            .combinedClickable(
+                onClick = { if (isAnalyzed) onClick() },
+                // Matches the backend's own precondition: only images still Pending,
+                // Processing, or Failed can be deleted this way — once analyzed, its
+                // items must be removed individually instead.
+                onLongClick = { if (!isAnalyzed) onLongPress() },
+            ),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = CardBg),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
@@ -516,6 +560,69 @@ private fun UploadQueueCard(upload: RecentUploadUi, onClick: () -> Unit) {
             }
         }
     }
+}
+
+@Composable
+private fun DeleteUploadConfirmDialog(
+    isDeleting: Boolean,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = { if (!isDeleting) onDismiss() },
+        icon = {
+            Icon(
+                painter = painterResource(Res.drawable.delete),
+                contentDescription = null,
+                tint = Color(0xFFD92D20),
+            )
+        },
+        title = {
+            Text(
+                text = "Delete this upload?",
+                fontWeight = FontWeight.Bold,
+                color = DarkText,
+            )
+        },
+        text = {
+            Text(
+                text = "This upload will be removed from your queue.",
+                color = GrayText,
+            )
+        },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                enabled = !isDeleting,
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFFD92D20),
+                    contentColor = Color.White,
+                    disabledContainerColor = Color(0xFFD92D20).copy(alpha = 0.5f),
+                    disabledContentColor = Color.White,
+                ),
+            ) {
+                if (isDeleting) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(14.dp),
+                        strokeWidth = 2.dp,
+                        color = Color.White,
+                    )
+                    Spacer(Modifier.width(8.dp))
+                }
+                Text("Delete", fontWeight = FontWeight.SemiBold)
+            }
+        },
+        dismissButton = {
+            OutlinedButton(
+                onClick = onDismiss,
+                enabled = !isDeleting,
+                shape = RoundedCornerShape(12.dp),
+            ) {
+                Text("Cancel", fontWeight = FontWeight.SemiBold)
+            }
+        },
+    )
 }
 
 @Composable

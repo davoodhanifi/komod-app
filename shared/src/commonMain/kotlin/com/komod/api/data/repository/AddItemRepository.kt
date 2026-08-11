@@ -24,6 +24,10 @@ interface AddItemRepository {
 
     fun removeUploadedImage(imageId: String)
 
+    // Deletes the image from the backend's upload queue (only valid while its status is
+    // Pending, Processing, or Failed), then drops it from the local store on success.
+    suspend fun deleteUploadedImage(imageId: String)
+
     val uploadedImages: StateFlow<List<UploadedImage>>
 
     suspend fun getThumbnailUrl(storagePath: String): String?

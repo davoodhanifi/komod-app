@@ -8,13 +8,20 @@ import com.komod.api.data.api.model.ImageStatus
 import com.komod.api.data.repository.AddItemRepository
 import com.komod.api.data.repository.WardrobeRepository
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+
+sealed interface WardrobeEffect {
+    data class ShowMessage(val message: String) : WardrobeEffect
+}
 
 private const val UploadPollIntervalMs = 5_000L
 
@@ -35,6 +42,17 @@ class WardrobeViewModel(
 
     private val _selectedCategory = MutableStateFlow(AllCategoriesLabel)
     val selectedCategory: StateFlow<String> = _selectedCategory.asStateFlow()
+
+    // The upload pending a delete confirmation (long-pressed, dialog visible); null
+    // means no dialog is showing.
+    private val _pendingDeleteUploadId = MutableStateFlow<String?>(null)
+    val pendingDeleteUploadId: StateFlow<String?> = _pendingDeleteUploadId.asStateFlow()
+
+    private val _deletingUploadIds = MutableStateFlow<Set<String>>(emptySet())
+    val deletingUploadIds: StateFlow<Set<String>> = _deletingUploadIds.asStateFlow()
+
+    private val _effects = MutableSharedFlow<WardrobeEffect>()
+    val effects: SharedFlow<WardrobeEffect> = _effects.asSharedFlow()
 
     // Keyed by storage path (not imageId) so a path change from the backend
     // is picked up as a cache miss and re-resolved into a fresh signed URL.
@@ -104,6 +122,43 @@ class WardrobeViewModel(
 
     fun selectCategory(category: String) {
         _selectedCategory.value = category
+    }
+
+    fun requestDeleteUpload(imageId: String) {
+        _pendingDeleteUploadId.value = imageId
+    }
+
+    fun dismissDeleteUpload() {
+        val imageId = _pendingDeleteUploadId.value ?: return
+        if (imageId in _deletingUploadIds.value) return
+        _pendingDeleteUploadId.value = null
+    }
+
+    fun confirmDeleteUpload() {
+        val imageId = _pendingDeleteUploadId.value ?: return
+        if (imageId in _deletingUploadIds.value) return
+
+        _deletingUploadIds.value += imageId
+        viewModelScope.launch {
+            runCatching { addItemRepository.deleteUploadedImage(imageId) }
+                .onSuccess {
+                    _deletingUploadIds.value -= imageId
+                    _pendingDeleteUploadId.value = null
+                }
+                .onFailure { error ->
+                    _deletingUploadIds.value -= imageId
+                    _pendingDeleteUploadId.value = null
+                    _effects.emit(
+                        WardrobeEffect.ShowMessage(
+                            ErrorMapper.toUserMessage(error, tag = "WardrobeViewModel"),
+                        ),
+                    )
+                    // Covers the race where the image finished analyzing (or was already
+                    // deleted) between the long-press and this call — refetch so the
+                    // Upload Queue reflects reality instead of a stale, now-wrong tile.
+                    refreshUploadedImages()
+                }
+        }
     }
 
     private suspend fun fetchItems() {
