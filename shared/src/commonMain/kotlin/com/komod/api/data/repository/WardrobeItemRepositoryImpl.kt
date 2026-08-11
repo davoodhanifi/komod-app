@@ -41,6 +41,7 @@ class WardrobeItemRepositoryImpl(
             category = dto.category,
             subcategory = dto.subcategory,
             itemName = dto.itemName,
+            brand = dto.brand,
             bodyRegion = dto.bodyRegion,
             layer = dto.layer,
             primaryColor = dto.primaryColor,

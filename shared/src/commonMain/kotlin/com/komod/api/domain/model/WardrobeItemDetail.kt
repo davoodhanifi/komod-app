@@ -8,6 +8,7 @@ data class WardrobeItemDetail(
     val category: String,
     val subcategory: String?,
     val itemName: String?,
+    val brand: String?,
     val bodyRegion: String?,
     val layer: String?,
     val primaryColor: String?,

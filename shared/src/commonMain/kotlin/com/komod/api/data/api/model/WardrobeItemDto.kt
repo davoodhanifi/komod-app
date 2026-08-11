@@ -10,6 +10,7 @@ data class WardrobeItemDto(
     val category: String,
     val subcategory: String? = null,
     val itemName: String? = null,
+    val brand: String? = null,
     val bodyRegion: String? = null,
     val layer: String? = null,
     val primaryColor: String? = null,

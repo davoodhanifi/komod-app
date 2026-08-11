@@ -80,6 +80,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -502,6 +503,12 @@ private fun QuickFactsRow(item: WardrobeItemDetail) {
         )
         FactItem(
             modifier = Modifier.weight(1f),
+            icon = { Icon(Icons.Outlined.LocalOffer, contentDescription = null, tint = Muted, modifier = Modifier.size(14.dp)) },
+            label = "Brand",
+            value = item.brand?.takeIf { it.isNotBlank() }?.toLabel() ?: "—",
+        )
+        FactItem(
+            modifier = Modifier.weight(1f),
             icon = { Icon(Icons.Outlined.AutoAwesome, contentDescription = null, tint = Muted, modifier = Modifier.size(14.dp)) },
             label = "Material",
             value = item.material?.toLabel() ?: "—",
@@ -540,6 +547,8 @@ private fun FactItem(
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Medium,
             fontSize = 14.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
         )
     }
 }

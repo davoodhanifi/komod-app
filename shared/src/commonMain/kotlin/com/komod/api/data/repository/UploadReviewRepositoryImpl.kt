@@ -60,6 +60,7 @@ class UploadReviewRepositoryImpl(
             category = category,
             subcategory = subcategory,
             itemName = itemName,
+            brand = brand,
             bodyRegion = bodyRegion,
             layer = layer,
             primaryColor = primaryColor,
