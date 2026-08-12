@@ -344,7 +344,7 @@ fun GenerateOutfitCard(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "Generate AI-powered outfit recommendations.",
+                text = "Generate Komoda's outfit recommendations.",
                 fontSize = 13.sp,
                 color = GrayText,
             )

@@ -57,7 +57,7 @@ fun LoginScreen(
                     color = MaterialTheme.colorScheme.onBackground,
                 )
                 Text(
-                    text = "Your AI wardrobe companion",
+                    text = "Your wardrobe companion, Komoda",
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

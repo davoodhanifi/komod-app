@@ -518,7 +518,7 @@ private fun ConfidenceInfoCard(modifier: Modifier = Modifier) {
                 .size(18.dp),
         )
         Text(
-            text = "AI confidence indicates how likely it is that the item was correctly identified.",
+            text = "Komoda's confidence indicates how likely it is that the item was correctly identified.",
             style = MaterialTheme.typography.bodySmall,
             color = GrayText,
             modifier = Modifier.padding(start = 12.dp),

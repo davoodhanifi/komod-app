@@ -129,7 +129,7 @@ private fun OutfitOfTheDayShell(
             Spacer(modifier = Modifier.height(2.dp))
 
             Text(
-                text = "AI styled for you",
+                text = "Styled by Komoda",
                 fontSize = 13.sp,
                 color = OutfitGrayText,
             )

@@ -549,7 +549,7 @@ private sealed interface UploadStatusMessage {
         override val title: String
             get() = "$count ${if (count == 1) "photo is" else "photos are"} being processed ✨"
         override val subtitle: String
-            get() = "Our AI is carefully finding your wardrobe pieces. This usually takes only a few seconds."
+            get() = "Komoda is carefully finding your wardrobe pieces. This usually takes only a few seconds."
     }
 
     data object Ready : UploadStatusMessage {
@@ -1089,7 +1089,7 @@ fun EmptyState(
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "Add your first outfit to start building your AI wardrobe.",
+            text = "Add your first outfit to start building your wardrobe with Komoda.",
             style = MaterialTheme.typography.bodyMedium,
             color = GrayText,
             textAlign = TextAlign.Center,

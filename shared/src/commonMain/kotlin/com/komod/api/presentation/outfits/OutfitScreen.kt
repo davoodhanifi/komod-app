@@ -241,7 +241,7 @@ private fun OutfitHeader(
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "Your personal AI stylist",
+            text = "Your personal stylist, Komoda",
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

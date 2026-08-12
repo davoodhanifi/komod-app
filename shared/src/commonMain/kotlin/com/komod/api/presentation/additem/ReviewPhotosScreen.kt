@@ -123,8 +123,8 @@ fun ReviewPhotosScreen(
                         modifier = Modifier.size(20.dp),
                     )
                     Text(
-                        text = "Crop around the clothing you want to add for better AI detection " +
-                            "and more accurate wardrobe results.",
+                        text = "Crop around the clothing you want to add for better detection " +
+                            "and more accurate wardrobe results from Komoda.",
                         style = MaterialTheme.typography.bodySmall,
                         color = DarkText,
                         modifier = Modifier.padding(start = 12.dp),

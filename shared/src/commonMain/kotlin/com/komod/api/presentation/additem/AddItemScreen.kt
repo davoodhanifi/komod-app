@@ -193,7 +193,7 @@ private fun AddItemInitialContent(
                 color = DarkText,
             )
             Text(
-                text = "Add up to 5 photos of your clothing items and let AI analyze them",
+                text = "Add up to 5 photos of your clothing items and let Komoda analyze them",
                 style = MaterialTheme.typography.bodyMedium,
                 color = GrayText,
                 modifier = Modifier.padding(top = 8.dp),
