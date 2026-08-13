@@ -57,9 +57,11 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -129,6 +131,7 @@ private data class OccasionOption(
     val icon: DrawableResource,
 )
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     user: User?,
@@ -145,91 +148,98 @@ fun HomeScreen(
     scrollState: androidx.compose.foundation.ScrollState = rememberScrollState(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val isRefreshing by viewModel.isRefreshing.collectAsState()
 
     LaunchedEffect(refreshKey) {
         if (refreshKey > 0) viewModel.refresh()
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.White)
-            .verticalScroll(scrollState)
-            .padding(bottom = 80.dp),
+    PullToRefreshBox(
+        isRefreshing = isRefreshing,
+        onRefresh = viewModel::pullToRefresh,
+        modifier = Modifier.fillMaxSize(),
     ) {
-        Spacer(modifier = Modifier.height(16.dp))
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.White)
+                .verticalScroll(scrollState)
+                .padding(bottom = 80.dp),
+        ) {
+            Spacer(modifier = Modifier.height(16.dp))
 
-        GreetingSection(
-            user = user,
-            onProfileClick = onProfileClick,
-        )
+            GreetingSection(
+                user = user,
+                onProfileClick = onProfileClick,
+            )
 
-        Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
-        // GenerateOutfitCard(
-        //     selectedOccasion = uiState.selectedOccasion,
-        //     onOccasionSelected = viewModel::selectOccasion,
-        //     onGenerateClick = onGenerateOutfit,
-        // )
-        //
-        // Spacer(modifier = Modifier.height(32.dp))
+            // GenerateOutfitCard(
+            //     selectedOccasion = uiState.selectedOccasion,
+            //     onOccasionSelected = viewModel::selectOccasion,
+            //     onGenerateClick = onGenerateOutfit,
+            // )
+            //
+            // Spacer(modifier = Modifier.height(32.dp))
 
-        uiState.outfitOfTheDayState?.let { state ->
-            OutfitOfTheDayCard(state = state, onViewOutfit = onViewOutfitOfTheDay)
+            uiState.outfitOfTheDayState?.let { state ->
+                OutfitOfTheDayCard(state = state, onViewOutfit = onViewOutfitOfTheDay)
+                Spacer(modifier = Modifier.height(32.dp))
+            }
+
+            when (val state = uiState.summaryState) {
+                is WardrobeSummaryState.Loading -> WardrobeSummarySkeleton()
+                is WardrobeSummaryState.Success -> WardrobeSummarySection(
+                    summary = state.summary,
+                    onViewAll = onViewWardrobe,
+                    onCategoryClick = onViewWardrobeCategory,
+                )
+                is WardrobeSummaryState.Error -> WardrobeSummaryError(
+                    message = state.message,
+                    onRetry = viewModel::retryLoadSummary,
+                )
+            }
+
             Spacer(modifier = Modifier.height(32.dp))
-        }
 
-        when (val state = uiState.summaryState) {
-            is WardrobeSummaryState.Loading -> WardrobeSummarySkeleton()
-            is WardrobeSummaryState.Success -> WardrobeSummarySection(
-                summary = state.summary,
-                onViewAll = onViewWardrobe,
-                onCategoryClick = onViewWardrobeCategory,
-            )
-            is WardrobeSummaryState.Error -> WardrobeSummaryError(
-                message = state.message,
-                onRetry = viewModel::retryLoadSummary,
-            )
-        }
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        when (val state = uiState.recentItemsState) {
-            is RecentItemsState.Loading -> RecentItemsSkeleton()
-            is RecentItemsState.Success -> RecentItemsSection(
-                items = state.items,
-                onItemClick = onItemClick,
-                onViewAll = onViewWardrobe,
-            )
-            is RecentItemsState.Error -> RecentItemsError(
-                message = state.message,
-                onRetry = viewModel::retryLoadRecentItems,
-            )
-        }
-
-        when (val state = uiState.savedOutfitsState) {
-            is SavedOutfitsState.Loading -> {
-                Spacer(modifier = Modifier.height(32.dp))
-                SavedOutfitsSkeleton()
+            when (val state = uiState.recentItemsState) {
+                is RecentItemsState.Loading -> RecentItemsSkeleton()
+                is RecentItemsState.Success -> RecentItemsSection(
+                    items = state.items,
+                    onItemClick = onItemClick,
+                    onViewAll = onViewWardrobe,
+                )
+                is RecentItemsState.Error -> RecentItemsError(
+                    message = state.message,
+                    onRetry = viewModel::retryLoadRecentItems,
+                )
             }
-            is SavedOutfitsState.Success -> {
-                Spacer(modifier = Modifier.height(32.dp))
-                if (state.outfits.isEmpty()) {
-                    SavedOutfitsEmptyState(onGenerateOutfit = onViewOutfits)
-                } else {
-                    SavedOutfitsSection(
-                        outfits = state.outfits,
-                        onOutfitClick = onOutfitClick,
-                        onViewAll = onViewOutfits,
-                    )
+
+            when (val state = uiState.savedOutfitsState) {
+                is SavedOutfitsState.Loading -> {
+                    Spacer(modifier = Modifier.height(32.dp))
+                    SavedOutfitsSkeleton()
                 }
+                is SavedOutfitsState.Success -> {
+                    Spacer(modifier = Modifier.height(32.dp))
+                    if (state.outfits.isEmpty()) {
+                        SavedOutfitsEmptyState(onGenerateOutfit = onViewOutfits)
+                    } else {
+                        SavedOutfitsSection(
+                            outfits = state.outfits,
+                            onOutfitClick = onOutfitClick,
+                            onViewAll = onViewOutfits,
+                        )
+                    }
+                }
+                // Hidden entirely on failure — no backend error is surfaced, and the rest
+                // of the Home screen keeps rendering normally.
+                is SavedOutfitsState.Error -> Unit
             }
-            // Hidden entirely on failure — no backend error is surfaced, and the rest
-            // of the Home screen keeps rendering normally.
-            is SavedOutfitsState.Error -> Unit
-        }
 
-        Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(24.dp))
+        }
     }
 }
 

@@ -9,6 +9,7 @@ import com.komod.api.data.repository.HomeRepository
 import com.komod.api.data.repository.OutfitRepository
 import com.komod.api.domain.model.WardrobeSummary
 import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -22,6 +23,9 @@ class HomeViewModel(
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
+
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
 
     init {
         loadData()
@@ -42,15 +46,30 @@ class HomeViewModel(
                 )
             }
 
-            // Load concurrently
-            val summaryDeferred = async { fetchSummary() }
-            val recentItemsDeferred = async { fetchRecentItems() }
-            val savedOutfitsDeferred = async { fetchSavedOutfits() }
-
-            summaryDeferred.await()
-            recentItemsDeferred.await()
-            savedOutfitsDeferred.await()
+            fetchAll()
         }
+    }
+
+    // Pull-to-refresh: unlike refresh(), this keeps whatever's already on screen visible
+    // (each section only swaps to its new content once its own fetch resolves) instead of
+    // blanking everything to a skeleton first — isRefreshing drives the pull-to-refresh
+    // spinner instead.
+    fun pullToRefresh() {
+        viewModelScope.launch {
+            _isRefreshing.value = true
+            fetchAll()
+            _isRefreshing.value = false
+        }
+    }
+
+    private suspend fun fetchAll() = coroutineScope {
+        val summaryDeferred = async { fetchSummary() }
+        val recentItemsDeferred = async { fetchRecentItems() }
+        val savedOutfitsDeferred = async { fetchSavedOutfits() }
+
+        summaryDeferred.await()
+        recentItemsDeferred.await()
+        savedOutfitsDeferred.await()
     }
 
     fun selectOccasion(occasion: String) {
