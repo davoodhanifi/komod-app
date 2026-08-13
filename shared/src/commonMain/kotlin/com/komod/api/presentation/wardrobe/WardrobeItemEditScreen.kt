@@ -251,21 +251,22 @@ private fun EditFormContent(
                 onToggle = onOccasionToggle,
             )
         }
-        EditSectionCard(title = "Status") {
-            DropdownField(
-                label = "Status",
-                value = content.form.status.toDisplayLabel(),
-                options = WardrobeStatusOptions.map { it.toDisplayLabel() },
-                enabled = !content.isSaving,
-                onSelected = { selected ->
-                    WardrobeStatusOptions.firstOrNull { it.toDisplayLabel() == selected }?.let(onStatusChange)
-                },
-                transformInput = { selected ->
-                    WardrobeStatusOptions.firstOrNull { it.toDisplayLabel() == selected }?.toDisplayLabel()
-                        ?: selected
-                },
-            )
-        }
+        // Status update disabled for now.
+        // EditSectionCard(title = "Status") {
+        //     DropdownField(
+        //         label = "Status",
+        //         value = content.form.status.toDisplayLabel(),
+        //         options = WardrobeStatusOptions.map { it.toDisplayLabel() },
+        //         enabled = !content.isSaving,
+        //         onSelected = { selected ->
+        //             WardrobeStatusOptions.firstOrNull { it.toDisplayLabel() == selected }?.let(onStatusChange)
+        //         },
+        //         transformInput = { selected ->
+        //             WardrobeStatusOptions.firstOrNull { it.toDisplayLabel() == selected }?.toDisplayLabel()
+        //                 ?: selected
+        //         },
+        //     )
+        // }
         Spacer(modifier = Modifier.height(96.dp))
     }
 }
