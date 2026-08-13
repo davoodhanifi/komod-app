@@ -94,11 +94,15 @@ fun OutfitOfTheDayCard(
     onViewOutfit: (Outfit) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    OutfitOfTheDayShell(modifier = modifier) {
+    val onCardClick = (state as? OutfitOfTheDayState.Available)?.let { available ->
+        { onViewOutfit(available.toOutfit()) }
+    }
+
+    OutfitOfTheDayShell(modifier = modifier, onClick = onCardClick) {
         when (state) {
             is OutfitOfTheDayState.Loading -> LoadingBody()
             is OutfitOfTheDayState.NotEnoughItems -> NotEnoughItemsBody()
-            is OutfitOfTheDayState.Available -> AvailableBody(state = state, onViewOutfit = onViewOutfit)
+            is OutfitOfTheDayState.Available -> AvailableBody(state = state)
         }
     }
 }
@@ -106,10 +110,14 @@ fun OutfitOfTheDayCard(
 @Composable
 private fun OutfitOfTheDayShell(
     modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Card(
-        modifier = modifier.padding(horizontal = 20.dp).fillMaxWidth(),
+        modifier = modifier
+            .padding(horizontal = 20.dp)
+            .fillMaxWidth()
+            .let { if (onClick != null) it.clickable(onClick = onClick) else it },
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
@@ -207,7 +215,6 @@ private fun LoadingBody() {
 @Composable
 private fun AvailableBody(
     state: OutfitOfTheDayState.Available,
-    onViewOutfit: (Outfit) -> Unit,
 ) {
     Column {
         Row(
@@ -271,7 +278,6 @@ private fun AvailableBody(
             color = OutfitPurple,
             fontSize = 13.sp,
             fontWeight = FontWeight.Medium,
-            modifier = Modifier.clickable(onClick = { onViewOutfit(state.toOutfit()) }),
         )
     }
 }

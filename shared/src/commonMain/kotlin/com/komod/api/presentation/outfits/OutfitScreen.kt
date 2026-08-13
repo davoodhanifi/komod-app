@@ -464,7 +464,8 @@ fun OutfitCard(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp, vertical = 10.dp)
-            .shadow(14.dp, shape, ambientColor = Color(0x14111827), spotColor = Color(0x14111827)),
+            .shadow(14.dp, shape, ambientColor = Color(0x14111827), spotColor = Color(0x14111827))
+            .clickable(onClick = onTryThis),
         shape = shape,
         colors = CardDefaults.cardColors(containerColor = OutfitSurface),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
