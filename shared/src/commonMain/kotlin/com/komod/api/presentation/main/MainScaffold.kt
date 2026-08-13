@@ -568,6 +568,9 @@ fun MainScaffold(
                             viewModel = outfitViewModel,
                             onNavigateBack = { navController.navigateUp() },
                             onShowSnackbar = ::showSnackbar,
+                            onItemClick = { itemId ->
+                                navController.navigate(MainRoute.WardrobeItemDetail.createRoute(itemId))
+                            },
                         )
                     } else {
                         LaunchedEffect(Unit) { navController.navigateUp() }

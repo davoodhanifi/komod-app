@@ -1,6 +1,7 @@
 package com.komod.api.presentation.outfits
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -49,6 +50,7 @@ import com.komod.api.domain.model.Outfit
 import com.komod.api.domain.model.OutfitItem
 import komod.shared.generated.resources.Res
 import komod.shared.generated.resources.arrow_left
+import komod.shared.generated.resources.arrow_right
 import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -59,6 +61,7 @@ fun OutfitDetailsScreen(
     onNavigateBack: () -> Unit,
     viewModel: OutfitViewModel = koinViewModel(),
     onShowSnackbar: (String) -> Unit = {},
+    onItemClick: (String) -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val isSaving = outfit.id in uiState.savingOutfitIds
@@ -180,8 +183,12 @@ fun OutfitDetailsScreen(
                 )
                 Spacer(modifier = Modifier.height(12.dp))
             }
-            items(outfit.items) { item ->
-                OutfitDetailsItemRow(item = item, modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp))
+            items(outfit.items.zip(outfit.wardrobeItemIds)) { (item, wardrobeItemId) ->
+                OutfitDetailsItemRow(
+                    item = item,
+                    onClick = { onItemClick(wardrobeItemId) },
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
+                )
             }
         }
     }
@@ -208,10 +215,11 @@ private fun OutfitMatchBadge(score: Int) {
 @Composable
 private fun OutfitDetailsItemRow(
     item: OutfitItem,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Card(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth().clickable(onClick = onClick),
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = OutfitSurface),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
@@ -236,7 +244,7 @@ private fun OutfitDetailsItemRow(
                 }
             }
             Spacer(modifier = Modifier.width(14.dp))
-            Column {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = item.category?.toDisplayLabel() ?: "Item",
                     color = OutfitText,
@@ -252,6 +260,11 @@ private fun OutfitDetailsItemRow(
                     )
                 }
             }
+            Icon(
+                painter = painterResource(Res.drawable.arrow_right),
+                contentDescription = null,
+                tint = OutfitMuted,
+            )
         }
     }
 }
