@@ -14,10 +14,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.LocationOff
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -47,6 +47,8 @@ private val OutfitLightPurple = Color(0xFFF0EDFF)
 private val OutfitDarkText = Color(0xFF111827)
 private val OutfitGrayText = Color(0xFF6B7280)
 private val OutfitThumbnailBackground = Color(0xFFF3F4F6)
+private val OutfitDirectionCardBackground = Color(0xFFFAFAFA)
+private val OutfitDirectionCardBorder = Color(0xFFF0F0F0)
 
 // No minimum-item rule exists server-side yet; this mirrors the "10 items across
 // tops, bottoms and shoes" recommendation from the design reference.
@@ -58,35 +60,34 @@ fun hasEnoughItemsForOutfit(summary: WardrobeSummary): Boolean =
 sealed interface OutfitOfTheDayState {
     data object Loading : OutfitOfTheDayState
     data object NotEnoughItems : OutfitOfTheDayState
+
+    // "outfits" is 1-5 entries — GET /outfits/today returns fewer than 5 whenever the
+    // wardrobe can't support every styling direction well, which is normal and expected.
     data class Available(
-        val id: String,
-        val occasionLabel: String,
-        val name: String,
-        val reason: String,
-        val matchScore: Int,
-        val wardrobeItemIds: List<String>,
-        val items: List<OutfitItem>,
-        val weather: OutfitOfTheDayWeather?,
-        val locationPermissionDenied: Boolean,
+        val outfits: List<Outfit>,
+        val weather: OutfitOfTheDayWeather,
     ) : OutfitOfTheDayState
 }
-
-fun OutfitOfTheDayState.Available.toOutfit(): Outfit = Outfit(
-    id = id,
-    name = name,
-    reason = reason,
-    matchScore = matchScore,
-    wardrobeItemIds = wardrobeItemIds,
-    items = items,
-)
 
 data class OutfitOfTheDayWeather(
     val temperatureC: Double,
     val condition: String,
-    val weatherCode: Int,
     val isRaining: Boolean,
     val isSnowing: Boolean,
+    val next6Hours: OutfitOfTheDayWeatherRange? = null,
 )
+
+data class OutfitOfTheDayWeatherRange(
+    val minTemperatureC: Double,
+    val maxTemperatureC: Double,
+)
+
+// "18–25°" when the next-6h range is known, or just the current "21°" otherwise.
+internal fun outfitTemperatureHeadline(weather: OutfitOfTheDayWeather): String {
+    val range = weather.next6Hours
+        ?: return "${weather.temperatureC.roundToInt()}°"
+    return "${range.minTemperatureC.roundToInt()}–${range.maxTemperatureC.roundToInt()}°"
+}
 
 @Composable
 fun OutfitOfTheDayCard(
@@ -94,15 +95,13 @@ fun OutfitOfTheDayCard(
     onViewOutfit: (Outfit) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val onCardClick = (state as? OutfitOfTheDayState.Available)?.let { available ->
-        { onViewOutfit(available.toOutfit()) }
-    }
+    val weather = (state as? OutfitOfTheDayState.Available)?.weather
 
-    OutfitOfTheDayShell(modifier = modifier, onClick = onCardClick) {
+    OutfitOfTheDayShell(modifier = modifier, weather = weather) {
         when (state) {
             is OutfitOfTheDayState.Loading -> LoadingBody()
             is OutfitOfTheDayState.NotEnoughItems -> NotEnoughItemsBody()
-            is OutfitOfTheDayState.Available -> AvailableBody(state = state)
+            is OutfitOfTheDayState.Available -> AvailableBody(state = state, onViewOutfit = onViewOutfit)
         }
     }
 }
@@ -110,14 +109,13 @@ fun OutfitOfTheDayCard(
 @Composable
 private fun OutfitOfTheDayShell(
     modifier: Modifier = Modifier,
-    onClick: (() -> Unit)? = null,
+    weather: OutfitOfTheDayWeather? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Card(
         modifier = modifier
             .padding(horizontal = 20.dp)
-            .fillMaxWidth()
-            .let { if (onClick != null) it.clickable(onClick = onClick) else it },
+            .fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
@@ -127,20 +125,33 @@ private fun OutfitOfTheDayShell(
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp, vertical = 16.dp),
         ) {
-            Text(
-                text = "Outfit of the Day ✨",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                color = OutfitDarkText,
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top,
+            ) {
+                Column(modifier = Modifier.weight(1f, fill = false)) {
+                    Text(
+                        text = "Outfit of the Day ✨",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = OutfitDarkText,
+                    )
 
-            Spacer(modifier = Modifier.height(2.dp))
+                    Spacer(modifier = Modifier.height(2.dp))
 
-            Text(
-                text = "Styled by Komoda",
-                fontSize = 13.sp,
-                color = OutfitGrayText,
-            )
+                    Text(
+                        text = "Styled by Komoda",
+                        fontSize = 13.sp,
+                        color = OutfitGrayText,
+                    )
+                }
+
+                if (weather != null) {
+                    Spacer(modifier = Modifier.width(12.dp))
+                    WeatherBadge(weather = weather)
+                }
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -215,70 +226,60 @@ private fun LoadingBody() {
 @Composable
 private fun AvailableBody(
     state: OutfitOfTheDayState.Available,
+    onViewOutfit: (Outfit) -> Unit,
 ) {
     Column {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(OutfitLightPurple)
-                    .padding(horizontal = 10.dp, vertical = 4.dp),
-            ) {
-                Text(
-                    text = state.occasionLabel,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = OutfitPurple,
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            items(state.outfits, key = { it.id }) { outfit ->
+                OutfitDirectionCard(
+                    outfit = outfit,
+                    onClick = { onViewOutfit(outfit) },
                 )
             }
+        }
+    }
+}
 
-            val weather = state.weather
-            if (weather != null) {
-                WeatherBadge(weather = weather)
-            } else if (state.locationPermissionDenied) {
-                LocationOffBadge()
-            }
+@Composable
+private fun OutfitDirectionCard(
+    outfit: Outfit,
+    onClick: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .width(220.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(OutfitDirectionCardBackground)
+            .clickable(onClick = onClick)
+            .padding(12.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .clip(RoundedCornerShape(8.dp))
+                .background(OutfitLightPurple)
+                .padding(horizontal = 10.dp, vertical = 4.dp),
+        ) {
+            Text(
+                text = outfit.name,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
+                color = OutfitPurple,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
 
-        Spacer(modifier = Modifier.height(14.dp))
+        // Reason is intentionally not shown here — it only appears once the user taps
+        // through to Outfit Details for this outfit.
+        if (outfit.items.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(12.dp))
 
-        Text(
-            text = state.name,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Bold,
-            color = OutfitDarkText,
-        )
-
-        Spacer(modifier = Modifier.height(2.dp))
-
-        Text(
-            text = state.reason,
-            fontSize = 13.sp,
-            color = OutfitGrayText,
-        )
-
-        if (state.items.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(14.dp))
-
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                state.items.take(4).forEach { item ->
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                outfit.items.take(4).forEach { item ->
                     OutfitItemThumbnail(item = item, modifier = Modifier.weight(1f))
                 }
             }
         }
-
-        Spacer(modifier = Modifier.height(14.dp))
-
-        Text(
-            text = "View Outfit →",
-            color = OutfitPurple,
-            fontSize = 13.sp,
-            fontWeight = FontWeight.Medium,
-        )
     }
 }
 
@@ -319,7 +320,7 @@ private fun WeatherBadge(weather: OutfitOfTheDayWeather) {
             painter = painterResource(
                 weatherIcon(
                     condition = weather.condition,
-                    weatherCode = weather.weatherCode,
+                    weatherCode = null,
                     isRaining = weather.isRaining,
                     isSnowing = weather.isSnowing,
                 ),
@@ -333,10 +334,12 @@ private fun WeatherBadge(weather: OutfitOfTheDayWeather) {
 
         Column(horizontalAlignment = Alignment.End) {
             Text(
-                text = "${weather.temperatureC.roundToInt()}°",
+                text = outfitTemperatureHeadline(weather),
                 fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = OutfitDarkText,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
             Text(
                 text = weather.condition,
@@ -346,27 +349,5 @@ private fun WeatherBadge(weather: OutfitOfTheDayWeather) {
                 overflow = TextOverflow.Ellipsis,
             )
         }
-    }
-}
-
-@Composable
-private fun LocationOffBadge() {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(
-            imageVector = Icons.Filled.LocationOff,
-            contentDescription = "Location access not enabled",
-            tint = OutfitGrayText,
-            modifier = Modifier.size(16.dp),
-        )
-
-        Spacer(modifier = Modifier.width(4.dp))
-
-        Text(
-            text = "Location off",
-            fontSize = 11.sp,
-            color = OutfitGrayText,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
     }
 }

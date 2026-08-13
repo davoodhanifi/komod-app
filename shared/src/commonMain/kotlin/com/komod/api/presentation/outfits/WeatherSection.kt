@@ -507,7 +507,7 @@ private fun SkeletonLine(
 
 internal fun weatherIcon(
     condition: String,
-    weatherCode: Int,
+    weatherCode: Int?,
     isRaining: Boolean,
     isSnowing: Boolean,
 ): DrawableResource {

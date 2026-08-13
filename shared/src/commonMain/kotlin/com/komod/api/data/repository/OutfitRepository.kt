@@ -2,6 +2,7 @@ package com.komod.api.data.repository
 
 import com.komod.api.domain.model.Outfit
 import com.komod.api.domain.model.OutfitItem
+import com.komod.api.domain.model.OutfitOfTheDay
 import com.komod.api.domain.model.WeatherCurrent
 
 interface OutfitRepository {
@@ -10,6 +11,11 @@ interface OutfitRepository {
         style: String? = null,
         weather: WeatherCurrent? = null,
     ): List<Outfit>
+
+    // Backend-driven weather-aware Outfit of the Day: the backend regenerates this on its
+    // own fixed 6-hour local-time schedule and returns the same cached result (outfits and
+    // weather snapshot together) for repeated calls within the same window.
+    suspend fun getOutfitOfTheDay(latitude: Double, longitude: Double): OutfitOfTheDay
 
     suspend fun saveOutfit(outfit: Outfit): String
 

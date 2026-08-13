@@ -3,6 +3,7 @@ package com.komod.api.data.repository
 import com.komod.api.data.api.WeatherApi
 import com.komod.api.domain.model.WeatherCurrent
 import com.komod.api.domain.model.WeatherLocation
+import com.komod.api.domain.model.WeatherNext6Hours
 
 class WeatherRepositoryImpl(
     private val weatherApi: WeatherApi,
@@ -21,7 +22,8 @@ private fun com.komod.api.data.api.model.WeatherDto.toDomain(): WeatherCurrent {
         condition = condition,
         windSpeedKmh = windSpeedKmh,
         isRaining = isRaining,
-        isSnowing = isSnowing
+        isSnowing = isSnowing,
+        next6Hours = next6Hours?.let { WeatherNext6Hours(it.minTemperatureC, it.maxTemperatureC) }
     )
 }
 

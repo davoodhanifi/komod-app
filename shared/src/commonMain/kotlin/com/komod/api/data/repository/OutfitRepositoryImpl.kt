@@ -1,9 +1,12 @@
 package com.komod.api.data.repository
 
 import com.komod.api.data.api.OutfitApiService
+import com.komod.api.data.api.model.OutfitGeneratedDto
 import com.komod.api.data.api.model.SaveOutfitRequest
 import com.komod.api.domain.model.Outfit
 import com.komod.api.domain.model.OutfitItem
+import com.komod.api.domain.model.OutfitOfTheDay
+import com.komod.api.domain.model.OutfitOfTheDayWeatherSnapshot
 import com.komod.api.domain.model.WardrobeItem
 import com.komod.api.domain.model.WardrobeItemDetail
 import io.ktor.client.plugins.ResponseException
@@ -33,16 +36,23 @@ class OutfitRepositoryImpl(
             weather = weather,
         )
 
-        return response.outfits.map { dto ->
-            Outfit(
-                id = randomOutfitId(),
-                name = dto.name,
-                reason = dto.reason,
-                matchScore = stableMatchScore(seed = dto.name + dto.wardrobeItemIds.joinToString()),
-                wardrobeItemIds = dto.wardrobeItemIds,
-                items = hydrateItems(dto.items, dto.wardrobeItemIds),
-            )
-        }
+        return response.outfits.map { it.toOutfit() }
+    }
+
+    override suspend fun getOutfitOfTheDay(latitude: Double, longitude: Double): OutfitOfTheDay {
+        val response = outfitApiService.getOutfitOfTheDay(latitude, longitude)
+
+        return OutfitOfTheDay(
+            outfits = response.outfits.map { it.toOutfit() },
+            weather = OutfitOfTheDayWeatherSnapshot(
+                temperatureC = response.weather.temperatureC,
+                condition = response.weather.condition,
+                isRaining = response.weather.isRaining,
+                isSnowing = response.weather.isSnowing,
+                next6HourMinTemperatureC = response.weather.next6HourMinTemperatureC,
+                next6HourMaxTemperatureC = response.weather.next6HourMaxTemperatureC,
+            ),
+        )
     }
 
     override suspend fun saveOutfit(outfit: Outfit): String {
@@ -68,6 +78,17 @@ class OutfitRepositoryImpl(
             throw OutfitDeleteNetworkException(error)
         }
     }
+
+    // Shared by generateOutfits() and getOutfitOfTheDay(): both return the same
+    // name/reason/wardrobeItemIds (+ optional items) shape per outfit.
+    private suspend fun OutfitGeneratedDto.toOutfit(): Outfit = Outfit(
+        id = randomOutfitId(),
+        name = name,
+        reason = reason,
+        matchScore = stableMatchScore(seed = name + wardrobeItemIds.joinToString()),
+        wardrobeItemIds = wardrobeItemIds,
+        items = hydrateItems(items, wardrobeItemIds),
+    )
 
     private suspend fun hydrateItems(
         apiItems: List<com.komod.api.data.api.model.OutfitGeneratedItemDto>,

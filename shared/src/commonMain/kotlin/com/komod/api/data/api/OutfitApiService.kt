@@ -3,6 +3,7 @@ package com.komod.api.data.api
 import com.komod.api.data.api.model.OutfitDto
 import com.komod.api.data.api.model.OutfitGenerateRequest
 import com.komod.api.data.api.model.OutfitGenerateResponse
+import com.komod.api.data.api.model.OutfitOfTheDayResponseDto
 import com.komod.api.data.api.model.ResponseData
 import com.komod.api.data.api.model.SaveOutfitRequest
 import com.komod.api.data.api.model.SaveOutfitResponse
@@ -14,6 +15,7 @@ import io.ktor.client.plugins.ClientRequestException
 import io.ktor.client.plugins.ServerResponseException
 import io.ktor.client.request.delete
 import io.ktor.client.request.get
+import io.ktor.client.request.parameter
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
@@ -52,6 +54,25 @@ class OutfitApiService(
             }
         }
         return response.body<ResponseData<OutfitGenerateResponse>>().data
+    }
+
+    // latitude/longitude are required on every call, even on a cache hit: the backend has
+    // no stored location for the user and needs coordinates to resolve the local timezone
+    // that determines the current 6-hour window.
+    suspend fun getOutfitOfTheDay(latitude: Double, longitude: Double): OutfitOfTheDayResponseDto {
+        val response = httpClient.get("outfits/today") {
+            parameter("latitude", latitude)
+            parameter("longitude", longitude)
+        }
+        if (!response.status.isSuccess()) {
+            val text = response.bodyAsText()
+            throw if (response.status.value in 400..499) {
+                ClientRequestException(response, text)
+            } else {
+                ServerResponseException(response, text)
+            }
+        }
+        return response.body<ResponseData<OutfitOfTheDayResponseDto>>().data
     }
 
     suspend fun saveOutfit(request: SaveOutfitRequest): String {
