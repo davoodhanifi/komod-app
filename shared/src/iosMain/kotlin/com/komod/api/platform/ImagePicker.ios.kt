@@ -7,6 +7,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.usePinned
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 import platform.AVFoundation.AVAuthorizationStatusAuthorized
 import platform.AVFoundation.AVAuthorizationStatusDenied
 import platform.AVFoundation.AVAuthorizationStatusNotDetermined
@@ -68,7 +71,7 @@ actual fun rememberImagePickerLauncher(
             },
             cameraAction = {
                 launchCameraPicker(
-                    onResult = { bytes, mimeType -> onResultState.value(listOf(PickedImage(bytes, mimeType))) },
+                    onResult = { bytes, mimeType -> onResultState.value(listOf(PickedImage(mimeType) { bytes })) },
                     onCancel = { onCancelState.value() },
                 )
             },
@@ -194,27 +197,31 @@ private fun presentMultiImagePicker(
                     return
                 }
 
-                val images = arrayOfNulls<PickedImage>(results.size)
-                var remaining = results.size
-
-                results.forEachIndexed { index, result ->
+                // Hand back a PickedImage per result immediately — its actual NSData isn't
+                // loaded here, only lazily on first access to .bytes(), so the caller doesn't
+                // wait on every selected photo's full image data before it can proceed.
+                val picked = results.map { result ->
                     val provider = result.itemProvider
-                    provider.loadDataRepresentationForTypeIdentifier("public.image") { data, _ ->
-                        runOnMain {
-                            images[index] = data?.let { PickedImage(it.toByteArray(), mimeTypeFor(provider)) }
-                            remaining -= 1
-                            if (remaining == 0) {
-                                val picked = images.filterNotNull()
-                                if (picked.isEmpty()) onCancel() else onResult(picked)
-                            }
-                        }
-                    }
+                    PickedImage(mimeTypeFor(provider)) { loadImageData(provider) }
                 }
+                onResult(picked)
             }
         }
         activePHPickerDelegate = delegate
         pickerViewController.delegate = delegate
         topViewController.presentViewController(pickerViewController, true, null)
+    }
+}
+
+private suspend fun loadImageData(provider: NSItemProvider): ByteArray {
+    return suspendCancellableCoroutine { continuation ->
+        provider.loadDataRepresentationForTypeIdentifier("public.image") { data, _ ->
+            if (data != null) {
+                continuation.resume(data.toByteArray())
+            } else {
+                continuation.resumeWithException(IllegalStateException("Unable to load selected image."))
+            }
+        }
     }
 }
 

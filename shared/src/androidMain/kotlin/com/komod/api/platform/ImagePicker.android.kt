@@ -16,6 +16,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import java.io.File
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @Composable
 actual fun rememberImagePickerLauncher(
@@ -28,13 +30,16 @@ actual fun rememberImagePickerLauncher(
     val onCancelState = rememberUpdatedState(onCancel)
     var cameraFile by remember { mutableStateOf<File?>(null) }
 
-    fun readImage(uri: Uri): PickedImage? {
-        return runCatching {
-            val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
-                ?: error("Unable to read selected image.")
-            val mimeType = context.contentResolver.getType(uri) ?: "image/jpeg"
-            PickedImage(bytes, mimeType)
-        }.getOrNull()
+    // Wraps [uri] immediately without reading its bytes — the actual content-resolver read only
+    // happens lazily, off the main thread, the first time something needs this photo's bytes.
+    fun pickedImage(uri: Uri): PickedImage {
+        val mimeType = context.contentResolver.getType(uri) ?: "image/jpeg"
+        return PickedImage(mimeType) {
+            withContext(Dispatchers.IO) {
+                context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                    ?: error("Unable to read selected image.")
+            }
+        }
     }
 
     val galleryLauncher = rememberLauncherForActivityResult(
@@ -45,12 +50,7 @@ actual fun rememberImagePickerLauncher(
             return@rememberLauncherForActivityResult
         }
 
-        val images = uris.take(maxSelection).mapNotNull(::readImage)
-        if (images.isEmpty()) {
-            onCancelState.value()
-        } else {
-            onResultState.value(images)
-        }
+        onResultState.value(uris.take(maxSelection).map(::pickedImage))
     }
 
     val cameraLauncher = rememberLauncherForActivityResult(
@@ -63,7 +63,8 @@ actual fun rememberImagePickerLauncher(
         }
 
         runCatching {
-            onResultState.value(listOf(PickedImage(file.readBytes(), "image/jpeg")))
+            val bytes = file.readBytes()
+            onResultState.value(listOf(PickedImage("image/jpeg") { bytes }))
         }.onFailure {
             onCancelState.value()
         }

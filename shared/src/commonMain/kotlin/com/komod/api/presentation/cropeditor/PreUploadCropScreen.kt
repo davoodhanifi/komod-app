@@ -90,7 +90,9 @@ fun PreUploadCropScreen(
     val interactionsEnabled = !isSaving
 
     LaunchedEffect(photo) {
-        imageBitmap = withContext(Dispatchers.Default) { photo.bytes.toImageBitmap() }
+        imageBitmap = runCatching {
+            withContext(Dispatchers.Default) { photo.bytes().toImageBitmap() }
+        }.getOrNull()
     }
 
     Scaffold(

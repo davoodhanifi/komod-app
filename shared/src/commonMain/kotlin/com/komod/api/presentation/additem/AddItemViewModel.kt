@@ -181,8 +181,8 @@ class AddItemViewModel(
     }
 
     /** The bytes to upload for [photo]: its already-rasterized crop, or the original untouched. */
-    private fun resolveUploadBytes(photo: ReviewPhoto): Pair<ByteArray, String> {
-        val cropped = photo.croppedBytes ?: return photo.original.bytes to photo.original.mimeType
+    private suspend fun resolveUploadBytes(photo: ReviewPhoto): Pair<ByteArray, String> {
+        val cropped = photo.croppedBytes ?: return photo.original.bytes() to photo.original.mimeType
         return cropped to "image/jpeg"
     }
 
@@ -192,7 +192,7 @@ class AddItemViewModel(
      */
     private suspend fun computeCroppedBytes(photo: ReviewPhoto, boundingBox: BoundingBox): ByteArray? {
         return runCatching {
-            cropToSquareJpeg(photo.original.bytes, boundingBox.x, boundingBox.y, boundingBox.width, boundingBox.height)
+            cropToSquareJpeg(photo.original.bytes(), boundingBox.x, boundingBox.y, boundingBox.width, boundingBox.height)
         }.getOrElse {
             _effects.emit(AddItemEffect.CropFailed)
             null

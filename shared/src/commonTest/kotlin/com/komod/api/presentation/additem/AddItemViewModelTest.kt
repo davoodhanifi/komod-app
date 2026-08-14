@@ -78,7 +78,7 @@ private const val MinimalJpegBase64 =
 @OptIn(kotlin.io.encoding.ExperimentalEncodingApi::class)
 private val minimalJpegBytes: ByteArray = kotlin.io.encoding.Base64.decode(MinimalJpegBase64)
 
-private fun pickedImage(tag: String) = PickedImage(bytes = minimalJpegBytes, mimeType = "image/jpeg")
+private fun pickedImage(tag: String) = PickedImage(mimeType = "image/jpeg") { minimalJpegBytes }
 
 class AddItemViewModelTest {
 
@@ -101,6 +101,27 @@ class AddItemViewModelTest {
         val state = assertIs<AddItemUiState.Reviewing>(viewModel.uiState.value)
         assertEquals(1, state.photos.size)
         assertEquals(state.photos.first().id, state.activeCropPhotoId)
+    }
+
+    @Test
+    fun `selecting photos enters Reviewing synchronously without reading any photo's bytes`() {
+        // onImagesSelected must never call a PickedImage's lazy loader itself — reading bytes
+        // is exactly the work that used to delay navigation to Review Photos, and it must now
+        // only ever happen later (thumbnail, crop, or upload), on demand.
+        var loadCalls = 0
+        val images = (1..3).map {
+            PickedImage(mimeType = "image/jpeg") {
+                loadCalls++
+                minimalJpegBytes
+            }
+        }
+        val viewModel = AddItemViewModel(FakeAddItemRepository())
+
+        viewModel.onImagesSelected(images)
+
+        val state = assertIs<AddItemUiState.Reviewing>(viewModel.uiState.value)
+        assertEquals(3, state.photos.size)
+        assertEquals(0, loadCalls)
     }
 
     @Test
@@ -217,7 +238,7 @@ class AddItemViewModelTest {
         viewModel.continueUploading()
 
         assertEquals(1, repository.uploadedBytes.size)
-        assertTrue(repository.uploadedBytes.single().second.contentEquals(original.bytes))
+        assertTrue(repository.uploadedBytes.single().second.contentEquals(minimalJpegBytes))
         assertEquals(AddItemUiState.Initial, viewModel.uiState.value)
         assertEquals(1, repository.analyzedImageIds.size)
     }

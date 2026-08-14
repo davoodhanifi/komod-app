@@ -176,9 +176,15 @@ private fun ReviewPhotoTile(
     // flash back to a spinner for what the user just finished cropping.
     LaunchedEffect(photo.id, photo.croppedBytes) {
         val croppedBytes = photo.croppedBytes
-        thumbnail = withContext(Dispatchers.Default) {
-            if (croppedBytes != null) croppedBytes.toImageBitmap() else createThumbnail(photo.original.bytes, maxDimension = 384).toImageBitmap()
-        }
+        thumbnail = runCatching {
+            withContext(Dispatchers.Default) {
+                if (croppedBytes != null) {
+                    croppedBytes.toImageBitmap()
+                } else {
+                    createThumbnail(photo.original.bytes(), maxDimension = 384).toImageBitmap()
+                }
+            }
+        }.getOrNull()
     }
 
     Box(
