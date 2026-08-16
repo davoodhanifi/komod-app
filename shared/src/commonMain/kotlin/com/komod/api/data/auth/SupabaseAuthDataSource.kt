@@ -11,11 +11,16 @@ class SupabaseAuthDataSource(
     val supabaseClient: SupabaseClient,
 ) {
     private val platformGoogleAuthHandler = PlatformGoogleAuthHandler()
+    private val platformAppleAuthHandler = PlatformAppleAuthHandler()
 
     val sessionStatus: StateFlow<SessionStatus> = supabaseClient.auth.sessionStatus
 
     suspend fun signInWithGoogle() {
         platformGoogleAuthHandler.signInWithGoogle(supabaseClient)
+    }
+
+    suspend fun signInWithApple() {
+        platformAppleAuthHandler.signInWithApple(supabaseClient)
     }
 
     suspend fun handleOAuthCallback(url: String) {

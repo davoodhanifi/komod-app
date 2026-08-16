@@ -12,6 +12,8 @@ interface AuthRepository {
 
     suspend fun signInWithGoogle()
 
+    suspend fun signInWithApple()
+
     suspend fun handleOAuthCallback(url: String)
 
     fun currentUserOrNull(): User?

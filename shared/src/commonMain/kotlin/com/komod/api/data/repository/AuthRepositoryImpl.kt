@@ -46,6 +46,10 @@ class AuthRepositoryImpl(
         authDataSource.signInWithGoogle()
     }
 
+    override suspend fun signInWithApple() {
+        authDataSource.signInWithApple()
+    }
+
     override suspend fun handleOAuthCallback(url: String) {
         runCatching {
             authDataSource.handleOAuthCallback(url)
