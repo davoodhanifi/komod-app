@@ -82,12 +82,16 @@ data class OutfitOfTheDayWeatherRange(
     val maxTemperatureC: Double,
 )
 
-// "18–25°" when the next-6h range is known, or just the current "21°" otherwise.
+// "21° (70°F)" when the next-6h range is unknown, or "18–25° (64–77°F)" when it is — matching
+// the Celsius-plus-Fahrenheit-in-parentheses format used on the outfit generation screen.
 internal fun outfitTemperatureHeadline(weather: OutfitOfTheDayWeather): String {
     val range = weather.next6Hours
-        ?: return "${weather.temperatureC.roundToInt()}°"
-    return "${range.minTemperatureC.roundToInt()}–${range.maxTemperatureC.roundToInt()}°"
+        ?: return "${weather.temperatureC.roundToInt()}° (${fahrenheit(weather.temperatureC)}°F)"
+    return "${range.minTemperatureC.roundToInt()}–${range.maxTemperatureC.roundToInt()}° " +
+        "(${fahrenheit(range.minTemperatureC)}–${fahrenheit(range.maxTemperatureC)}°F)"
 }
+
+private fun fahrenheit(celsius: Double): Int = (celsius * 9.0 / 5.0 + 32.0).roundToInt()
 
 @Composable
 fun OutfitOfTheDayCard(

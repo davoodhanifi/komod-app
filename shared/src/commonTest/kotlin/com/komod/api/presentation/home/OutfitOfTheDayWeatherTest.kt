@@ -16,7 +16,7 @@ class OutfitOfTheDayWeatherTest {
     fun `headline falls back to the current temperature when next6Hours is missing`() {
         val headline = outfitTemperatureHeadline(weather(next6Hours = null))
 
-        assertEquals("21°", headline)
+        assertEquals("21° (70°F)", headline)
     }
 
     @Test
@@ -25,7 +25,7 @@ class OutfitOfTheDayWeatherTest {
             weather(next6Hours = OutfitOfTheDayWeatherRange(minTemperatureC = 18.0, maxTemperatureC = 25.0)),
         )
 
-        assertEquals("18–25°", headline)
+        assertEquals("18–25° (64–77°F)", headline)
     }
 
     @Test
@@ -34,6 +34,6 @@ class OutfitOfTheDayWeatherTest {
             weather(next6Hours = OutfitOfTheDayWeatherRange(minTemperatureC = 17.6, maxTemperatureC = 24.5)),
         )
 
-        assertEquals("18–25°", headline)
+        assertEquals("18–25° (64–76°F)", headline)
     }
 }
