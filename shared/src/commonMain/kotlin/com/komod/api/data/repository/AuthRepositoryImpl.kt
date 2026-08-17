@@ -61,34 +61,7 @@ class AuthRepositoryImpl(
 
     override fun currentUserOrNull(): User? {
         val userInfo = authDataSource.currentUserOrNull() ?: return null
-        val metadataSources = buildMetadataSources(userInfo)
-        val displayName = findMetadataValue(
-            metadataSources = metadataSources,
-            keys = listOf("full_name", "name", "display_name", "preferred_username"),
-        ) ?: composeFullName(
-            firstName = findMetadataValue(
-                metadataSources = metadataSources,
-                keys = listOf("given_name", "givenName", "first_name", "firstName"),
-            ),
-            lastName = findMetadataValue(
-                metadataSources = metadataSources,
-                keys = listOf("family_name", "familyName", "last_name", "lastName"),
-            ),
-        )
-            ?: userInfo.email?.substringBefore('@')
-        val photoUrl = findMetadataValue(
-            metadataSources = metadataSources,
-            keys = listOf("avatar_url", "avatarUrl", "picture", "photo_url", "photoUrl", "picture_url"),
-        )
-        val subscriptionType = resolveSubscriptionType(metadataSources)
-
-        return User(
-            id = userInfo.id,
-            email = userInfo.email,
-            displayName = displayName,
-            photoUrl = photoUrl,
-            subscriptionType = subscriptionType,
-        )
+        return buildUser(userInfo)
     }
 
     override suspend fun signOut() {
@@ -99,6 +72,43 @@ class AuthRepositoryImpl(
     private fun syncCurrentUser() {
         _currentUser.value = currentUserOrNull()
     }
+}
+
+// Extracted from AuthRepositoryImpl.currentUserOrNull() so the metadata-mapping logic is
+// unit-testable against a directly-constructed UserInfo, without needing a live SupabaseClient.
+internal fun buildUser(userInfo: io.github.jan.supabase.auth.user.UserInfo): User {
+    val metadataSources = buildMetadataSources(userInfo)
+    // Apple's email (real or a "@privaterelay.appleid.com" address) doesn't read as a name,
+    // so unlike other providers, an Apple-identified user with no name metadata is left
+    // with no displayName at all rather than one invented from their email's local part.
+    val isAppleUser = userInfo.identities.orEmpty().any { it.provider == "apple" }
+    val displayName = findMetadataValue(
+        metadataSources = metadataSources,
+        keys = listOf("full_name", "name", "display_name", "preferred_username"),
+    ) ?: composeFullName(
+        firstName = findMetadataValue(
+            metadataSources = metadataSources,
+            keys = listOf("given_name", "givenName", "first_name", "firstName"),
+        ),
+        lastName = findMetadataValue(
+            metadataSources = metadataSources,
+            keys = listOf("family_name", "familyName", "last_name", "lastName"),
+        ),
+    )
+        ?: if (isAppleUser) null else userInfo.email?.substringBefore('@')
+    val photoUrl = findMetadataValue(
+        metadataSources = metadataSources,
+        keys = listOf("avatar_url", "avatarUrl", "picture", "photo_url", "photoUrl", "picture_url"),
+    )
+    val subscriptionType = resolveSubscriptionType(metadataSources)
+
+    return User(
+        id = userInfo.id,
+        email = userInfo.email,
+        displayName = displayName,
+        photoUrl = photoUrl,
+        subscriptionType = subscriptionType,
+    )
 }
 
 private fun resolveSubscriptionType(metadataSources: List<JsonObject>): SubscriptionType {

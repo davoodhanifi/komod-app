@@ -31,6 +31,7 @@ import platform.UIKit.UIApplication
 import platform.UIKit.UIWindow
 import platform.darwin.NSObject
 import platform.posix.memcpy
+import kotlinx.serialization.json.put
 
 internal actual class PlatformAppleAuthHandler actual constructor() {
     actual suspend fun signInWithApple(supabaseClient: SupabaseClient) {
@@ -39,21 +40,40 @@ internal actual class PlatformAppleAuthHandler actual constructor() {
         // so it can hash it itself and verify it matches that claim.
         val rawNonce = NSUUID().UUIDString()
         val hashedNonce = sha256Hex(rawNonce)
-        val identityToken = requestAppleIdentityToken(hashedNonce)
+        val authorization = requestAppleAuthorization(hashedNonce)
         supabaseClient.auth.signInWith(IDToken) {
-            this.idToken = identityToken
+            this.idToken = authorization.identityToken
             this.provider = Apple
             this.nonce = rawNonce
         }
+
+        // Apple only ever hands back the user's name on their very first authorization for
+        // this app — never on subsequent logins. Persist it into Supabase user_metadata now so
+        // it's available going forward; when Apple doesn't provide one (every login after the
+        // first, or if the user declined to share it), skip this entirely so whatever's already
+        // on the profile — including nothing — is left exactly as it was.
+        val fullName = authorization.fullName
+        if (!fullName.isNullOrBlank()) {
+            supabaseClient.auth.updateUser {
+                data {
+                    put("full_name", fullName)
+                }
+            }
+        }
     }
 }
+
+private data class AppleAuthorization(
+    val identityToken: String,
+    val fullName: String?,
+)
 
 // Retains the delegate for the lifetime of the in-flight request — ASAuthorizationController
 // only holds a *weak* reference to its delegate/presentationContextProvider, so nothing else
 // keeps it alive while the native sheet is on screen.
 private var activeAppleSignInDelegate: NSObject? = null
 
-private suspend fun requestAppleIdentityToken(hashedNonce: String): String {
+private suspend fun requestAppleAuthorization(hashedNonce: String): AppleAuthorization {
     return suspendCancellableCoroutine { continuation ->
         val request = ASAuthorizationAppleIDProvider().createRequest().apply {
             requestedScopes = listOf(ASAuthorizationScopeFullName, ASAuthorizationScopeEmail)
@@ -73,7 +93,9 @@ private suspend fun requestAppleIdentityToken(hashedNonce: String): String {
                 val credential = didCompleteWithAuthorization.credential as? ASAuthorizationAppleIDCredential
                 val token = credential?.identityToken?.toUtf8String()
                 if (token != null) {
-                    continuation.resume(token)
+                    continuation.resume(
+                        AppleAuthorization(identityToken = token, fullName = credential.composedFullName()),
+                    )
                 } else {
                     continuation.resumeWithException(
                         IllegalStateException("Apple sign-in did not return an identity token."),
@@ -115,6 +137,23 @@ private fun keyWindow(): UIWindow {
     val windows = UIApplication.sharedApplication.windows
     val keyWindow = windows.firstOrNull { (it as? UIWindow)?.isKeyWindow() == true } as? UIWindow
     return keyWindow ?: UIApplication.sharedApplication.keyWindow as UIWindow
+}
+
+// Apple only populates this on the user's very first authorization for this app; on every
+// later login `fullName` is either absent or an empty NSPersonNameComponents, so this
+// legitimately (and expectedly) returns null in that case.
+private fun ASAuthorizationAppleIDCredential.composedFullName(): String? {
+    val components = fullName ?: return null
+    return composeAppleFullName(components.givenName, components.familyName)
+}
+
+// Split out from the extension above so it's testable directly with plain strings —
+// ASAuthorizationAppleIDCredential/NSPersonNameComponents can't be constructed in a test
+// (Apple disables their initializers outside a real authorization response).
+internal fun composeAppleFullName(givenName: String?, familyName: String?): String? {
+    val given = givenName?.trim().orEmpty()
+    val family = familyName?.trim().orEmpty()
+    return listOf(given, family).filter { it.isNotEmpty() }.joinToString(" ").ifBlank { null }
 }
 
 private fun NSData.toUtf8String(): String? {
