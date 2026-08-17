@@ -2,6 +2,7 @@
 
 package com.komod.api.data.auth
 
+import com.komod.api.core.error.AppLogger
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.Apple
@@ -52,12 +53,35 @@ internal actual class PlatformAppleAuthHandler actual constructor() {
         // it's available going forward; when Apple doesn't provide one (every login after the
         // first, or if the user declined to share it), skip this entirely so whatever's already
         // on the profile — including nothing — is left exactly as it was.
+        //
+        // Deliberately best-effort: sign-in has already succeeded by this point (the session is
+        // already Authenticated), so a failure persisting the name must never surface as a
+        // sign-in failure — and since Apple will never send this name again, a swallowed
+        // exception here would otherwise lose it silently forever, hence the explicit log.
         val fullName = authorization.fullName
+        // Unconditional, not onFailure-only: this is the only way to see, from a real device
+        // (TestFlight, no attached debugger), whether Apple withheld the name for this
+        // authorization at all versus handed it over but the persist step failed.
+        AppLogger.e(
+            "PlatformAppleAuthHandler",
+            if (fullName.isNullOrBlank()) {
+                "Apple did not return a fullName for this authorization (expected on any login " +
+                    "after the very first, or if the user declined to share their name)."
+            } else {
+                "Apple returned fullName='$fullName' — attempting to persist to user_metadata."
+            },
+        )
         if (!fullName.isNullOrBlank()) {
-            supabaseClient.auth.updateUser {
-                data {
-                    put("full_name", fullName)
+            runCatching {
+                supabaseClient.auth.updateUser {
+                    data {
+                        put("full_name", fullName)
+                    }
                 }
+            }.onSuccess {
+                AppLogger.e("PlatformAppleAuthHandler", "Persisted Apple full name to user_metadata successfully.")
+            }.onFailure { error ->
+                AppLogger.e("PlatformAppleAuthHandler", "Failed to persist Apple-provided full name", error)
             }
         }
     }
