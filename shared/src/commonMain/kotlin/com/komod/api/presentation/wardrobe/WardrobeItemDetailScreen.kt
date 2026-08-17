@@ -514,12 +514,6 @@ private fun QuickFactsRow(item: WardrobeItemDetail) {
             label = "Material",
             value = item.material?.toLabel() ?: "—",
         )
-        FactItem(
-            modifier = Modifier.weight(1f),
-            icon = { Icon(Icons.Outlined.LocalOffer, contentDescription = null, tint = Muted, modifier = Modifier.size(14.dp)) },
-            label = "Season",
-            value = item.season?.joinToString(" / ") { it.toLabel() } ?: "—",
-        )
     }
 }
 
