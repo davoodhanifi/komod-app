@@ -47,6 +47,9 @@ class WardrobeItemEditViewModel(
 
     fun updateCategory(value: String) = updateForm { copy(category = value) }
     fun updateSubcategory(value: String) = updateForm { copy(subcategory = value) }
+    fun updateName(value: String) = updateForm { copy(name = value) }
+    fun updateBrand(value: String) = updateForm { copy(brand = value) }
+    fun updateMaterial(value: String) = updateForm { copy(material = value) }
     fun updatePrimaryColor(value: String) = updateForm { copy(primaryColor = value) }
     fun updateFormality(value: String) = updateForm { copy(formality = value) }
     fun toggleSeason(value: String) = updateForm {

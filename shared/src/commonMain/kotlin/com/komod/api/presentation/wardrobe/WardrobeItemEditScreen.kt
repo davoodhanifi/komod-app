@@ -167,6 +167,9 @@ fun WardrobeItemEditScreen(
                 content = state.content,
                 onCategoryChange = viewModel::updateCategory,
                 onSubcategoryChange = viewModel::updateSubcategory,
+                onItemNameChange = viewModel::updateName,
+                onBrandChange = viewModel::updateBrand,
+                onMaterialChange = viewModel::updateMaterial,
                 onPrimaryColorChange = viewModel::updatePrimaryColor,
                 onFormalityChange = viewModel::updateFormality,
                 onSeasonToggle = viewModel::toggleSeason,
@@ -184,6 +187,9 @@ private fun EditFormContent(
     content: WardrobeItemEditContent,
     onCategoryChange: (String) -> Unit,
     onSubcategoryChange: (String) -> Unit,
+    onItemNameChange: (String) -> Unit,
+    onBrandChange: (String) -> Unit,
+    onMaterialChange: (String) -> Unit,
     onPrimaryColorChange: (String) -> Unit,
     onFormalityChange: (String) -> Unit,
     onSeasonToggle: (String) -> Unit,
@@ -200,6 +206,34 @@ private fun EditFormContent(
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         EditHeroCard(item = content.item)
+        EditSectionCard(title = "Item Details") {
+            OutlinedTextField(
+                value = content.form.name,
+                onValueChange = onItemNameChange,
+                label = { Text("Name") },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !content.isSaving,
+                shape = RoundedCornerShape(18.dp),
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            OutlinedTextField(
+                value = content.form.brand,
+                onValueChange = onBrandChange,
+                label = { Text("Brand") },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !content.isSaving,
+                shape = RoundedCornerShape(18.dp),
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            OutlinedTextField(
+                value = content.form.material,
+                onValueChange = onMaterialChange,
+                label = { Text("Material") },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !content.isSaving,
+                shape = RoundedCornerShape(18.dp),
+            )
+        }
         EditSectionCard(title = "Classification") {
             DropdownField(
                 label = "Category",
