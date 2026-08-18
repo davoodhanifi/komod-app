@@ -32,4 +32,5 @@ sealed interface AddItemEffect {
     data class UploadsSucceeded(val count: Int) : AddItemEffect
     data object SelectionLimitExceeded : AddItemEffect
     data object CropFailed : AddItemEffect
+    data class PlanLimitReached(val message: String) : AddItemEffect
 }

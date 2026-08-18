@@ -7,5 +7,7 @@ sealed interface UploadReviewEffect {
 
     data object ReviewConflict : UploadReviewEffect
 
+    data object PlanLimitReached : UploadReviewEffect
+
     data class ReviewFailed(val message: String) : UploadReviewEffect
 }

@@ -142,6 +142,35 @@ class AddItemRepositoryImplTest {
         }
     }
 
+    // 2. Analysis capacity validation fails: the background analyze call is fire-and-forget,
+    // so there's no synchronous error state to show — instead the image is marked Failed
+    // (a status the Wardrobe screen's Upload Queue already renders) rather than left
+    // Pending forever waiting for a poll that will keep hitting the same capacity limit.
+    @Test
+    fun `an analyze response reporting PlanLimitExceeded marks the image Failed`() = runBlocking {
+        val apiService = buildApiService {
+            respond(
+                content = """{"type":"about:blank","title":"Payment Required","status":402,"detail":"Your Komod is full or has items waiting for review.","code":"PlanLimitExceeded"}""",
+                status = HttpStatusCode.PaymentRequired,
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            )
+        }
+        val store = UploadedImageStore()
+        store.add(
+            UploadedImage(
+                imageId = "img-7",
+                storagePath = "originals/img-7.jpg",
+                thumbnailStoragePath = "thumbs/img-7.jpg",
+                status = ImageStatus.Pending,
+            ),
+        )
+        val repository = AddItemRepositoryImpl(apiService, testStorageService(), store)
+
+        repository.triggerAnalysisInBackground("img-7")
+
+        assertEquals(ImageStatus.Failed, store.awaitStatus("img-7", ImageStatus.Failed).status)
+    }
+
     @Test
     fun `refreshUploadedImages upserts an Analyzed image together with its extracted items`() = runBlocking {
         val apiService = buildApiService {

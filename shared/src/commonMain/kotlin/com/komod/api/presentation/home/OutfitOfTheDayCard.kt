@@ -33,6 +33,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import com.komod.api.core.error.PlanLimitCategory
+import com.komod.api.core.error.PlanLimitMessages
 import com.komod.api.domain.model.Outfit
 import com.komod.api.domain.model.OutfitItem
 import com.komod.api.domain.model.WardrobeSummary
@@ -60,6 +62,10 @@ fun hasEnoughItemsForOutfit(summary: WardrobeSummary): Boolean =
 sealed interface OutfitOfTheDayState {
     data object Loading : OutfitOfTheDayState
     data object NotEnoughItems : OutfitOfTheDayState
+
+    // The account's daily outfit-generation limit has been reached — the same
+    // entitlement manual generation on the Outfits tab draws from.
+    data object PlanLimitReached : OutfitOfTheDayState
 
     // "outfits" is 1-5 entries — GET /outfits/today returns fewer than 5 whenever the
     // wardrobe can't support every styling direction well, which is normal and expected.
@@ -105,6 +111,7 @@ fun OutfitOfTheDayCard(
         when (state) {
             is OutfitOfTheDayState.Loading -> LoadingBody()
             is OutfitOfTheDayState.NotEnoughItems -> NotEnoughItemsBody()
+            is OutfitOfTheDayState.PlanLimitReached -> PlanLimitReachedBody()
             is OutfitOfTheDayState.Available -> AvailableBody(state = state, onViewOutfit = onViewOutfit)
         }
     }
@@ -196,6 +203,47 @@ private fun NotEnoughItemsBody() {
 
             Text(
                 text = "Add a few more items to your wardrobe and we'll create your daily outfit.",
+                fontSize = 13.sp,
+                color = OutfitGrayText,
+            )
+        }
+    }
+}
+
+@Composable
+private fun PlanLimitReachedBody() {
+    val content = PlanLimitMessages.forCategory(PlanLimitCategory.DailyGenerationLimit)
+
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(OutfitLightPurple),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                painter = painterResource(Res.drawable.hanger_filled),
+                contentDescription = null,
+                tint = OutfitPurple,
+                modifier = Modifier.size(20.dp),
+            )
+        }
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        Column {
+            Text(
+                text = content.title,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = OutfitDarkText,
+            )
+
+            Spacer(modifier = Modifier.height(2.dp))
+
+            Text(
+                text = content.message,
                 fontSize = 13.sp,
                 color = OutfitGrayText,
             )

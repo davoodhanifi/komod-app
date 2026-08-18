@@ -208,6 +208,7 @@ fun OutfitScreen(
                     ErrorState(
                         message = uiState.errorMessage ?: "Something went wrong. Please try again.",
                         onRetry = viewModel::generateOutfits,
+                        showRetry = !uiState.isPlanLimitError,
                     )
                 }
             }
@@ -894,6 +895,7 @@ private fun SkeletonLine(
 private fun ErrorState(
     message: String,
     onRetry: () -> Unit,
+    showRetry: Boolean = true,
 ) {
     Column(
         modifier = Modifier
@@ -915,14 +917,16 @@ private fun ErrorState(
             fontSize = 15.sp,
             textAlign = TextAlign.Center,
         )
-        Spacer(modifier = Modifier.height(20.dp))
-        Button(
-            onClick = onRetry,
-            colors = ButtonDefaults.buttonColors(containerColor = OutfitPurple),
-            shape = RoundedCornerShape(18.dp),
-            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 14.dp),
-        ) {
-            Text(text = "Retry", fontWeight = FontWeight.SemiBold)
+        if (showRetry) {
+            Spacer(modifier = Modifier.height(20.dp))
+            Button(
+                onClick = onRetry,
+                colors = ButtonDefaults.buttonColors(containerColor = OutfitPurple),
+                shape = RoundedCornerShape(18.dp),
+                contentPadding = PaddingValues(horizontal = 24.dp, vertical = 14.dp),
+            ) {
+                Text(text = "Retry", fontWeight = FontWeight.SemiBold)
+            }
         }
     }
 }

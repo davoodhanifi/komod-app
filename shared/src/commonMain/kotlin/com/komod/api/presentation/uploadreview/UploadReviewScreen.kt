@@ -67,7 +67,9 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil3.compose.AsyncImage
+import com.komod.api.core.error.PlanLimitCategory
 import com.komod.api.domain.model.WardrobeItemDetail
+import com.komod.api.presentation.common.PlanLimitDialog
 import com.komod.api.presentation.wardrobe.toWardrobeLabel
 import komod.shared.generated.resources.Res
 import komod.shared.generated.resources.arrow_left
@@ -93,6 +95,7 @@ fun UploadReviewScreen(
     viewModel: UploadReviewViewModel = koinViewModel(parameters = { parametersOf(imageId) }),
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    var showPlanLimitDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(refreshKey) {
         if (refreshKey > 0) {
@@ -121,6 +124,8 @@ fun UploadReviewScreen(
                     onReviewCompleted()
                     onNavigateBack()
                 }
+
+                UploadReviewEffect.PlanLimitReached -> showPlanLimitDialog = true
 
                 is UploadReviewEffect.ReviewFailed -> onShowSnackbar(effect.message)
             }
@@ -186,6 +191,13 @@ fun UploadReviewScreen(
                 )
             }
         }
+    }
+
+    if (showPlanLimitDialog) {
+        PlanLimitDialog(
+            category = PlanLimitCategory.WardrobeCapacity,
+            onDismiss = { showPlanLimitDialog = false },
+        )
     }
 }
 

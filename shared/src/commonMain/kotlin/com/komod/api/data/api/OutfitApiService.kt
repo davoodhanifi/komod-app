@@ -1,5 +1,7 @@
 package com.komod.api.data.api
 
+import com.komod.api.core.error.PlanLimitCategory
+import com.komod.api.core.error.PlanLimitExceededException
 import com.komod.api.data.api.model.OutfitDto
 import com.komod.api.data.api.model.OutfitGenerateRequest
 import com.komod.api.data.api.model.OutfitGenerateResponse
@@ -47,6 +49,9 @@ class OutfitApiService(
         }
         if (!response.status.isSuccess()) {
             val text = response.bodyAsText()
+            if (isPlanLimitExceeded(text)) {
+                throw PlanLimitExceededException(PlanLimitCategory.DailyGenerationLimit)
+            }
             throw if (response.status.value in 400..499) {
                 ClientRequestException(response, text)
             } else {
@@ -66,6 +71,12 @@ class OutfitApiService(
         }
         if (!response.status.isSuccess()) {
             val text = response.bodyAsText()
+            if (isPlanLimitExceeded(text)) {
+                // /outfits/today can trigger a fresh generation server-side when there's no
+                // cached Outfit of the Day yet, drawing on the same daily generation
+                // entitlement as POST /outfits/generate.
+                throw PlanLimitExceededException(PlanLimitCategory.DailyGenerationLimit)
+            }
             throw if (response.status.value in 400..499) {
                 ClientRequestException(response, text)
             } else {

@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.komod.api.core.error.ErrorContext
 import com.komod.api.core.error.ErrorMapper
+import com.komod.api.core.error.PlanLimitExceededException
 import com.komod.api.data.repository.OutfitRepository
 import com.komod.api.data.repository.WeatherRepository
 import com.komod.api.data.location.WeatherLocationResult
@@ -60,7 +61,7 @@ class OutfitViewModel(
         viewModelScope.launch {
             if (_uiState.value.isGenerating) return@launch
 
-            _uiState.value = _uiState.value.copy(isGenerating = true, errorMessage = null)
+            _uiState.value = _uiState.value.copy(isGenerating = true, errorMessage = null, isPlanLimitError = false)
             runCatching {
                 val state = _uiState.value
                 outfitRepository.generateOutfits(
@@ -78,6 +79,7 @@ class OutfitViewModel(
                 _uiState.value = _uiState.value.copy(
                     isGenerating = false,
                     errorMessage = ErrorMapper.toUserMessage(throwable, tag = "OutfitViewModel"),
+                    isPlanLimitError = throwable is PlanLimitExceededException,
                 )
             }
         }

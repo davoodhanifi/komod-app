@@ -3,6 +3,7 @@ package com.komod.api.data.repository
 import com.komod.api.core.error.AppLogger
 import com.komod.api.core.error.ErrorContext
 import com.komod.api.core.error.ErrorMapper
+import com.komod.api.core.error.PlanLimitExceededException
 import com.komod.api.data.api.WardrobeApiService
 import com.komod.api.data.api.model.CreateImageResponse
 import com.komod.api.data.api.model.ImageStatus
@@ -68,6 +69,15 @@ class AddItemRepositoryImpl(
                 // next poll tick, so the Upload Queue can show "Extracting items..."
                 // as soon as the backend confirms it queued the work.
                 uploadedImageStore.updateStatus(imageId, result.status)
+            } catch (error: PlanLimitExceededException) {
+                // A hard capacity block, not a transient failure — polling will never
+                // recover it on its own, so mark this image Failed now (the Wardrobe
+                // screen's Upload Queue already renders that state) instead of leaving it
+                // stuck at Pending forever waiting for a poll that hits the same limit. As
+                // with logParseFailureAndPromoteToProcessing below, a logging failure must
+                // never suppress that state update.
+                runCatching { AppLogger.e("AddItemRepository", "Analysis blocked by plan limit for image $imageId", error) }
+                uploadedImageStore.updateStatus(imageId, ImageStatus.Failed)
             } catch (error: ContentConvertException) {
                 // Ktor's ContentNegotiation wraps a JSON decoding failure in this type
                 // (not kotlinx.serialization.SerializationException, which is caught

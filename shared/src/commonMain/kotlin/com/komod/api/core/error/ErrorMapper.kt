@@ -56,6 +56,11 @@ object ErrorMapper {
     }
 
     private fun mapToMessage(throwable: Throwable, context: ErrorContext): String = when (throwable) {
+        is PlanLimitExceededException -> {
+            val content = PlanLimitMessages.forCategory(throwable.category)
+            "${content.title}. ${content.message}"
+        }
+
         is UploadReviewUnauthorizedException -> UserFacingMessages.SessionExpired
         is UploadReviewForbiddenException -> "You don't have permission to do this."
         is UploadReviewNotFoundException,

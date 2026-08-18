@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.komod.api.core.error.ErrorContext
 import com.komod.api.core.error.ErrorMapper
+import com.komod.api.core.error.PlanLimitExceededException
+import com.komod.api.core.error.PlanLimitMessages
 import com.komod.api.data.repository.AddItemRepository
 import com.komod.api.domain.model.BoundingBox
 import com.komod.api.platform.PickedImage
@@ -130,6 +132,7 @@ class AddItemViewModel(
             val total = photos.size
             val failed = mutableListOf<ReviewPhoto>()
             var completedCount = 0
+            var planLimitMessage: String? = null
 
             fun emitProgress(currentFraction: Float) {
                 _uiState.value = AddItemUiState.Uploading(
@@ -141,8 +144,8 @@ class AddItemViewModel(
 
             emitProgress(0f)
 
-            for (photo in photos) {
-                val uploaded = runCatching {
+            for ((index, photo) in photos.withIndex()) {
+                val result = runCatching {
                     val (bytes, mimeType) = resolveUploadBytes(photo)
                     val imageInfo = addItemRepository.createImage()
 
@@ -161,21 +164,44 @@ class AddItemViewModel(
                     addItemRepository.triggerAnalysisInBackground(imageInfo.imageId)
                 }.onFailure { error ->
                     ErrorMapper.toUserMessage(error, tag = "AddItemViewModel", context = ErrorContext.Upload)
-                }.isSuccess
+                }
 
-                if (!uploaded) failed += photo
+                if (result.isFailure) failed += photo
                 completedCount += 1
                 emitProgress(0f)
+
+                // A plan limit blocks every remaining photo identically — stop immediately
+                // instead of burning a failed request per photo, and offer this photo plus
+                // whatever hadn't been attempted yet back together for retry.
+                val planLimitError = result.exceptionOrNull() as? PlanLimitExceededException
+                if (planLimitError != null) {
+                    val content = PlanLimitMessages.forCategory(planLimitError.category)
+                    planLimitMessage = "${content.title}. ${content.message}"
+                    failed += photos.subList(index + 1, photos.size)
+                    break
+                }
             }
 
-            if (failed.isEmpty()) {
-                _uiState.value = AddItemUiState.Initial
-                _effects.emit(AddItemEffect.UploadsSucceeded(count = total))
-            } else {
-                _uiState.value = AddItemUiState.Error(
-                    message = "Some photos couldn't be uploaded. Please try again.",
-                    failedPhotos = failed,
-                )
+            val limitMessage = planLimitMessage
+            when {
+                failed.isEmpty() -> {
+                    _uiState.value = AddItemUiState.Initial
+                    _effects.emit(AddItemEffect.UploadsSucceeded(count = total))
+                }
+                limitMessage != null -> {
+                    // No dedicated error page and no Retry/Choose Another Photo — neither
+                    // would fix a capacity limit. Send the user back to Wardrobe instead,
+                    // where they can actually review/delete existing items, and explain why
+                    // via a snackbar there.
+                    _uiState.value = AddItemUiState.Initial
+                    _effects.emit(AddItemEffect.PlanLimitReached(limitMessage))
+                }
+                else -> {
+                    _uiState.value = AddItemUiState.Error(
+                        message = "Some photos couldn't be uploaded. Please try again.",
+                        failedPhotos = failed,
+                    )
+                }
             }
         }
     }

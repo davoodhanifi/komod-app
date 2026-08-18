@@ -3,6 +3,7 @@ package com.komod.api.presentation.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.komod.api.core.error.ErrorMapper
+import com.komod.api.core.error.PlanLimitExceededException
 import com.komod.api.data.location.WeatherLocationResult
 import com.komod.api.data.location.WeatherLocationService
 import com.komod.api.data.repository.HomeRepository
@@ -129,13 +130,25 @@ class HomeViewModel(
             return
         }
 
-        val outfitOfTheDay = runCatching {
+        val outfitOfTheDayResult = runCatching {
             outfitRepository.getOutfitOfTheDay(
                 latitude = locationResult.latitude,
                 longitude = locationResult.longitude,
             )
-        }.getOrNull()
+        }
 
+        outfitOfTheDayResult.exceptionOrNull()?.let { error ->
+            ErrorMapper.toUserMessage(error, tag = "HomeViewModel")
+            if (error is PlanLimitExceededException) {
+                _uiState.update { it.copy(outfitOfTheDayState = OutfitOfTheDayState.PlanLimitReached) }
+            } else {
+                // Other failures hide the card entirely rather than showing an error here.
+                _uiState.update { it.copy(outfitOfTheDayState = null) }
+            }
+            return
+        }
+
+        val outfitOfTheDay = outfitOfTheDayResult.getOrNull()
         if (outfitOfTheDay == null || outfitOfTheDay.outfits.isEmpty()) {
             _uiState.update { it.copy(outfitOfTheDayState = null) }
             return

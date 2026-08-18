@@ -3,6 +3,7 @@ package com.komod.api.presentation.uploadreview
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.komod.api.core.error.ErrorMapper
+import com.komod.api.core.error.PlanLimitExceededException
 import com.komod.api.data.api.model.WardrobeItemReviewAction
 import com.komod.api.data.api.model.WardrobeItemReviewRequestItem
 import com.komod.api.data.repository.AddItemRepository
@@ -133,6 +134,13 @@ class UploadReviewViewModel(
                         is UploadReviewConflictException -> {
                             addItemRepository.removeUploadedImage(imageId)
                             _effects.emit(UploadReviewEffect.ReviewConflict)
+                        }
+                        is PlanLimitExceededException -> {
+                            // Do not drop or auto-reject any items — leave the user's
+                            // selection exactly as it was so they can adjust it and retry
+                            // once they've freed up capacity.
+                            _uiState.value = current.copy(isSubmitting = false)
+                            _effects.emit(UploadReviewEffect.PlanLimitReached)
                         }
                         else -> {
                             _uiState.value = current.copy(isSubmitting = false)

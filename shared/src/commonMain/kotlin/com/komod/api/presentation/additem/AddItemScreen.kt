@@ -97,6 +97,11 @@ fun AddItemScreen(
 
                 is AddItemEffect.CropFailed ->
                     onShowSnackbar("Couldn't apply a crop, so that photo will upload as originally taken.")
+
+                is AddItemEffect.PlanLimitReached -> {
+                    onShowSnackbar(effect.message)
+                    onNavigateBack()
+                }
             }
         }
     }

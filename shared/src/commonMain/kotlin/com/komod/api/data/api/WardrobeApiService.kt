@@ -1,5 +1,7 @@
 package com.komod.api.data.api
 
+import com.komod.api.core.error.PlanLimitCategory
+import com.komod.api.core.error.PlanLimitExceededException
 import com.komod.api.data.api.model.AnalyzeWardrobeImageResultDto
 import com.komod.api.data.api.model.AnalyzeWardrobeRequest
 import com.komod.api.data.api.model.CreateImageResponse
@@ -34,10 +36,28 @@ import io.ktor.http.isSuccess
 class WardrobeApiService(
     private val httpClient: HttpClient,
 ) {
+    // Status is checked explicitly before parsing the body, same reasoning as
+    // analyzeWardrobeItems below: an error response (e.g. capacity exceeded) has a
+    // ProblemDetails-shaped body, not a ResponseData<CreateImageResponse> one, and a blind
+    // .body<T>() call would throw an unrelated SerializationException instead of the real
+    // HTTP failure — which would also hide the "code" field this needs to detect a
+    // PlanLimitExceeded response.
     suspend fun createImage(): CreateImageResponse {
-        return httpClient.post("images") {
+        val response = httpClient.post("images") {
             contentType(ContentType.Application.Json)
-        }.body<ResponseData<CreateImageResponse>>().data
+        }
+        if (!response.status.isSuccess()) {
+            val text = response.bodyAsText()
+            if (isPlanLimitExceeded(text)) {
+                throw PlanLimitExceededException(PlanLimitCategory.PendingCapacity)
+            }
+            throw if (response.status.value in 400..499) {
+                ClientRequestException(response, text)
+            } else {
+                ServerResponseException(response, text)
+            }
+        }
+        return response.body<ResponseData<CreateImageResponse>>().data
     }
 
     // Queues background analysis and returns immediately with the queued status — the
@@ -58,6 +78,9 @@ class WardrobeApiService(
         }
         if (!response.status.isSuccess()) {
             val text = response.bodyAsText()
+            if (isPlanLimitExceeded(text)) {
+                throw PlanLimitExceededException(PlanLimitCategory.PendingCapacity)
+            }
             throw if (response.status.value in 400..499) {
                 ClientRequestException(response, text)
             } else {
@@ -207,10 +230,24 @@ class WardrobeApiService(
         return response.body<ResponseData<List<UploadedImageDto>>>().data
     }
 
+    // Same reasoning as createImage/analyzeWardrobeItems: the status is checked explicitly
+    // so a PlanLimitExceeded body (returned when approving would exceed the wardrobe's
+    // capacity) can be detected before any implicit body-parsing miscategorizes it.
     suspend fun reviewWardrobeItems(request: ReviewWardrobeItemsRequest) {
-        httpClient.patch("wardrobe-items/review") {
+        val response = httpClient.patch("wardrobe-items/review") {
             contentType(ContentType.Application.Json)
             setBody(request)
+        }
+        if (!response.status.isSuccess()) {
+            val text = response.bodyAsText()
+            if (isPlanLimitExceeded(text)) {
+                throw PlanLimitExceededException(PlanLimitCategory.WardrobeCapacity)
+            }
+            throw if (response.status.value in 400..499) {
+                ClientRequestException(response, text)
+            } else {
+                ServerResponseException(response, text)
+            }
         }
     }
 
