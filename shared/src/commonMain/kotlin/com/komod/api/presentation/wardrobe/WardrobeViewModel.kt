@@ -21,6 +21,10 @@ import kotlinx.coroutines.launch
 
 sealed interface WardrobeEffect {
     data class ShowMessage(val message: String) : WardrobeEffect
+    // A bulk delete changed the Active wardrobe item count — distinct from ShowMessage so
+    // callers can hook a count-dependent refresh (e.g. Profile's subscription usage)
+    // without parsing message text.
+    data object ItemsChanged : WardrobeEffect
 }
 
 private const val UploadPollIntervalMs = 5_000L
@@ -220,6 +224,7 @@ class WardrobeViewModel(
                     // Loading/isRefreshing, so this can't flash the skeleton or disrupt
                     // the grid the user is already looking at.
                     fetchItems()
+                    _effects.emit(WardrobeEffect.ItemsChanged)
                 }
                 .onFailure { error ->
                     // Selection and selected items are left untouched so the user can

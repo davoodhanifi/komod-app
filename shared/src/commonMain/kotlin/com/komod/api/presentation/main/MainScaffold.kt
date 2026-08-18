@@ -74,6 +74,7 @@ private const val WardrobeRefreshArg = "wardrobe_refresh_required"
 private const val WardrobeItemRefreshArg = "wardrobe_item_refresh_required"
 private const val UploadReviewRefreshArg = "upload_review_refresh_required"
 private const val HomeRefreshArg = "home_refresh_required"
+private const val ProfileRefreshArg = "profile_refresh_required"
 private const val OutfitIdArg = "outfitId"
 private const val OccasionArg = "occasion"
 private const val WardrobeCategoryArg = "wardrobe_category"
@@ -189,6 +190,7 @@ fun MainScaffold(
     var homeRefreshKey by rememberSaveable { mutableIntStateOf(0) }
     var wardrobeItemRefreshKey by rememberSaveable { mutableIntStateOf(0) }
     var uploadReviewRefreshKey by rememberSaveable { mutableIntStateOf(0) }
+    var profileRefreshKey by rememberSaveable { mutableIntStateOf(0) }
 
     fun requestRefresh(route: String, key: String) {
         runCatching { navController.getBackStackEntry(route) }
@@ -369,6 +371,9 @@ fun MainScaffold(
                             navController.navigate(MainRoute.UploadReview.createRoute(imageId))
                         },
                         onShowSnackbar = ::showSnackbar,
+                        onItemsChanged = {
+                            requestRefresh(MainRoute.Profile.route, ProfileRefreshArg)
+                        },
                     )
                 }
 
@@ -390,17 +395,32 @@ fun MainScaffold(
                             navController.navigate(MainRoute.OutfitDetails.createRoute(outfit.id))
                         },
                         onShowSnackbar = ::showSnackbar,
+                        onOutfitGenerated = {
+                            requestRefresh(MainRoute.Profile.route, ProfileRefreshArg)
+                        },
                     )
                 }
 
-                composable(MainRoute.Profile.route) {
+                composable(MainRoute.Profile.route) { backStackEntry ->
                     LaunchedEffect(profileScrollState.value) {
                         bottomBarScrollState.updateScroll(profileScrollState.value.toFloat())
+                    }
+
+                    val shouldRefresh by backStackEntry.savedStateHandle
+                        .getStateFlow(ProfileRefreshArg, false)
+                        .collectAsState()
+
+                    LaunchedEffect(shouldRefresh) {
+                        if (shouldRefresh) {
+                            profileRefreshKey += 1
+                            backStackEntry.savedStateHandle[ProfileRefreshArg] = false
+                        }
                     }
 
                     ProfileScreen(
                         user = currentUser,
                         scrollState = profileScrollState,
+                        refreshKey = profileRefreshKey,
                         onHelpSupportClick = {
                             uriHandler.openUri("https://komod.app/support")
                         },
@@ -461,6 +481,9 @@ fun MainScaffold(
                         onRefreshHome = {
                             requestRefresh(MainRoute.Home.route, HomeRefreshArg)
                         },
+                        onItemCountChanged = {
+                            requestRefresh(MainRoute.Profile.route, ProfileRefreshArg)
+                        },
                         onShowSnackbar = ::showSnackbar,
                     )
                 }
@@ -514,6 +537,8 @@ fun MainScaffold(
                         onShowSnackbar = ::showSnackbar,
                         onReviewCompleted = {
                             requestRefresh(MainRoute.Wardrobe.route, WardrobeRefreshArg)
+                            // Approving items changes the Active wardrobe item count.
+                            requestRefresh(MainRoute.Profile.route, ProfileRefreshArg)
                         },
                         onAdjustCrop = {
                             // Temporarily disabled: AI catalog image generation now handles

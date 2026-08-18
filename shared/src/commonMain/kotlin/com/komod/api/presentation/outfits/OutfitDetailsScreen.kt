@@ -72,6 +72,10 @@ fun OutfitDetailsScreen(
         viewModel.effects.collect { effect ->
             when (effect) {
                 is OutfitEffect.ShowSnackbar -> onShowSnackbar(effect.message)
+                // Generation only ever runs from OutfitScreen (the shared OutfitViewModel
+                // is just hoisted up to MainScaffold) — this screen only saves/unsaves an
+                // already-generated outfit, so there's nothing to do here.
+                OutfitEffect.OutfitsGenerated -> Unit
             }
         }
     }

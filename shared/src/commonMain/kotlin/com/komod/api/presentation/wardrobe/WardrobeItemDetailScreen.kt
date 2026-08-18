@@ -115,6 +115,7 @@ fun WardrobeItemDetailScreen(
     onAdjustCrop: (imageId: String) -> Unit,
     onRefreshWardrobe: () -> Unit,
     onRefreshHome: () -> Unit,
+    onItemCountChanged: () -> Unit = {},
     refreshKey: Int = 0,
     onShowSnackbar: (String) -> Unit,
     viewModel: WardrobeItemDetailViewModel = koinViewModel(parameters = { parametersOf(wardrobeItemId) }),
@@ -146,12 +147,14 @@ fun WardrobeItemDetailScreen(
                     onShowSnackbar("Item deleted.")
                     onRefreshWardrobe()
                     onRefreshHome()
+                    onItemCountChanged()
                     onNavigateBack()
                 }
                 WardrobeItemDetailEffect.ItemMissing -> {
                     onShowSnackbar("This item no longer exists.")
                     onRefreshWardrobe()
                     onRefreshHome()
+                    onItemCountChanged()
                     onNavigateToWardrobeList()
                 }
                 is WardrobeItemDetailEffect.DeleteFailed -> {

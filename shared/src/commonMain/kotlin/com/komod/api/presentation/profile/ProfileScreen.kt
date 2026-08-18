@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -25,14 +26,19 @@ import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -46,8 +52,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.komod.api.BuildKonfig
-import com.komod.api.domain.model.SubscriptionType
+import com.komod.api.domain.model.CurrentSubscription
+import com.komod.api.domain.model.SubscriptionPlan
 import com.komod.api.domain.model.User
+import com.komod.api.presentation.home.ShimmerBox
+import org.koin.compose.viewmodel.koinViewModel
 
 private val Purple = Color(0xFF7C5CFC)
 private val LightPurple = Color(0xFFF2EEFF)
@@ -63,8 +72,18 @@ fun ProfileScreen(
     onSignOutConfirmed: () -> Unit,
     modifier: Modifier = Modifier,
     scrollState: androidx.compose.foundation.ScrollState = rememberScrollState(),
+    refreshKey: Int = 0,
+    viewModel: ProfileViewModel = koinViewModel(),
 ) {
     var showSignOutDialog by rememberSaveable { mutableStateOf(false) }
+    val uiState by viewModel.uiState.collectAsState()
+
+    // Mirrors HomeScreen/WardrobeScreen's existing "refresh when returning" pattern: a
+    // wardrobe or outfit-generation change elsewhere flags this screen dirty, and only
+    // then does it re-fetch — not on every recomposition or plain tab switch.
+    LaunchedEffect(refreshKey) {
+        if (refreshKey > 0) viewModel.loadSubscription()
+    }
 
     Column(
         modifier = modifier
@@ -89,7 +108,14 @@ fun ProfileScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        ProfileCard(user = user)
+        ProfileCard(user = user, subscriptionState = uiState.subscriptionState)
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        SubscriptionCard(
+            state = uiState.subscriptionState,
+            onRetry = viewModel::loadSubscription,
+        )
 
         Spacer(modifier = Modifier.height(20.dp))
 
@@ -182,7 +208,7 @@ fun ProfileScreen(
 }
 
 @Composable
-private fun ProfileCard(user: User?) {
+private fun ProfileCard(user: User?, subscriptionState: SubscriptionUiState) {
     val fullName = user?.displayName?.takeIf { it.isNotBlank() } ?: "Komod User"
     val email = user?.email?.takeIf { it.isNotBlank() } ?: "No email available"
 
@@ -220,7 +246,7 @@ private fun ProfileCard(user: User?) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Spacer(modifier = Modifier.height(8.dp))
-                SubscriptionBadge(subscriptionType = user?.subscriptionType ?: SubscriptionType.FREE)
+                SubscriptionBadge(state = subscriptionState)
             }
         }
     }
@@ -277,38 +303,57 @@ private fun AvatarWithEdit(photoUrl: String?, initials: String) {
 }
 
 @Composable
-private fun SubscriptionBadge(subscriptionType: SubscriptionType) {
-    val isPro = subscriptionType == SubscriptionType.PRO
-    val backgroundColor = if (isPro) Purple else LightPurple
-    val textColor = if (isPro) Color.White else Purple
-
-    Surface(
-        shape = RoundedCornerShape(100.dp),
-        color = backgroundColor,
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Box(
+private fun SubscriptionBadge(state: SubscriptionUiState) {
+    when (state) {
+        // Nothing to show yet — a shimmer placeholder rather than any plan name, so
+        // nothing incorrect is ever shown even briefly.
+        SubscriptionUiState.Loading -> {
+            ShimmerBox(
                 modifier = Modifier
-                    .size(8.dp)
-                    .clip(CircleShape)
-                    .background(Color.White)
-                    .then(
-                        if (isPro) {
-                            Modifier
-                        } else {
-                            Modifier.border(width = 1.dp, color = Purple, shape = CircleShape)
-                        }
-                    ),
+                    .width(72.dp)
+                    .height(26.dp)
+                    .clip(RoundedCornerShape(100.dp)),
             )
-            Text(
-                text = if (isPro) "Pro" else "Free",
-                style = MaterialTheme.typography.labelLarge,
-                color = textColor,
-            )
+        }
+        // The plan couldn't be loaded — omit the badge entirely (the SubscriptionCard
+        // below already shows a proper error + retry) rather than guessing.
+        is SubscriptionUiState.Error -> Unit
+        is SubscriptionUiState.Success -> {
+            // Rack is the free tier, so it keeps the old "Free" badge's light/outlined
+            // look; every paid plan (door counts, Walk-in) gets the solid "Pro" look.
+            val isFreeTier = state.subscription.plan == SubscriptionPlan.Rack
+            val backgroundColor = if (isFreeTier) LightPurple else Purple
+            val textColor = if (isFreeTier) Purple else Color.White
+
+            Surface(
+                shape = RoundedCornerShape(100.dp),
+                color = backgroundColor,
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .clip(CircleShape)
+                            .background(Color.White)
+                            .then(
+                                if (isFreeTier) {
+                                    Modifier.border(width = 1.dp, color = Purple, shape = CircleShape)
+                                } else {
+                                    Modifier
+                                }
+                            ),
+                    )
+                    Text(
+                        text = state.subscription.plan.displayName(),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = textColor,
+                    )
+                }
+            }
         }
     }
 }
@@ -397,4 +442,147 @@ private fun buildInitials(fullName: String, email: String): String {
         }
     }
     return email.firstOrNull()?.uppercaseChar()?.toString() ?: "U"
+}
+
+// null limit means unlimited (the backend's own signal) — never "0" or any other
+// stand-in value invented locally.
+internal fun formatUsageText(current: Int, limit: Int?, unitSuffix: String): String =
+    "$current / ${limit?.toString() ?: "Unlimited"} $unitSuffix"
+
+// Only meaningful for a finite limit — callers must not show a progress bar at all when
+// limit is null (unlimited), so this never needs to represent that case.
+internal fun usageProgress(current: Int, limit: Int): Float =
+    (current.toFloat() / limit.toFloat()).coerceIn(0f, 1f)
+
+@Composable
+private fun SubscriptionCard(
+    state: SubscriptionUiState,
+    onRetry: () -> Unit,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = CardShape,
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+    ) {
+        Column(modifier = Modifier.fillMaxWidth().padding(20.dp)) {
+            when (state) {
+                SubscriptionUiState.Loading -> SubscriptionLoadingContent()
+                is SubscriptionUiState.Success -> SubscriptionSuccessContent(state.subscription)
+                is SubscriptionUiState.Error -> SubscriptionErrorContent(message = state.message, onRetry = onRetry)
+            }
+        }
+    }
+}
+
+@Composable
+private fun SubscriptionSuccessContent(subscription: CurrentSubscription) {
+    Column {
+        Text(
+            text = subscription.plan.displayName(),
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        UsageRow(
+            label = "Wardrobe",
+            current = subscription.currentWardrobeItemCount,
+            limit = subscription.wardrobeItemLimit,
+            unitSuffix = "items",
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        UsageRow(
+            label = "Outfit generations",
+            current = subscription.todayOutfitGenerationCount,
+            limit = subscription.dailyOutfitGenerationLimit,
+            unitSuffix = "today",
+        )
+    }
+}
+
+// limit == null means unlimited (the backend's own signal — never inferred from the plan
+// locally): shown as plain "current / Unlimited" text with no progress bar, since a bar
+// implies a ceiling that doesn't exist here.
+@Composable
+private fun UsageRow(
+    label: String,
+    current: Int,
+    limit: Int?,
+    unitSuffix: String,
+) {
+    Column {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        Text(
+            text = formatUsageText(current, limit, unitSuffix),
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+
+        if (limit != null && limit > 0) {
+            Spacer(modifier = Modifier.height(8.dp))
+            LinearProgressIndicator(
+                progress = { usageProgress(current, limit) },
+                color = Purple,
+                trackColor = LightPurple,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(8.dp)
+                    .clip(RoundedCornerShape(50)),
+            )
+        }
+    }
+}
+
+@Composable
+private fun SubscriptionLoadingContent() {
+    Column {
+        ShimmerBox(modifier = Modifier.width(150.dp).height(22.dp).clip(RoundedCornerShape(6.dp)))
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        ShimmerBox(modifier = Modifier.width(90.dp).height(14.dp).clip(RoundedCornerShape(4.dp)))
+        Spacer(modifier = Modifier.height(6.dp))
+        ShimmerBox(modifier = Modifier.fillMaxWidth().height(16.dp).clip(RoundedCornerShape(4.dp)))
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        ShimmerBox(modifier = Modifier.width(140.dp).height(14.dp).clip(RoundedCornerShape(4.dp)))
+        Spacer(modifier = Modifier.height(6.dp))
+        ShimmerBox(modifier = Modifier.fillMaxWidth().height(16.dp).clip(RoundedCornerShape(4.dp)))
+    }
+}
+
+@Composable
+private fun SubscriptionErrorContent(
+    message: String,
+    onRetry: () -> Unit,
+) {
+    Column {
+        Text(
+            text = message,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        Button(
+            onClick = onRetry,
+            colors = ButtonDefaults.buttonColors(containerColor = Purple),
+        ) {
+            Text("Retry")
+        }
+    }
 }

@@ -3,6 +3,7 @@ package com.komod.api.di
 import com.komod.api.BuildKonfig
 import com.komod.api.data.api.WardrobeApiService
 import com.komod.api.data.api.OutfitApiService
+import com.komod.api.data.api.SubscriptionApiService
 import com.komod.api.data.api.WeatherApi
 import com.komod.api.data.api.provideKtorClient
 import com.komod.api.data.api.providePlainHttpClient
@@ -15,6 +16,8 @@ import com.komod.api.data.repository.HomeRepository
 import com.komod.api.data.repository.HomeRepositoryImpl
 import com.komod.api.data.repository.OutfitRepository
 import com.komod.api.data.repository.OutfitRepositoryImpl
+import com.komod.api.data.repository.SubscriptionRepository
+import com.komod.api.data.repository.SubscriptionRepositoryImpl
 import com.komod.api.data.repository.WeatherRepository
 import com.komod.api.data.repository.WeatherRepositoryImpl
 import com.komod.api.data.repository.UploadedImageStore
@@ -33,6 +36,7 @@ import com.komod.api.presentation.auth.LoginViewModel
 import com.komod.api.presentation.cropeditor.CropEditorViewModel
 import com.komod.api.presentation.home.HomeViewModel
 import com.komod.api.presentation.outfits.OutfitViewModel
+import com.komod.api.presentation.profile.ProfileViewModel
 import com.komod.api.presentation.uploadreview.UploadReviewViewModel
 import com.komod.api.presentation.wardrobe.WardrobeItemEditViewModel
 import com.komod.api.presentation.wardrobe.WardrobeItemDetailViewModel
@@ -65,6 +69,7 @@ fun appModule() = module {
     single(PlainHttpClientQualifier) { providePlainHttpClient() }
     single { WardrobeApiService(get()) }
     single { OutfitApiService(get()) }
+    single { SubscriptionApiService(get()) }
     single { WeatherApi(get()) }
     single { WardrobeItemCache() }
     single { UploadedImageStore() }
@@ -93,11 +98,13 @@ fun appModule() = module {
         )
     }
     single<UploadReviewRepository> { UploadReviewRepositoryImpl(wardrobeApiService = get(), storageService = get()) }
+    single<SubscriptionRepository> { SubscriptionRepositoryImpl(subscriptionApiService = get()) }
     viewModel { LoginViewModel(get()) }
     viewModel { AddItemViewModel(get()) }
     viewModel { OutfitViewModel(get(), get(), get(), get(), get()) }
     viewModel { WardrobeViewModel(get(), get()) }
     viewModel { HomeViewModel(get(), get(), get()) }
+    viewModel { ProfileViewModel(get()) }
     viewModel { params -> WardrobeItemDetailViewModel(params.get(), get()) }
     viewModel { params -> WardrobeItemEditViewModel(params.get(), get()) }
     viewModel { params -> UploadReviewViewModel(params.get(), get(), get(), get()) }

@@ -1,7 +1,6 @@
 package com.komod.api.data.repository
 
 import com.komod.api.data.auth.SupabaseAuthDataSource
-import com.komod.api.domain.model.SubscriptionType
 import com.komod.api.domain.model.User
 import io.github.jan.supabase.auth.status.SessionStatus
 import kotlinx.coroutines.CoroutineScope
@@ -100,41 +99,13 @@ internal fun buildUser(userInfo: io.github.jan.supabase.auth.user.UserInfo): Use
         metadataSources = metadataSources,
         keys = listOf("avatar_url", "avatarUrl", "picture", "photo_url", "photoUrl", "picture_url"),
     )
-    val subscriptionType = resolveSubscriptionType(metadataSources)
 
     return User(
         id = userInfo.id,
         email = userInfo.email,
         displayName = displayName,
         photoUrl = photoUrl,
-        subscriptionType = subscriptionType,
     )
-}
-
-private fun resolveSubscriptionType(metadataSources: List<JsonObject>): SubscriptionType {
-    if (metadataSources.isEmpty()) return SubscriptionType.FREE
-
-    val paidValues = setOf("pro", "premium", "paid", "plus")
-    val possibleTierValues = listOf(
-        "subscription_type",
-        "subscriptionType",
-        "subscription",
-        "plan",
-        "tier",
-        "membership",
-    ).mapNotNull { key -> findMetadataValue(metadataSources, listOf(key))?.lowercase() }
-
-    if (possibleTierValues.any { it in paidValues }) {
-        return SubscriptionType.PRO
-    }
-
-    val isProValue = findMetadataValue(metadataSources, listOf("is_pro", "isPro"))?.lowercase()
-
-    return if (isProValue == "true" || isProValue == "1" || isProValue == "yes") {
-        SubscriptionType.PRO
-    } else {
-        SubscriptionType.FREE
-    }
 }
 
 private fun buildMetadataSources(userInfo: io.github.jan.supabase.auth.user.UserInfo): List<JsonObject> {
