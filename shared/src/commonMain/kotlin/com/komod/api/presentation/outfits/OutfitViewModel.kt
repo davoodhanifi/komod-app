@@ -76,11 +76,20 @@ class OutfitViewModel(
                     errorMessage = null,
                 )
             }.onFailure { throwable ->
+                val message = ErrorMapper.toUserMessage(throwable, tag = "OutfitViewModel")
                 _uiState.value = _uiState.value.copy(
                     isGenerating = false,
-                    errorMessage = ErrorMapper.toUserMessage(throwable, tag = "OutfitViewModel"),
+                    errorMessage = message,
                     isPlanLimitError = throwable is PlanLimitExceededException,
                 )
+                // The inline error card only renders when the outfits list is empty (see
+                // OutfitScreen) — if there are already-generated outfits on screen from an
+                // earlier successful generation, that card never shows, so this failure
+                // would otherwise be completely silent. A snackbar covers that case
+                // without disturbing the outfits still on screen.
+                if (_uiState.value.outfits.isNotEmpty()) {
+                    _effects.emit(OutfitEffect.ShowSnackbar(message))
+                }
             }
         }
     }
