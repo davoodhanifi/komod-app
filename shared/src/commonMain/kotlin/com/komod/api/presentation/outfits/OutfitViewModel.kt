@@ -75,7 +75,6 @@ class OutfitViewModel(
                     isGenerating = false,
                     errorMessage = null,
                 )
-                _effects.emit(OutfitEffect.OutfitsGenerated)
             }.onFailure { throwable ->
                 _uiState.value = _uiState.value.copy(
                     isGenerating = false,

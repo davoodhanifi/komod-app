@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -23,7 +22,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.outlined.HelpOutline
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -60,6 +58,7 @@ import org.koin.compose.viewmodel.koinViewModel
 
 private val Purple = Color(0xFF7C5CFC)
 private val LightPurple = Color(0xFFF2EEFF)
+private val Orange = Color(0xFFF59E0B)
 private val Red = Color(0xFFDC2626)
 private val LightRed = Color(0xFFFEECEC)
 private val CardShape = RoundedCornerShape(24.dp)
@@ -72,17 +71,21 @@ fun ProfileScreen(
     onSignOutConfirmed: () -> Unit,
     modifier: Modifier = Modifier,
     scrollState: androidx.compose.foundation.ScrollState = rememberScrollState(),
-    refreshKey: Int = 0,
     viewModel: ProfileViewModel = koinViewModel(),
 ) {
     var showSignOutDialog by rememberSaveable { mutableStateOf(false) }
     val uiState by viewModel.uiState.collectAsState()
 
-    // Mirrors HomeScreen/WardrobeScreen's existing "refresh when returning" pattern: a
-    // wardrobe or outfit-generation change elsewhere flags this screen dirty, and only
-    // then does it re-fetch — not on every recomposition or plain tab switch.
-    LaunchedEffect(refreshKey) {
-        if (refreshKey > 0) viewModel.loadSubscription()
+    // NavHost disposes and recomposes a destination's content fresh each time you
+    // navigate into it (even though the ViewModel instance itself survives via the
+    // retained back stack entry), so this fires once per visit to the Profile tab — the
+    // subscription and its usage can change from wardrobe/outfit activity on other tabs,
+    // and there's no reliable way to flag this tab dirty from a sibling tab (its back
+    // stack entry isn't reachable once you've navigated away from it). Safe to call
+    // unconditionally: loadSubscription() only shows the Loading skeleton when there's
+    // nothing on screen yet, so a repeat visit never flickers.
+    LaunchedEffect(Unit) {
+        viewModel.loadSubscription()
     }
 
     Column(
@@ -225,7 +228,7 @@ private fun ProfileCard(user: User?, subscriptionState: SubscriptionUiState) {
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            AvatarWithEdit(
+            ProfileAvatar(
                 photoUrl = user?.photoUrl,
                 initials = buildInitials(fullName, email),
             )
@@ -253,51 +256,28 @@ private fun ProfileCard(user: User?, subscriptionState: SubscriptionUiState) {
 }
 
 @Composable
-private fun AvatarWithEdit(photoUrl: String?, initials: String) {
+private fun ProfileAvatar(photoUrl: String?, initials: String) {
     Box(
-        modifier = Modifier.size(72.dp),
+        modifier = Modifier
+            .size(72.dp)
+            .clip(CircleShape)
+            .background(LightPurple),
+        contentAlignment = Alignment.Center,
     ) {
-        Box(
-            modifier = Modifier
-                .size(72.dp)
-                .clip(CircleShape)
-                .background(LightPurple),
-            contentAlignment = Alignment.Center,
-        ) {
-            if (!photoUrl.isNullOrBlank()) {
-                AsyncImage(
-                    model = photoUrl,
-                    contentDescription = "Profile photo",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize(),
-                )
-            } else {
-                Text(
-                    text = initials,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Purple,
-                )
-            }
-        }
-
-        Surface(
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .offset(x = 2.dp, y = 2.dp)
-                .size(24.dp),
-            shape = CircleShape,
-            color = Color.White,
-            shadowElevation = 2.dp,
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    imageVector = Icons.Filled.Edit,
-                    contentDescription = "Edit profile photo",
-                    tint = Purple,
-                    modifier = Modifier.size(14.dp),
-                )
-            }
+        if (!photoUrl.isNullOrBlank()) {
+            AsyncImage(
+                model = photoUrl,
+                contentDescription = "Profile photo",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            )
+        } else {
+            Text(
+                text = initials,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = Purple,
+            )
         }
     }
 }
@@ -454,6 +434,21 @@ internal fun formatUsageText(current: Int, limit: Int?, unitSuffix: String): Str
 internal fun usageProgress(current: Int, limit: Int): Float =
     (current.toFloat() / limit.toFloat()).coerceIn(0f, 1f)
 
+internal enum class UsageSeverity { Normal, Warning, Critical }
+
+// Thresholds are on the same 0..1 ratio usageProgress() already computes: comfortably
+// under the limit stays the brand color, getting close (70%+) turns amber, and right at
+// or over it (90%+) turns red — a glance at the bar's color should tell the story before
+// reading the numbers.
+internal fun usageSeverity(current: Int, limit: Int): UsageSeverity {
+    val progress = usageProgress(current, limit)
+    return when {
+        progress >= 0.9f -> UsageSeverity.Critical
+        progress >= 0.7f -> UsageSeverity.Warning
+        else -> UsageSeverity.Normal
+    }
+}
+
 @Composable
 private fun SubscriptionCard(
     state: SubscriptionUiState,
@@ -534,10 +529,21 @@ private fun UsageRow(
 
         if (limit != null && limit > 0) {
             Spacer(modifier = Modifier.height(8.dp))
+            val severity = usageSeverity(current, limit)
+            val progressColor = when (severity) {
+                UsageSeverity.Normal -> Purple
+                UsageSeverity.Warning -> Orange
+                UsageSeverity.Critical -> Red
+            }
+            val trackColorForSeverity = when (severity) {
+                UsageSeverity.Normal -> LightPurple
+                UsageSeverity.Warning -> Orange.copy(alpha = 0.15f)
+                UsageSeverity.Critical -> LightRed
+            }
             LinearProgressIndicator(
                 progress = { usageProgress(current, limit) },
-                color = Purple,
-                trackColor = LightPurple,
+                color = progressColor,
+                trackColor = trackColorForSeverity,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(8.dp)

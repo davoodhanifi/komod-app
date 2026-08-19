@@ -8,6 +8,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import kotlin.test.AfterTest
@@ -16,16 +17,24 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 
-// A fresh CompletableDeferred per fake instance lets each test control exactly when
+// A fresh CompletableDeferred per call lets each test control exactly when
 // getCurrentSubscription() resolves, so the ViewModel's Loading state can be observed
-// before it settles into Success.
+// before it settles into Success — including across a second, later call, via
+// prepareNext().
 private class FakeSubscriptionRepository : SubscriptionRepository {
-    private val result = CompletableDeferred<Result<CurrentSubscription>>()
+    private var deferred = CompletableDeferred<Result<CurrentSubscription>>()
 
-    override suspend fun getCurrentSubscription(): CurrentSubscription = result.await().getOrThrow()
+    override suspend fun getCurrentSubscription(): CurrentSubscription = deferred.await().getOrThrow()
 
     fun complete(subscription: CurrentSubscription) {
-        result.complete(Result.success(subscription))
+        deferred.complete(Result.success(subscription))
+    }
+
+    // Call between two loadSubscription() invocations so the second call's
+    // getCurrentSubscription() suspends on its own fresh deferred instead of
+    // immediately resuming with the first call's already-completed result.
+    fun prepareNext() {
+        deferred = CompletableDeferred()
     }
 }
 
@@ -56,12 +65,16 @@ class ProfileViewModelTest {
         Dispatchers.resetMain()
     }
 
-    // 5. Loading state.
+    // 5. Loading state. loadSubscription() is called explicitly here — unlike before,
+    // ProfileViewModel no longer auto-fetches from init{}; that's now the caller's job
+    // (ProfileScreen's LaunchedEffect(Unit), which fires on every visit to the Profile
+    // tab so returning to it always picks up fresh usage numbers).
     @Test
     fun `starts in Loading until the repository call resolves`() = runTest(testDispatcher) {
         val repository = FakeSubscriptionRepository()
         val viewModel = ProfileViewModel(repository)
 
+        viewModel.loadSubscription()
         assertIs<SubscriptionUiState.Loading>(viewModel.uiState.value.subscriptionState)
 
         repository.complete(testSubscription())
@@ -83,6 +96,7 @@ class ProfileViewModelTest {
             todayOutfitGenerationCount = 1,
         )
 
+        viewModel.loadSubscription()
         repository.complete(subscription)
         advanceUntilIdle()
 
@@ -101,12 +115,41 @@ class ProfileViewModelTest {
             dailyOutfitGenerationLimit = null,
         )
 
+        viewModel.loadSubscription()
         repository.complete(subscription)
         advanceUntilIdle()
 
         val state = assertIs<SubscriptionUiState.Success>(viewModel.uiState.value.subscriptionState)
         assertEquals(null, state.subscription.wardrobeItemLimit)
         assertEquals(null, state.subscription.dailyOutfitGenerationLimit)
+    }
+
+    // A repeat call to loadSubscription() (simulating a return visit to Profile) must not
+    // blank an already-successful state back to Loading — that's the flicker this design
+    // exists to avoid, now that every visit triggers a real refetch. runCurrent() (not
+    // advanceUntilIdle()) is used after the second call specifically so this observes the
+    // state *before* the new network call resolves, which is exactly the moment a flicker
+    // would show up.
+    @Test
+    fun `a second load while already showing a successful result does not flash back to Loading`() = runTest(testDispatcher) {
+        val repository = FakeSubscriptionRepository()
+        val viewModel = ProfileViewModel(repository)
+
+        viewModel.loadSubscription()
+        repository.complete(testSubscription())
+        advanceUntilIdle()
+        assertIs<SubscriptionUiState.Success>(viewModel.uiState.value.subscriptionState)
+
+        repository.prepareNext()
+        viewModel.loadSubscription()
+        runCurrent()
+        assertIs<SubscriptionUiState.Success>(viewModel.uiState.value.subscriptionState)
+
+        val updated = testSubscription(currentWardrobeItemCount = 99)
+        repository.complete(updated)
+        advanceUntilIdle()
+        val state = assertIs<SubscriptionUiState.Success>(viewModel.uiState.value.subscriptionState)
+        assertEquals(updated, state.subscription)
     }
 
     // 6. A test asserting that an API failure surfaces SubscriptionUiState.Error (rather

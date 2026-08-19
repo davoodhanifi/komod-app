@@ -28,4 +28,23 @@ class ProfileUsageFormattingTest {
     fun `progress never exceeds 1 even if usage is reported over the limit`() {
         assertEquals(1f, usageProgress(current = 160, limit = 150))
     }
+
+    @Test
+    fun `usage under 70 percent is Normal severity`() {
+        assertEquals(UsageSeverity.Normal, usageSeverity(current = 0, limit = 150))
+        assertEquals(UsageSeverity.Normal, usageSeverity(current = 100, limit = 150)) // ~66.7%
+    }
+
+    @Test
+    fun `usage from 70 up to 90 percent is Warning severity`() {
+        assertEquals(UsageSeverity.Warning, usageSeverity(current = 105, limit = 150)) // exactly 70%
+        assertEquals(UsageSeverity.Warning, usageSeverity(current = 130, limit = 150)) // ~86.7%
+    }
+
+    @Test
+    fun `usage at 90 percent or above is Critical severity`() {
+        assertEquals(UsageSeverity.Critical, usageSeverity(current = 135, limit = 150)) // exactly 90%
+        assertEquals(UsageSeverity.Critical, usageSeverity(current = 150, limit = 150)) // 100%
+        assertEquals(UsageSeverity.Critical, usageSeverity(current = 160, limit = 150)) // over limit
+    }
 }

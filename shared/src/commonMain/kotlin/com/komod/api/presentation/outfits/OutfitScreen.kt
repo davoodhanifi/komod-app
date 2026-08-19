@@ -119,7 +119,6 @@ fun OutfitScreen(
     viewModel: OutfitViewModel = koinViewModel(),
     onOpenDetails: (Outfit) -> Unit,
     onShowSnackbar: (String) -> Unit = {},
-    onOutfitGenerated: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showStyleSheet by remember { mutableStateOf(false) }
@@ -129,7 +128,6 @@ fun OutfitScreen(
         viewModel.effects.collect { effect ->
             when (effect) {
                 is OutfitEffect.ShowSnackbar -> onShowSnackbar(effect.message)
-                OutfitEffect.OutfitsGenerated -> onOutfitGenerated()
             }
         }
     }

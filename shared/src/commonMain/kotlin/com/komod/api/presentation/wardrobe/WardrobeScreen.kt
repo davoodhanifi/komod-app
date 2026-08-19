@@ -115,7 +115,6 @@ fun WardrobeScreen(
     onItemClick: (String) -> Unit,
     onUploadClick: (String) -> Unit,
     onShowSnackbar: (String) -> Unit = {},
-    onItemsChanged: () -> Unit = {},
     lazyGridState: androidx.compose.foundation.lazy.grid.LazyGridState = rememberLazyGridState(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -137,7 +136,6 @@ fun WardrobeScreen(
         viewModel.effects.collect { effect ->
             when (effect) {
                 is WardrobeEffect.ShowMessage -> onShowSnackbar(effect.message)
-                WardrobeEffect.ItemsChanged -> onItemsChanged()
             }
         }
     }

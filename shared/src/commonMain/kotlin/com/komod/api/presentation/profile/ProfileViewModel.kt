@@ -17,12 +17,11 @@ class ProfileViewModel(
     private val _uiState = MutableStateFlow(ProfileUiState())
     val uiState: StateFlow<ProfileUiState> = _uiState.asStateFlow()
 
-    init {
-        loadSubscription()
-    }
-
-    // Also used to refresh (see ProfileScreen's refreshKey, mirroring
-    // HomeScreen/WardrobeScreen's existing "refresh when returning" pattern).
+    // Called from ProfileScreen's LaunchedEffect(Unit) — which fires on every navigation
+    // into the Profile tab, not just the first — so this doubles as both the initial load
+    // and the "refresh when returning to Profile" trigger. Safe to call unconditionally
+    // on every visit because it only blanks to the Loading skeleton when there's nothing
+    // on screen yet (see below), so a repeat visit never flickers.
     fun loadSubscription() {
         viewModelScope.launch {
             // Only blank to the Loading skeleton when there's nothing on screen yet — a
