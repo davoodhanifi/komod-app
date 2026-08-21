@@ -69,6 +69,7 @@ fun ProfileScreen(
     onHelpSupportClick: () -> Unit,
     onAboutClick: () -> Unit,
     onSignOutConfirmed: () -> Unit,
+    onUpgradeClick: () -> Unit,
     modifier: Modifier = Modifier,
     scrollState: androidx.compose.foundation.ScrollState = rememberScrollState(),
     viewModel: ProfileViewModel = koinViewModel(),
@@ -118,6 +119,7 @@ fun ProfileScreen(
         SubscriptionCard(
             state = uiState.subscriptionState,
             onRetry = viewModel::loadSubscription,
+            onUpgradeClick = onUpgradeClick,
         )
 
         Spacer(modifier = Modifier.height(20.dp))
@@ -453,6 +455,7 @@ internal fun usageSeverity(current: Int, limit: Int): UsageSeverity {
 private fun SubscriptionCard(
     state: SubscriptionUiState,
     onRetry: () -> Unit,
+    onUpgradeClick: () -> Unit,
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -463,7 +466,7 @@ private fun SubscriptionCard(
         Column(modifier = Modifier.fillMaxWidth().padding(20.dp)) {
             when (state) {
                 SubscriptionUiState.Loading -> SubscriptionLoadingContent()
-                is SubscriptionUiState.Success -> SubscriptionSuccessContent(state.subscription)
+                is SubscriptionUiState.Success -> SubscriptionSuccessContent(state.subscription, onUpgradeClick)
                 is SubscriptionUiState.Error -> SubscriptionErrorContent(message = state.message, onRetry = onRetry)
             }
         }
@@ -471,7 +474,7 @@ private fun SubscriptionCard(
 }
 
 @Composable
-private fun SubscriptionSuccessContent(subscription: CurrentSubscription) {
+private fun SubscriptionSuccessContent(subscription: CurrentSubscription, onUpgradeClick: () -> Unit) {
     Column {
         Text(
             text = subscription.plan.displayName(),
@@ -497,6 +500,16 @@ private fun SubscriptionSuccessContent(subscription: CurrentSubscription) {
             limit = subscription.dailyOutfitGenerationLimit,
             unitSuffix = "today",
         )
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Button(
+            onClick = onUpgradeClick,
+            colors = ButtonDefaults.buttonColors(containerColor = Purple),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(if (subscription.plan == SubscriptionPlan.Rack) "Upgrade Plan" else "Manage Plan")
+        }
     }
 }
 

@@ -49,6 +49,13 @@ kotlin {
     }
 
     sourceSets {
+        // Required by the RevenueCat KMP SDK's iOS interop.
+        named { it.lowercase().startsWith("ios") }.configureEach {
+            languageSettings {
+                optIn("kotlinx.cinterop.ExperimentalForeignApi")
+            }
+        }
+
         androidMain.dependencies {
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.ktor.client.okhttp)
@@ -79,6 +86,7 @@ kotlin {
             implementation(libs.supabase.storage)
             implementation(libs.coil.compose)
             implementation(libs.coil.network.ktor3)
+            implementation(libs.purchases.kmp.core)
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)
@@ -105,5 +113,10 @@ buildkonfig {
         buildConfigField(STRING, "SUPABASE_URL", localProps["SUPABASE_URL"]?.toString() ?: "")
         buildConfigField(STRING, "SUPABASE_PUBLISHABLE_KEY", localProps["SUPABASE_PUBLISHABLE_KEY"]?.toString() ?: "")
         buildConfigField(STRING, "APP_VERSION", appVersion)
+        // RevenueCat's Apple public SDK key (starts with "appl_"), from the RevenueCat
+        // dashboard's Project Settings > API Keys. Only used on iOS today — see
+        // MainViewController.kt's initKoin(). Present on Android too since BuildKonfig fields
+        // aren't per-target, but never read there.
+        buildConfigField(STRING, "REVENUECAT_IOS_API_KEY", localProps["REVENUECAT_IOS_API_KEY"]?.toString() ?: "")
     }
 }

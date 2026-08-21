@@ -13,4 +13,5 @@ enum class ErrorContext(internal val fallbackMessage: String) {
     Auth("Sign-in failed. Please try again."),
     Weather("Unable to load weather right now."),
     Subscription("Unable to load your plan right now."),
+    Paywall("Something went wrong. Please try again."),
 }

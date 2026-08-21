@@ -59,6 +59,7 @@ import com.komod.api.presentation.home.HomeScreen
 import com.komod.api.presentation.outfits.OutfitDetailsScreen
 import com.komod.api.presentation.outfits.OutfitScreen
 import com.komod.api.presentation.outfits.OutfitViewModel
+import com.komod.api.presentation.paywall.PaywallScreen
 import com.komod.api.presentation.profile.ProfileScreen
 import com.komod.api.presentation.uploadreview.UploadReviewScreen
 import com.komod.api.presentation.wardrobe.WardrobeItemEditScreen
@@ -84,6 +85,7 @@ private sealed class MainRoute(val route: String) {
     data object Outfits : MainRoute("outfits")
     data object Profile : MainRoute("profile")
     data object AddItem : MainRoute("wardrobe/add-item")
+    data object Paywall : MainRoute("paywall")
     data object WardrobeItemDetail : MainRoute("wardrobe/item/{$WardrobeItemIdArg}") {
         fun createRoute(itemId: String): String = "wardrobe/item/$itemId"
     }
@@ -171,6 +173,7 @@ fun MainScaffold(
         MainRoute.UploadReview.route,
         MainRoute.CropEditor.route,
         MainRoute.OutfitDetails.route,
+        MainRoute.Paywall.route,
     )
     val showBottomBar = currentRoute !in hideBottomBarRoutes
     
@@ -412,6 +415,16 @@ fun MainScaffold(
                                 authRepository.signOut()
                             }
                         },
+                        onUpgradeClick = {
+                            navController.navigate(MainRoute.Paywall.route)
+                        },
+                    )
+                }
+
+                composable(MainRoute.Paywall.route) {
+                    PaywallScreen(
+                        onNavigateBack = { navController.navigateUp() },
+                        onShowSnackbar = ::showSnackbar,
                     )
                 }
 

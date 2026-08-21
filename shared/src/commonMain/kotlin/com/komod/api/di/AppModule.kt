@@ -1,6 +1,7 @@
 package com.komod.api.di
 
 import com.komod.api.BuildKonfig
+import com.komod.api.data.billing.PurchasesService
 import com.komod.api.data.api.WardrobeApiService
 import com.komod.api.data.api.OutfitApiService
 import com.komod.api.data.api.SubscriptionApiService
@@ -12,6 +13,8 @@ import com.komod.api.data.repository.AddItemRepository
 import com.komod.api.data.repository.AddItemRepositoryImpl
 import com.komod.api.data.repository.AuthRepository
 import com.komod.api.data.repository.AuthRepositoryImpl
+import com.komod.api.data.repository.BillingRepository
+import com.komod.api.data.repository.BillingRepositoryImpl
 import com.komod.api.data.repository.HomeRepository
 import com.komod.api.data.repository.HomeRepositoryImpl
 import com.komod.api.data.repository.OutfitRepository
@@ -36,6 +39,7 @@ import com.komod.api.presentation.auth.LoginViewModel
 import com.komod.api.presentation.cropeditor.CropEditorViewModel
 import com.komod.api.presentation.home.HomeViewModel
 import com.komod.api.presentation.outfits.OutfitViewModel
+import com.komod.api.presentation.paywall.PaywallViewModel
 import com.komod.api.presentation.profile.ProfileViewModel
 import com.komod.api.presentation.uploadreview.UploadReviewViewModel
 import com.komod.api.presentation.wardrobe.WardrobeItemEditViewModel
@@ -77,6 +81,8 @@ fun appModule() = module {
     single { WeatherLocationService() }
     single { com.komod.api.platform.AppSettingsOpener() }
     single { StorageService(supabaseClient = get()) }
+    single { PurchasesService() }
+    single<BillingRepository> { BillingRepositoryImpl(purchasesService = get()) }
     single<AddItemRepository> { AddItemRepositoryImpl(get(), get(), get()) }
     single<WardrobeRepository> { WardrobeRepositoryImpl(wardrobeApiService = get(), supabaseClient = get(), wardrobeItemCache = get()) }
     single<WardrobeItemRepository> {
@@ -105,6 +111,7 @@ fun appModule() = module {
     viewModel { WardrobeViewModel(get(), get()) }
     viewModel { HomeViewModel(get(), get(), get()) }
     viewModel { ProfileViewModel(get()) }
+    viewModel { PaywallViewModel(get()) }
     viewModel { params -> WardrobeItemDetailViewModel(params.get(), get()) }
     viewModel { params -> WardrobeItemEditViewModel(params.get(), get()) }
     viewModel { params -> UploadReviewViewModel(params.get(), get(), get(), get()) }
