@@ -1,5 +1,6 @@
 package com.komod.api.data.api
 
+import com.komod.api.platform.getDeviceTimeZoneId
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.MockRequestHandleScope
@@ -84,6 +85,35 @@ class SubscriptionApiServiceTest {
         assertEquals("KomodWalkIn", dto.plan)
         assertEquals(null, dto.wardrobeItemLimit)
         assertEquals(null, dto.dailyOutfitGenerationLimit)
+    }
+
+    // The device timezone can vary by host, so this compares against the same
+    // getDeviceTimeZoneId() the production code calls rather than a fixed literal — the
+    // point under test is that whatever it returns reaches the query string unchanged
+    // (and is simply absent when it returns null).
+    @Test
+    fun `getCurrentSubscription sends the device timezone as a query parameter`() = runBlocking {
+        var capturedRequest: HttpRequestData? = null
+        val apiService = buildApiService { request ->
+            capturedRequest = request
+            respond(
+                content = """
+                    {"data":{
+                      "plan":"Komod2Doors",
+                      "wardrobeItemLimit":150,
+                      "dailyOutfitGenerationLimit":30,
+                      "currentWardrobeItemCount":87,
+                      "todayOutfitGenerationCount":12
+                    }}
+                """.trimIndent(),
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            )
+        }
+
+        apiService.getCurrentSubscription()
+
+        assertEquals(getDeviceTimeZoneId(), capturedRequest?.url?.parameters?.get("timeZoneId"))
     }
 
     // 6. API failure surfaces as a real exception — never a synthesized default DTO.

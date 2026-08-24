@@ -11,6 +11,7 @@ import com.komod.api.data.api.model.SaveOutfitRequest
 import com.komod.api.data.api.model.SaveOutfitResponse
 import com.komod.api.data.api.model.WeatherContextDto
 import com.komod.api.domain.model.WeatherCurrent
+import com.komod.api.platform.getDeviceTimeZoneId
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.plugins.ClientRequestException
@@ -44,6 +45,9 @@ class OutfitApiService(
                     occasion = occasion,
                     style = style,
                     weather = weather?.toWeatherContext(),
+                    // Null (same as `style` above) when the device timezone can't be
+                    // determined, so the backend falls back to UTC per its own default.
+                    timeZoneId = getDeviceTimeZoneId(),
                 ),
             )
         }

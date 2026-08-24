@@ -2,10 +2,13 @@ package com.komod.api.data.api
 
 import com.komod.api.core.error.PlanLimitCategory
 import com.komod.api.core.error.PlanLimitExceededException
+import com.komod.api.data.api.model.OutfitGenerateRequest
+import com.komod.api.platform.getDeviceTimeZoneId
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.MockRequestHandleScope
 import io.ktor.client.engine.mock.respond
+import io.ktor.client.engine.mock.toByteArray
 import io.ktor.client.plugins.ServerResponseException
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.defaultRequest
@@ -53,6 +56,29 @@ class OutfitApiServiceTest {
             apiService.generateOutfits(occasion = "casual")
         }
         assertEquals(PlanLimitCategory.DailyGenerationLimit, exception.category)
+    }
+
+    // The device timezone can vary by host, so this compares against the same
+    // getDeviceTimeZoneId() the production code calls rather than a fixed literal — the
+    // point under test is that whatever it returns reaches the request body unchanged.
+    @Test
+    fun `generateOutfits sends the device timezone in the request body`() = runBlocking {
+        var capturedRequest: HttpRequestData? = null
+        val apiService = buildApiService { request ->
+            capturedRequest = request
+            respond(
+                content = """{"data":{"outfits":[]}}""",
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            )
+        }
+
+        apiService.generateOutfits(occasion = "casual")
+
+        val sentBody = testJson.decodeFromString<OutfitGenerateRequest>(
+            capturedRequest!!.body.toByteArray().decodeToString(),
+        )
+        assertEquals(getDeviceTimeZoneId(), sentBody.timeZoneId)
     }
 
     // 5. A normal server error on this same endpoint must still behave as before.
@@ -103,5 +129,38 @@ class OutfitApiServiceTest {
             apiService.getOutfitOfTheDay(latitude = 40.0, longitude = -73.0)
         }
         Unit
+    }
+
+    // Outfit of the Day derives its timezone from the user's location server-side, so
+    // unlike generateOutfits() it must never send a client-supplied timezone.
+    @Test
+    fun `getOutfitOfTheDay does not send a timezone query parameter`() = runBlocking {
+        var capturedRequest: HttpRequestData? = null
+        val apiService = buildApiService { request ->
+            capturedRequest = request
+            respond(
+                content = """
+                    {"data":{
+                      "outfits":[],
+                      "weather":{
+                        "temperatureC":20.0,
+                        "feelsLikeC":19.0,
+                        "condition":"Clear",
+                        "windSpeedKmh":5.0,
+                        "isRaining":false,
+                        "isSnowing":false,
+                        "next6HourMinTemperatureC":18.0,
+                        "next6HourMaxTemperatureC":22.0
+                      }
+                    }}
+                """.trimIndent(),
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            )
+        }
+
+        apiService.getOutfitOfTheDay(latitude = 40.0, longitude = -73.0)
+
+        assertEquals(null, capturedRequest?.url?.parameters?.get("timeZoneId"))
     }
 }
