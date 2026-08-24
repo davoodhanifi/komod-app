@@ -95,7 +95,7 @@ class LoginViewModelTest {
     }
 
     @Test
-    fun `Apple sign-in shows a loading state while in flight, then clears on success`() = runTest {
+    fun `Apple sign-in shows a loading state while in flight then clears on success`() = runTest {
         val repository = FakeAuthRepository()
         repository.appleGate = CompletableDeferred()
         val viewModel = LoginViewModel(repository)
@@ -151,7 +151,7 @@ class LoginViewModelTest {
     }
 
     @Test
-    fun `Google sign-in still shows a loading state while in flight, then clears on success`() = runTest {
+    fun `Google sign-in still shows a loading state while in flight then clears on success`() = runTest {
         val repository = FakeAuthRepository()
         repository.googleGate = CompletableDeferred()
         val viewModel = LoginViewModel(repository)

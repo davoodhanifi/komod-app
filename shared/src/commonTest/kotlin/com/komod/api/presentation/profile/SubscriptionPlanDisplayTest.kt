@@ -17,7 +17,7 @@ class SubscriptionPlanDisplayTest {
     }
 
     @Test
-    fun `an unrecognized plan still gets a sensible, non-crashing display name`() {
+    fun `an unrecognized plan still gets a sensible non-crashing display name`() {
         assertEquals("Your Komod Plan", SubscriptionPlan.Unknown.displayName())
     }
 }

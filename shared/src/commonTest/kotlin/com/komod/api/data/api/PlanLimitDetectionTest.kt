@@ -38,7 +38,7 @@ class PlanLimitDetectionTest {
     }
 
     @Test
-    fun `an errorCode field is also recognized, since the exact backend field name is unconfirmed`() {
+    fun `an errorCode field is also recognized since the exact backend field name is unconfirmed`() {
         val body = """{"type":"about:blank","title":"Payment Required","status":402,"errorCode":"PlanLimitExceeded"}"""
 
         assertTrue(isPlanLimitExceeded(body))
@@ -54,7 +54,7 @@ class PlanLimitDetectionTest {
     }
 
     @Test
-    fun `the code match is case-sensitive, not a loose contains check`() {
+    fun `the code match is case-sensitive and not a loose contains check`() {
         // Guards against a naive "contains" implementation matching unrelated text that
         // happens to mention the phrase, e.g. inside a human-readable "detail" message.
         val body = """{"detail":"This mentions planlimitexceeded in passing.","code":"SomethingElse"}"""

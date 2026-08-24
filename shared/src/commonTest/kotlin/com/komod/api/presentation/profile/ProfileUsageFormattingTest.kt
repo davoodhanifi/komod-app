@@ -13,7 +13,7 @@ class ProfileUsageFormattingTest {
     }
 
     @Test
-    fun `a null limit renders as Unlimited, never a fabricated number`() {
+    fun `a null limit renders as Unlimited never a fabricated number`() {
         assertEquals("87 / Unlimited items", formatUsageText(current = 87, limit = null, unitSuffix = "items"))
         assertEquals("12 / Unlimited today", formatUsageText(current = 12, limit = null, unitSuffix = "today"))
     }

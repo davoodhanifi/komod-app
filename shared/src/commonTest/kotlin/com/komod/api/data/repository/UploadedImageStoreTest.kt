@@ -14,7 +14,7 @@ private fun uploadedImage(id: String, status: ImageStatus = ImageStatus.Pending)
 
 class UploadedImageStoreTest {
     @Test
-    fun `a newly added image is prepended, not appended`() {
+    fun `a newly added image is prepended rather than appended`() {
         val store = UploadedImageStore()
         store.add(uploadedImage("img-1"))
         store.add(uploadedImage("img-2"))

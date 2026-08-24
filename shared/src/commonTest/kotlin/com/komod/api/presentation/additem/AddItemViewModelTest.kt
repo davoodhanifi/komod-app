@@ -93,7 +93,7 @@ class AddItemViewModelTest {
     }
 
     @Test
-    fun `selecting a single photo opens the crop editor immediately, skipping the review grid`() {
+    fun `selecting a single photo opens the crop editor immediately skipping the review grid`() {
         val viewModel = AddItemViewModel(FakeAddItemRepository())
 
         viewModel.onImagesSelected(listOf(pickedImage("only")))
