@@ -6,6 +6,13 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- Camera is used for wardrobe item photos but isn't required to use the app (e.g. on
+         Chrome OS devices without one) — without this, lint infers the CAMERA permission
+         implies required camera hardware. -->
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="false" />
+
     <application
         android:name=".KomodApplication"
         android:allowBackup="true"

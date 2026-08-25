@@ -1,5 +1,6 @@
 package com.komod.api.core.error
 
+import com.komod.api.data.billing.RevenueCatIdentityNotReadyException
 import com.komod.api.data.repository.BillingUnavailableException
 import com.komod.api.data.repository.OutfitDeleteBadRequestException
 import com.komod.api.data.repository.OutfitDeleteNetworkException
@@ -63,6 +64,7 @@ object ErrorMapper {
         }
 
         is BillingUnavailableException -> "Subscriptions aren't available on this device yet."
+        is RevenueCatIdentityNotReadyException -> "We're still finishing setting up your account. Please try again in a moment."
 
         is UploadReviewUnauthorizedException -> UserFacingMessages.SessionExpired
         is UploadReviewForbiddenException -> "You don't have permission to do this."

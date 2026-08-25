@@ -62,6 +62,7 @@ private val LightLavender = Color(0xFFEDE9FF)
 private val DarkText = Color(0xFF111827)
 private val GrayText = Color(0xFF6B7280)
 private val BorderColor = Color(0xFFE5E7EB)
+private val Orange = Color(0xFFF59E0B)
 private val CardShape = RoundedCornerShape(20.dp)
 
 @Composable
@@ -135,7 +136,7 @@ fun PaywallScreen(
                         plans = plansState.plans,
                         billingPeriod = uiState.billingPeriod,
                         selectedPlan = uiState.selectedPlan,
-                        activeEntitlementPlan = uiState.activeEntitlementPlan,
+                        currentPlan = uiState.subscriptionState?.plan,
                         onSelectBillingPeriod = viewModel::selectBillingPeriod,
                         onSelectPlan = viewModel::selectPlan,
                     )
@@ -143,10 +144,18 @@ fun PaywallScreen(
             }
 
             if (uiState.plansState is PaywallPlansState.Success) {
+                uiState.syncFailedMessage?.let { message ->
+                    SyncFailedBanner(
+                        message = message,
+                        isRetrying = uiState.isSyncing,
+                        onRetry = viewModel::retrySync,
+                    )
+                }
+
                 PaywallBottomBar(
                     isPurchasing = uiState.isPurchasing,
                     isRestoring = uiState.isRestoring,
-                    isCurrentPlanSelected = uiState.selectedPlan != null && uiState.selectedPlan == uiState.activeEntitlementPlan,
+                    isCurrentPlanSelected = uiState.selectedPlan != null && uiState.selectedPlan == uiState.subscriptionState?.plan,
                     canPurchase = uiState.selectedPlan != null,
                     onContinueClick = viewModel::purchaseSelectedPlan,
                     onRestoreClick = viewModel::restorePurchases,
@@ -161,7 +170,7 @@ private fun PaywallPlansContent(
     plans: List<PaywallPlan>,
     billingPeriod: BillingPeriod,
     selectedPlan: SubscriptionPlan?,
-    activeEntitlementPlan: SubscriptionPlan?,
+    currentPlan: SubscriptionPlan?,
     onSelectBillingPeriod: (BillingPeriod) -> Unit,
     onSelectPlan: (SubscriptionPlan) -> Unit,
 ) {
@@ -189,7 +198,7 @@ private fun PaywallPlansContent(
                 plan = plan,
                 billingPeriod = billingPeriod,
                 isSelected = plan.plan == selectedPlan,
-                isCurrent = plan.plan == activeEntitlementPlan,
+                isCurrent = plan.plan == currentPlan,
                 onClick = { onSelectPlan(plan.plan) },
             )
             Spacer(modifier = Modifier.height(12.dp))
@@ -325,6 +334,40 @@ private fun PlanCard(
                     style = MaterialTheme.typography.bodySmall,
                     color = GrayText,
                 )
+            }
+        }
+    }
+}
+
+// Shown when a purchase/restore succeeded on RevenueCat but the backend sync that must follow
+// it failed — the purchase itself is intact, only the displayed plan hasn't caught up. Never
+// phrased as a purchase/restore failure.
+@Composable
+private fun SyncFailedBanner(
+    message: String,
+    isRetrying: Boolean,
+    onRetry: () -> Unit,
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp, vertical = 8.dp),
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = Orange.copy(alpha = 0.12f)),
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodyMedium,
+                color = DarkText,
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            TextButton(onClick = onRetry, enabled = !isRetrying) {
+                if (isRetrying) {
+                    CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp, color = Orange)
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
+                Text(text = "Retry", color = Orange, fontWeight = FontWeight.SemiBold)
             }
         }
     }

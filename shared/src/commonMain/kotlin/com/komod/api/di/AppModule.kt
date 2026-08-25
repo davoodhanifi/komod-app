@@ -2,6 +2,8 @@ package com.komod.api.di
 
 import com.komod.api.BuildKonfig
 import com.komod.api.data.billing.PurchasesService
+import com.komod.api.data.billing.RevenueCatIdentitySync
+import com.komod.api.data.billing.RevenueCatPurchasesService
 import com.komod.api.data.api.WardrobeApiService
 import com.komod.api.data.api.OutfitApiService
 import com.komod.api.data.api.SubscriptionApiService
@@ -21,6 +23,8 @@ import com.komod.api.data.repository.OutfitRepository
 import com.komod.api.data.repository.OutfitRepositoryImpl
 import com.komod.api.data.repository.SubscriptionRepository
 import com.komod.api.data.repository.SubscriptionRepositoryImpl
+import com.komod.api.data.repository.SubscriptionSyncRepository
+import com.komod.api.data.repository.SubscriptionSyncRepositoryImpl
 import com.komod.api.data.repository.WeatherRepository
 import com.komod.api.data.repository.WeatherRepositoryImpl
 import com.komod.api.data.repository.UploadedImageStore
@@ -81,8 +85,15 @@ fun appModule() = module {
     single { WeatherLocationService() }
     single { com.komod.api.platform.AppSettingsOpener() }
     single { StorageService(supabaseClient = get()) }
-    single { PurchasesService() }
-    single<BillingRepository> { BillingRepositoryImpl(purchasesService = get()) }
+    single<PurchasesService> { RevenueCatPurchasesService() }
+    // Also resolved explicitly and eagerly from iOS's initKoin() right after
+    // RevenueCatPurchasesService.configure() — see MainViewController.kt — so identity syncing
+    // starts at app launch rather than waiting for BillingRepository's first use (Paywall).
+    single { RevenueCatIdentitySync(authRepository = get(), purchasesService = get()) }
+    single<BillingRepository> { BillingRepositoryImpl(purchasesService = get(), revenueCatIdentitySync = get()) }
+    single<SubscriptionSyncRepository> {
+        SubscriptionSyncRepositoryImpl(subscriptionApiService = get(), revenueCatIdentitySync = get())
+    }
     single<AddItemRepository> { AddItemRepositoryImpl(get(), get(), get()) }
     single<WardrobeRepository> { WardrobeRepositoryImpl(wardrobeApiService = get(), supabaseClient = get(), wardrobeItemCache = get()) }
     single<WardrobeItemRepository> {
@@ -111,7 +122,7 @@ fun appModule() = module {
     viewModel { WardrobeViewModel(get(), get()) }
     viewModel { HomeViewModel(get(), get(), get()) }
     viewModel { ProfileViewModel(get()) }
-    viewModel { PaywallViewModel(get()) }
+    viewModel { PaywallViewModel(get(), get()) }
     viewModel { params -> WardrobeItemDetailViewModel(params.get(), get()) }
     viewModel { params -> WardrobeItemEditViewModel(params.get(), get()) }
     viewModel { params -> UploadReviewViewModel(params.get(), get(), get(), get()) }

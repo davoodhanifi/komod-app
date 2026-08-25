@@ -2,9 +2,8 @@ package com.komod.api.data.repository
 
 import com.komod.api.data.billing.PurchasesService
 import com.komod.api.data.billing.RevenueCatCatalog
+import com.komod.api.data.billing.RevenueCatIdentitySync
 import com.komod.api.domain.model.PaywallPlan
-import com.komod.api.domain.model.SubscriptionPlan
-import com.revenuecat.purchases.kmp.models.CustomerInfo
 import com.revenuecat.purchases.kmp.models.Package
 
 // Thrown instead of calling into an unconfigured Purchases SDK — currently that's any non-iOS
@@ -18,19 +17,26 @@ interface BillingRepository {
     // sourced from the current RevenueCat offering every time this is called.
     suspend fun getPaywallPlans(): List<PaywallPlan>
 
-    // Purchases [rcPackage] and returns the plan now active per RevenueCat's CustomerInfo — the
-    // source of truth for entitlement state, never assumed from the purchase call succeeding.
-    suspend fun purchase(rcPackage: Package): SubscriptionPlan?
+    // Purchases [rcPackage]. Waits for RevenueCat's identity to be confirmed ready for the
+    // current Supabase user first (see RevenueCatIdentitySync) — never proceeds against a
+    // possibly-still-anonymous or stale identity. Deliberately returns nothing about "what plan
+    // the user is on now" — RevenueCat is only the source of truth for the App Store
+    // transaction itself; the resulting Komod plan comes from the backend sync that must follow
+    // (SubscriptionSyncRepository), never inferred from this call succeeding.
+    suspend fun purchase(rcPackage: Package)
 
-    suspend fun restorePurchases(): SubscriptionPlan?
+    suspend fun restorePurchases()
 
-    // Null if nothing is active (or billing isn't available on this platform) — never throws
-    // for that case, since callers use this for best-effort background refreshes.
-    suspend fun getActivePlan(): SubscriptionPlan?
+    // Warms/refreshes RevenueCat's local CustomerInfo cache (e.g. before a backend sync, so
+    // the sync reflects the latest transaction state RevenueCat itself has observed). The
+    // result is intentionally discarded — nothing in this app derives the displayed plan from
+    // it directly; see SubscriptionSyncRepository.
+    suspend fun refreshCustomerInfo()
 }
 
 class BillingRepositoryImpl(
     private val purchasesService: PurchasesService,
+    private val revenueCatIdentitySync: RevenueCatIdentitySync,
 ) : BillingRepository {
 
     override val isBillingAvailable: Boolean
@@ -52,24 +58,20 @@ class BillingRepositoryImpl(
         }
     }
 
-    override suspend fun purchase(rcPackage: Package): SubscriptionPlan? {
+    override suspend fun purchase(rcPackage: Package) {
         if (!isBillingAvailable) throw BillingUnavailableException()
-        return purchasesService.purchase(rcPackage).customerInfo.activePlan()
+        revenueCatIdentitySync.awaitReadyForCurrentUser()
+        purchasesService.purchase(rcPackage)
     }
 
-    override suspend fun restorePurchases(): SubscriptionPlan? {
+    override suspend fun restorePurchases() {
         if (!isBillingAvailable) throw BillingUnavailableException()
-        return purchasesService.restorePurchases().activePlan()
+        revenueCatIdentitySync.awaitReadyForCurrentUser()
+        purchasesService.restorePurchases()
     }
 
-    override suspend fun getActivePlan(): SubscriptionPlan? {
-        if (!isBillingAvailable) return null
-        return purchasesService.getCustomerInfo().activePlan()
+    override suspend fun refreshCustomerInfo() {
+        if (!isBillingAvailable) return
+        purchasesService.getCustomerInfo()
     }
 }
-
-// The single place RevenueCat's CustomerInfo is turned into our SubscriptionPlan enum. This is
-// the source of truth for "what is the user entitled to right now" — always read from here,
-// never assumed locally just because a purchase call returned successfully.
-private fun CustomerInfo.activePlan(): SubscriptionPlan? =
-    RevenueCatCatalog.plans.entries.firstOrNull { (_, ids) -> entitlements[ids.entitlementId]?.isActive == true }?.key

@@ -132,4 +132,70 @@ class SubscriptionApiServiceTest {
         }
         Unit
     }
+
+    @Test
+    fun `syncSubscription decodes the full ResponseData envelope including a cancelled-but-not-yet-expired plan`() = runBlocking {
+        val apiService = buildApiService {
+            respond(
+                content = """
+                    {"data":{
+                      "plan":"Komod3Doors",
+                      "status":"Cancelled",
+                      "expiresAt":"2026-12-01T00:00:00Z",
+                      "willRenew":false,
+                      "store":"APP_STORE",
+                      "productId":"komod_3doors_monthly"
+                    }}
+                """.trimIndent(),
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            )
+        }
+
+        val dto = apiService.syncSubscription()
+
+        assertEquals("Komod3Doors", dto.plan)
+        assertEquals("Cancelled", dto.status)
+        assertEquals("2026-12-01T00:00:00Z", dto.expiresAt)
+        assertEquals(false, dto.willRenew)
+        assertEquals("APP_STORE", dto.store)
+        assertEquals("komod_3doors_monthly", dto.productId)
+    }
+
+    // POST /subscription/sync takes no request body — the backend derives the user from the
+    // auth token and reads RevenueCat itself.
+    @Test
+    fun `syncSubscription sends no request body`() = runBlocking {
+        var capturedRequest: HttpRequestData? = null
+        val apiService = buildApiService { request ->
+            capturedRequest = request
+            respond(
+                content = """
+                    {"data":{"plan":"KomodRack","status":"Active","willRenew":false}}
+                """.trimIndent(),
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            )
+        }
+
+        apiService.syncSubscription()
+
+        assertEquals(0L, capturedRequest?.body?.contentLength ?: 0L)
+    }
+
+    @Test
+    fun `syncSubscription on a server error throws rather than returning a default`() = runBlocking {
+        val apiService = buildApiService {
+            respond(
+                content = """{"type":"about:blank","title":"boom","status":500}""",
+                status = HttpStatusCode.InternalServerError,
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            )
+        }
+
+        assertFailsWith<ServerResponseException> {
+            apiService.syncSubscription()
+        }
+        Unit
+    }
 }
