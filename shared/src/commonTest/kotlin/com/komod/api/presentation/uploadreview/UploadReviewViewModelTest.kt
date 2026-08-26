@@ -2,6 +2,7 @@ package com.komod.api.presentation.uploadreview
 
 import com.komod.api.core.error.PlanLimitCategory
 import com.komod.api.core.error.PlanLimitExceededException
+import com.komod.api.core.navigation.PlanLimitNavigatorImpl
 import com.komod.api.data.api.model.CreateImageResponse
 import com.komod.api.data.api.model.ImageStatus
 import com.komod.api.data.api.model.WardrobeItemReviewRequestItem
@@ -149,14 +150,16 @@ class UploadReviewViewModelTest {
     // 1 & 6. Approving wardrobe items when the wardrobe is full: a PlanLimitExceeded from
     // submitReview must not be treated as a generic failure (no ReviewFailed snackbar), must
     // not silently drop/reject the user's selection, and must surface a dedicated effect the
-    // Screen renders as its plan-limit dialog.
+    // Screen renders as its plan-limit dialog — and (this feature) must request the shared
+    // Paywall navigation exactly once.
     @Test
-    fun `submitReview failing with PlanLimitExceeded emits a dedicated effect and preserves the selection`() =
+    fun `submitReview failing with PlanLimitExceeded emits a dedicated effect and preserves the selection and requests the Paywall`() =
         runTest(UnconfinedTestDispatcher()) {
         val fakeRepository = FakeUploadReviewRepository(readyDetail())
         fakeRepository.submitError = PlanLimitExceededException(PlanLimitCategory.WardrobeCapacity)
         val addItemRepository = FakeAddItemRepository()
-        val viewModel = UploadReviewViewModel("img-1", fakeRepository, FakeAuthRepository(), addItemRepository)
+        val planLimitNavigator = PlanLimitNavigatorImpl()
+        val viewModel = UploadReviewViewModel("img-1", fakeRepository, FakeAuthRepository(), addItemRepository, planLimitNavigator)
 
         val emittedEffects = mutableListOf<UploadReviewEffect>()
         val job = launch { viewModel.effects.collect { emittedEffects += it } }
@@ -171,6 +174,7 @@ class UploadReviewViewModelTest {
         assertEquals(selectionBeforeSubmit, state.selectedItemIds) // nothing auto-rejected
         assertEquals(listOf<UploadReviewEffect>(UploadReviewEffect.PlanLimitReached), emittedEffects)
         assertTrue(addItemRepository.removedImageIds.isEmpty()) // the upload was not treated as consumed
+        assertEquals(true, planLimitNavigator.pendingPaywallRequest.value)
         job.cancel()
     }
 
@@ -180,6 +184,64 @@ class UploadReviewViewModelTest {
     // target, so it throws rather than being swallowed. The same pre-existing limitation is
     // documented in WardrobeViewModelPollingTest/WardrobeViewModelBulkDeleteTest and
     // AddItemViewModelTest. The `when` branch added for PlanLimitExceededException above
-    // sits alongside the untouched `else` branch (see UploadReviewViewModel.submitItems),
-    // so that generic path is unchanged by this feature.
+    // sits alongside the untouched `else`/`UploadReviewUnauthorizedException` branches (see
+    // UploadReviewViewModel.submitItems), and neither of those calls planLimitNavigator —
+    // only the PlanLimitExceededException branch does, so a generic failure or a network/auth
+    // error never requests the Paywall. (PlanLimitNavigatorTest separately covers that the
+    // navigator itself never flips to "pending" except via an explicit requestPaywall() call.)
+
+    // 7. Two unrelated screens both hitting a plan limit at the same time (e.g. two upload
+    // reviews open back to back) must still only ever result in one pending Paywall request —
+    // this is the shared navigator's coalescing behavior (see PlanLimitNavigatorTest for the
+    // full contract), exercised here end-to-end with the real production ViewModel+navigator
+    // rather than a fake.
+    @Test
+    fun `two plan-limit failures from separate ViewModels sharing one navigator still coalesce into one pending request`() =
+        runTest(UnconfinedTestDispatcher()) {
+        val sharedNavigator = PlanLimitNavigatorImpl()
+        var pendingTrueCount = 0
+        val collectJob = launch {
+            sharedNavigator.pendingPaywallRequest.collect { if (it) pendingTrueCount++ }
+        }
+
+        val repository1 = FakeUploadReviewRepository(readyDetail())
+        repository1.submitError = PlanLimitExceededException(PlanLimitCategory.WardrobeCapacity)
+        val viewModel1 = UploadReviewViewModel("img-1", repository1, FakeAuthRepository(), FakeAddItemRepository(), sharedNavigator)
+        viewModel1.submitReview()
+
+        val repository2 = FakeUploadReviewRepository(readyDetail())
+        repository2.submitError = PlanLimitExceededException(PlanLimitCategory.WardrobeCapacity)
+        val viewModel2 = UploadReviewViewModel("img-2", repository2, FakeAuthRepository(), FakeAddItemRepository(), sharedNavigator)
+        viewModel2.submitReview()
+
+        assertEquals(true, sharedNavigator.pendingPaywallRequest.value)
+        assertEquals(1, pendingTrueCount) // only one actual transition to "pending", not two
+        collectJob.cancel()
+    }
+
+    // 8. Returning from the Paywall without upgrading (MainScaffold calling onPaywallShown()
+    // once it has navigated) must not, on its own, retry the original blocked action or change
+    // anything else about this ViewModel's state — the user stays blocked until they manually
+    // retry.
+    @Test
+    fun `returning from the Paywall without upgrading does not retry the blocked submission`() =
+        runTest(UnconfinedTestDispatcher()) {
+        val fakeRepository = FakeUploadReviewRepository(readyDetail())
+        fakeRepository.submitError = PlanLimitExceededException(PlanLimitCategory.WardrobeCapacity)
+        val planLimitNavigator = PlanLimitNavigatorImpl()
+        val viewModel = UploadReviewViewModel("img-1", fakeRepository, FakeAuthRepository(), FakeAddItemRepository(), planLimitNavigator)
+
+        viewModel.submitReview()
+        assertEquals(1, fakeRepository.submittedItems.size)
+        assertEquals(true, planLimitNavigator.pendingPaywallRequest.value)
+
+        // Simulates MainScaffold having navigated to the Paywall and the user coming back
+        // without purchasing anything.
+        planLimitNavigator.onPaywallShown()
+
+        assertEquals(false, planLimitNavigator.pendingPaywallRequest.value)
+        assertEquals(1, fakeRepository.submittedItems.size) // no automatic re-submission
+        val state = viewModel.uiState.value as UploadReviewUiState.Ready
+        assertEquals(false, state.isSubmitting) // still sitting blocked, ready for a manual retry
+    }
 }

@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.komod.api.core.error.ErrorContext
 import com.komod.api.core.error.ErrorMapper
 import com.komod.api.core.error.PlanLimitExceededException
+import com.komod.api.core.navigation.PlanLimitNavigator
 import com.komod.api.data.repository.OutfitRepository
 import com.komod.api.data.repository.WeatherRepository
 import com.komod.api.data.location.WeatherLocationResult
@@ -29,6 +30,7 @@ class OutfitViewModel(
     private val weatherPreferences: WeatherPreferences,
     private val weatherLocationService: WeatherLocationService,
     private val appSettingsOpener: AppSettingsOpener,
+    private val planLimitNavigator: PlanLimitNavigator,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(OutfitUiState())
     val uiState: StateFlow<OutfitUiState> = _uiState.asStateFlow()
@@ -77,10 +79,11 @@ class OutfitViewModel(
                 )
             }.onFailure { throwable ->
                 val message = ErrorMapper.toUserMessage(throwable, tag = "OutfitViewModel")
+                val planLimitError = detectPlanLimitError(throwable)
                 _uiState.value = _uiState.value.copy(
                     isGenerating = false,
                     errorMessage = message,
-                    isPlanLimitError = throwable is PlanLimitExceededException,
+                    isPlanLimitError = planLimitError,
                 )
                 // The inline error card only renders when the outfits list is empty (see
                 // OutfitScreen) — if there are already-generated outfits on screen from an
@@ -89,6 +92,13 @@ class OutfitViewModel(
                 // without disturbing the outfits still on screen.
                 if (_uiState.value.outfits.isNotEmpty()) {
                     _effects.emit(OutfitEffect.ShowSnackbar(message))
+                }
+                // Existing message shown above (inline error card or snackbar); Paywall
+                // navigation itself is fired centrally through the shared navigator — see
+                // MainScaffold. Only the daily generation limit, never a generic/network
+                // failure, triggers this.
+                if (planLimitError) {
+                    planLimitNavigator.requestPaywall()
                 }
             }
         }
@@ -269,3 +279,10 @@ class OutfitViewModel(
 internal fun shouldRecheckWeatherPermission(currentWeatherUiState: WeatherUiState): Boolean {
     return currentWeatherUiState == WeatherUiState.PermissionRequired
 }
+
+// Extracted so "does this failure warrant a Paywall redirect" is unit-testable on its own,
+// independent of OutfitViewModel's platform-bound constructor dependencies (see
+// shouldRecheckWeatherPermission above for the same reasoning). Only the backend's dedicated
+// PlanLimitExceeded error counts — a generic failure or a network/timeout error must never
+// send the user to the Paywall.
+internal fun detectPlanLimitError(throwable: Throwable): Boolean = throwable is PlanLimitExceededException

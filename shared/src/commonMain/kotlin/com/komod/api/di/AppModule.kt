@@ -1,6 +1,8 @@
 package com.komod.api.di
 
 import com.komod.api.BuildKonfig
+import com.komod.api.core.navigation.PlanLimitNavigator
+import com.komod.api.core.navigation.PlanLimitNavigatorImpl
 import com.komod.api.data.billing.PurchasesService
 import com.komod.api.data.billing.RevenueCatIdentitySync
 import com.komod.api.data.billing.RevenueCatPurchasesService
@@ -84,6 +86,7 @@ fun appModule() = module {
     single { WeatherPreferences() }
     single { WeatherLocationService() }
     single { com.komod.api.platform.AppSettingsOpener() }
+    single<PlanLimitNavigator> { PlanLimitNavigatorImpl() }
     single { StorageService(supabaseClient = get()) }
     single<PurchasesService> { RevenueCatPurchasesService() }
     // Also resolved explicitly and eagerly from iOS's initKoin() right after
@@ -117,14 +120,14 @@ fun appModule() = module {
     single<UploadReviewRepository> { UploadReviewRepositoryImpl(wardrobeApiService = get(), storageService = get()) }
     single<SubscriptionRepository> { SubscriptionRepositoryImpl(subscriptionApiService = get()) }
     viewModel { LoginViewModel(get()) }
-    viewModel { AddItemViewModel(get()) }
-    viewModel { OutfitViewModel(get(), get(), get(), get(), get()) }
+    viewModel { AddItemViewModel(get(), get()) }
+    viewModel { OutfitViewModel(get(), get(), get(), get(), get(), get()) }
     viewModel { WardrobeViewModel(get(), get()) }
     viewModel { HomeViewModel(get(), get(), get()) }
     viewModel { ProfileViewModel(get()) }
     viewModel { PaywallViewModel(get(), get()) }
     viewModel { params -> WardrobeItemDetailViewModel(params.get(), get()) }
     viewModel { params -> WardrobeItemEditViewModel(params.get(), get()) }
-    viewModel { params -> UploadReviewViewModel(params.get(), get(), get(), get()) }
+    viewModel { params -> UploadReviewViewModel(params.get(), get(), get(), get(), get()) }
     viewModel { params -> CropEditorViewModel(params.get(), params.get(), get(), get()) }
 }

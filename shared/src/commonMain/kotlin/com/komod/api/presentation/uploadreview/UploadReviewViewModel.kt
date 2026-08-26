@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.komod.api.core.error.ErrorMapper
 import com.komod.api.core.error.PlanLimitExceededException
+import com.komod.api.core.navigation.PlanLimitNavigator
 import com.komod.api.data.api.model.WardrobeItemReviewAction
 import com.komod.api.data.api.model.WardrobeItemReviewRequestItem
 import com.komod.api.data.repository.AddItemRepository
@@ -24,6 +25,7 @@ class UploadReviewViewModel(
     private val repository: UploadReviewRepository,
     private val authRepository: AuthRepository,
     private val addItemRepository: AddItemRepository,
+    private val planLimitNavigator: PlanLimitNavigator,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow<UploadReviewUiState>(UploadReviewUiState.Loading)
     val uiState: StateFlow<UploadReviewUiState> = _uiState.asStateFlow()
@@ -141,6 +143,10 @@ class UploadReviewViewModel(
                             // once they've freed up capacity.
                             _uiState.value = current.copy(isSubmitting = false)
                             _effects.emit(UploadReviewEffect.PlanLimitReached)
+                            // Existing dialog shown above via the effect; Paywall navigation
+                            // itself is fired centrally through the shared navigator — see
+                            // MainScaffold.
+                            planLimitNavigator.requestPaywall()
                         }
                         else -> {
                             _uiState.value = current.copy(isSubmitting = false)

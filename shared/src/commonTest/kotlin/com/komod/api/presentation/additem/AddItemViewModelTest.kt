@@ -1,5 +1,6 @@
 package com.komod.api.presentation.additem
 
+import com.komod.api.core.navigation.PlanLimitNavigator
 import com.komod.api.data.api.model.CreateImageResponse
 import com.komod.api.data.repository.AddItemRepository
 import com.komod.api.domain.model.BoundingBox
@@ -69,6 +70,22 @@ private class FakeAddItemRepository : AddItemRepository {
     override suspend fun refreshUploadedImages() = Unit
 }
 
+private class FakePlanLimitNavigator : PlanLimitNavigator {
+    private val _pendingPaywallRequest = MutableStateFlow(false)
+    override val pendingPaywallRequest: StateFlow<Boolean> = _pendingPaywallRequest
+    var requestPaywallCallCount = 0
+        private set
+
+    override fun requestPaywall() {
+        requestPaywallCallCount++
+        _pendingPaywallRequest.value = true
+    }
+
+    override fun onPaywallShown() {
+        _pendingPaywallRequest.value = false
+    }
+}
+
 // A real, minimal 1x1 JPEG — applyCrop/confirmCropAndContinue now rasterize the crop eagerly
 // (so the review grid can preview it), which means any test that confirms a crop exercises the
 // real platform decoder. Arbitrary text bytes would fail to decode there.
@@ -94,7 +111,7 @@ class AddItemViewModelTest {
 
     @Test
     fun `selecting a single photo opens the crop editor immediately skipping the review grid`() {
-        val viewModel = AddItemViewModel(FakeAddItemRepository())
+        val viewModel = AddItemViewModel(FakeAddItemRepository(), FakePlanLimitNavigator())
 
         viewModel.onImagesSelected(listOf(pickedImage("only")))
 
@@ -115,7 +132,7 @@ class AddItemViewModelTest {
                 minimalJpegBytes
             }
         }
-        val viewModel = AddItemViewModel(FakeAddItemRepository())
+        val viewModel = AddItemViewModel(FakeAddItemRepository(), FakePlanLimitNavigator())
 
         viewModel.onImagesSelected(images)
 
@@ -126,7 +143,7 @@ class AddItemViewModelTest {
 
     @Test
     fun `selecting multiple photos shows the review grid with no crop editor open`() {
-        val viewModel = AddItemViewModel(FakeAddItemRepository())
+        val viewModel = AddItemViewModel(FakeAddItemRepository(), FakePlanLimitNavigator())
 
         viewModel.onImagesSelected(listOf(pickedImage("a"), pickedImage("b"), pickedImage("c")))
 
@@ -138,7 +155,7 @@ class AddItemViewModelTest {
 
     @Test
     fun `tapping crop then closing without confirming leaves that photo uncropped`() {
-        val viewModel = AddItemViewModel(FakeAddItemRepository())
+        val viewModel = AddItemViewModel(FakeAddItemRepository(), FakePlanLimitNavigator())
         viewModel.onImagesSelected(listOf(pickedImage("a"), pickedImage("b")))
         val photoId = (viewModel.uiState.value as AddItemUiState.Reviewing).photos.first().id
 
@@ -153,7 +170,7 @@ class AddItemViewModelTest {
 
     @Test
     fun `confirming a crop marks only that photo as cropped and returns to the grid`() = runTest {
-        val viewModel = AddItemViewModel(FakeAddItemRepository())
+        val viewModel = AddItemViewModel(FakeAddItemRepository(), FakePlanLimitNavigator())
         viewModel.onImagesSelected(listOf(pickedImage("a"), pickedImage("b")))
         val photos = (viewModel.uiState.value as AddItemUiState.Reviewing).photos
         val (croppedId, untouchedId) = photos[0].id to photos[1].id
@@ -178,7 +195,7 @@ class AddItemViewModelTest {
 
     @Test
     fun `removing a photo drops it from the batch but keeps the review grid open`() {
-        val viewModel = AddItemViewModel(FakeAddItemRepository())
+        val viewModel = AddItemViewModel(FakeAddItemRepository(), FakePlanLimitNavigator())
         viewModel.onImagesSelected(listOf(pickedImage("a"), pickedImage("b"), pickedImage("c")))
         val photos = (viewModel.uiState.value as AddItemUiState.Reviewing).photos
         val (removedId, keptIds) = photos[0].id to photos.drop(1).map { it.id }
@@ -191,7 +208,7 @@ class AddItemViewModelTest {
 
     @Test
     fun `removing the last remaining photo closes the review screen entirely`() {
-        val viewModel = AddItemViewModel(FakeAddItemRepository())
+        val viewModel = AddItemViewModel(FakeAddItemRepository(), FakePlanLimitNavigator())
         viewModel.onImagesSelected(listOf(pickedImage("a"), pickedImage("b")))
         val photos = (viewModel.uiState.value as AddItemUiState.Reviewing).photos
 
@@ -204,7 +221,7 @@ class AddItemViewModelTest {
 
     @Test
     fun `removing the photo whose crop editor is open also closes the crop editor`() {
-        val viewModel = AddItemViewModel(FakeAddItemRepository())
+        val viewModel = AddItemViewModel(FakeAddItemRepository(), FakePlanLimitNavigator())
         viewModel.onImagesSelected(listOf(pickedImage("a"), pickedImage("b")))
         val photos = (viewModel.uiState.value as AddItemUiState.Reviewing).photos
         viewModel.openCrop(photos[0].id)
@@ -218,7 +235,7 @@ class AddItemViewModelTest {
 
     @Test
     fun `confirming a crop that matches the full image is treated as no crop`() {
-        val viewModel = AddItemViewModel(FakeAddItemRepository())
+        val viewModel = AddItemViewModel(FakeAddItemRepository(), FakePlanLimitNavigator())
         viewModel.onImagesSelected(listOf(pickedImage("only")))
         val photoId = (viewModel.uiState.value as AddItemUiState.Reviewing).photos.first().id
 
@@ -231,7 +248,7 @@ class AddItemViewModelTest {
     @Test
     fun `continuing without cropping uploads the original bytes untouched`() = runTest {
         val repository = FakeAddItemRepository()
-        val viewModel = AddItemViewModel(repository)
+        val viewModel = AddItemViewModel(repository, FakePlanLimitNavigator())
         val original = pickedImage("original-bytes")
         viewModel.onImagesSelected(listOf(original))
 
@@ -246,7 +263,7 @@ class AddItemViewModelTest {
     @Test
     fun `each photo is uploaded exactly once even when several are selected`() = runTest {
         val repository = FakeAddItemRepository()
-        val viewModel = AddItemViewModel(repository)
+        val viewModel = AddItemViewModel(repository, FakePlanLimitNavigator())
         viewModel.onImagesSelected(listOf(pickedImage("a"), pickedImage("b"), pickedImage("c")))
 
         viewModel.continueUploading()
@@ -266,7 +283,7 @@ class AddItemViewModelTest {
     @Test
     fun `selecting more than five photos emits a selection limit effect and does not enter review`() =
         runTest(UnconfinedTestDispatcher()) {
-            val viewModel = AddItemViewModel(FakeAddItemRepository())
+            val viewModel = AddItemViewModel(FakeAddItemRepository(), FakePlanLimitNavigator())
             val images = (1..6).map { pickedImage("photo-$it") }
 
             var emitted = false

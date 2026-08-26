@@ -51,6 +51,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.komod.api.core.navigation.PlanLimitNavigator
 import com.komod.api.data.repository.AuthRepository
 import com.komod.api.domain.model.toOutfit
 import com.komod.api.presentation.additem.AddItemScreen
@@ -135,6 +136,7 @@ private fun getMainTabs() = listOf(
 @Composable
 fun MainScaffold(
     authRepository: AuthRepository = koinInject(),
+    planLimitNavigator: PlanLimitNavigator = koinInject(),
 ) {
     val uriHandler = LocalUriHandler.current
     val navController = rememberNavController()
@@ -221,6 +223,18 @@ fun MainScaffold(
     }
 
     val currentUser by authRepository.currentUser.collectAsState()
+
+    // Single place that actually navigates to the Paywall on behalf of every plan-gated
+    // ViewModel (AddItem, UploadReview, outfit generation, ...) — see PlanLimitNavigator.
+    // launchSingleTop guards against a duplicate Paywall entry if this somehow fires while
+    // already there; onPaywallShown() re-arms the navigator for the next limit hit.
+    val paywallRequested by planLimitNavigator.pendingPaywallRequest.collectAsState()
+    LaunchedEffect(paywallRequested) {
+        if (paywallRequested) {
+            navController.navigate(MainRoute.Paywall.route) { launchSingleTop = true }
+            planLimitNavigator.onPaywallShown()
+        }
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(

@@ -6,6 +6,7 @@ import com.komod.api.core.error.ErrorContext
 import com.komod.api.core.error.ErrorMapper
 import com.komod.api.core.error.PlanLimitExceededException
 import com.komod.api.core.error.PlanLimitMessages
+import com.komod.api.core.navigation.PlanLimitNavigator
 import com.komod.api.data.repository.AddItemRepository
 import com.komod.api.domain.model.BoundingBox
 import com.komod.api.platform.PickedImage
@@ -22,6 +23,7 @@ private const val MaxPhotosPerUpload = 5
 
 class AddItemViewModel(
     private val addItemRepository: AddItemRepository,
+    private val planLimitNavigator: PlanLimitNavigator,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow<AddItemUiState>(AddItemUiState.Initial)
     val uiState: StateFlow<AddItemUiState> = _uiState.asStateFlow()
@@ -195,6 +197,10 @@ class AddItemViewModel(
                     // via a snackbar there.
                     _uiState.value = AddItemUiState.Initial
                     _effects.emit(AddItemEffect.PlanLimitReached(limitMessage))
+                    // Existing message shown above via the effect; the Paywall navigation
+                    // itself is fired centrally through the shared navigator so it can be
+                    // coalesced with any other plan-limit hit in flight — see MainScaffold.
+                    planLimitNavigator.requestPaywall()
                 }
                 else -> {
                     _uiState.value = AddItemUiState.Error(
