@@ -2,6 +2,7 @@ package com.komod.api.presentation.paywall
 
 import com.komod.api.data.repository.BillingRepository
 import com.komod.api.data.repository.SubscriptionSyncRepository
+import com.komod.api.domain.model.BillingPeriod
 import com.komod.api.domain.model.KomodSubscriptionState
 import com.komod.api.domain.model.PaywallPlan
 import com.komod.api.domain.model.SubscriptionPlan
@@ -264,6 +265,30 @@ class PaywallViewModelTest {
 
         assertEquals(syncCallsBeforeAction, syncRepository.syncCallCount)
         assertEquals(false, viewModel.uiState.value.isPurchasing)
+    }
+
+    // Yearly is the default so users open the Paywall already on the plan we want to nudge
+    // them toward.
+    @Test
+    fun `Yearly is the default billing period on open`() = runTest(testDispatcher) {
+        val viewModel = PaywallViewModel(FakeBillingRepository(), FakeSubscriptionSyncRepository())
+        advanceUntilIdle()
+
+        assertEquals(BillingPeriod.Yearly, viewModel.uiState.value.billingPeriod)
+    }
+
+    // Users can still switch to Monthly (and back) normally — the new default doesn't lock
+    // the toggle.
+    @Test
+    fun `selecting Monthly switches away from the Yearly default and back again`() = runTest(testDispatcher) {
+        val viewModel = PaywallViewModel(FakeBillingRepository(), FakeSubscriptionSyncRepository())
+        advanceUntilIdle()
+
+        viewModel.selectBillingPeriod(BillingPeriod.Monthly)
+        assertEquals(BillingPeriod.Monthly, viewModel.uiState.value.billingPeriod)
+
+        viewModel.selectBillingPeriod(BillingPeriod.Yearly)
+        assertEquals(BillingPeriod.Yearly, viewModel.uiState.value.billingPeriod)
     }
 
     // 8/9. Backend sync failure after a successful purchase/restore is intentionally not

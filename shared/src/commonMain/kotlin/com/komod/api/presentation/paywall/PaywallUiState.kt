@@ -7,7 +7,9 @@ import com.komod.api.domain.model.SubscriptionPlan
 
 data class PaywallUiState(
     val plansState: PaywallPlansState = PaywallPlansState.Loading,
-    val billingPeriod: BillingPeriod = BillingPeriod.Monthly,
+    // Yearly is the default: it's the plan we want to nudge users toward. Monthly remains a
+    // normal, unpenalized choice — this only changes what's pre-selected on open.
+    val billingPeriod: BillingPeriod = BillingPeriod.Yearly,
     val selectedPlan: SubscriptionPlan? = null,
     // The backend's synchronized Komod subscription state (POST /subscription/sync) — the
     // sole source of truth for "what plan is the user on right now", including a cancelled

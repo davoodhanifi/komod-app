@@ -189,7 +189,17 @@ private fun PaywallPlansContent(
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        BillingPeriodToggle(selected = billingPeriod, onSelect = onSelectBillingPeriod)
+        // Discount badge is tied to whichever plan is currently selected — different plans can
+        // have different yearly savings, so this is recomputed on every selection change rather
+        // than cached once.
+        val selectedPaywallPlan = plans.find { it.plan == selectedPlan }
+        val selectedYearlyDiscountPercent = selectedPaywallPlan?.let(::yearlyDiscountPercent)
+
+        BillingPeriodToggle(
+            selected = billingPeriod,
+            yearlyDiscountPercent = selectedYearlyDiscountPercent,
+            onSelect = onSelectBillingPeriod,
+        )
 
         Spacer(modifier = Modifier.height(20.dp))
 
@@ -199,6 +209,7 @@ private fun PaywallPlansContent(
                 billingPeriod = billingPeriod,
                 isSelected = plan.plan == selectedPlan,
                 isCurrent = plan.plan == currentPlan,
+                isRecommended = isRecommendedPlan(plan.plan),
                 onClick = { onSelectPlan(plan.plan) },
             )
             Spacer(modifier = Modifier.height(12.dp))
@@ -211,6 +222,7 @@ private fun PaywallPlansContent(
 @Composable
 private fun BillingPeriodToggle(
     selected: BillingPeriod,
+    yearlyDiscountPercent: Int?,
     onSelect: (BillingPeriod) -> Unit,
 ) {
     Row(
@@ -231,6 +243,9 @@ private fun BillingPeriodToggle(
             selected = selected == BillingPeriod.Yearly,
             onClick = { onSelect(BillingPeriod.Yearly) },
             modifier = Modifier.weight(1f),
+            // Never hard-coded — null (and therefore no badge at all) whenever the live
+            // RevenueCat prices needed to compute it aren't available for the selected plan.
+            badgeText = yearlyDiscountPercent?.let { "SAVE $it%" },
         )
     }
 }
@@ -241,14 +256,16 @@ private fun BillingPeriodOption(
     selected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    badgeText: String? = null,
 ) {
-    Box(
+    Row(
         modifier = modifier
             .clip(RoundedCornerShape(12.dp))
             .background(if (selected) Color.White else Color.Transparent)
             .clickable(onClick = onClick)
             .padding(vertical = 10.dp),
-        contentAlignment = Alignment.Center,
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = label,
@@ -256,6 +273,21 @@ private fun BillingPeriodOption(
             fontWeight = FontWeight.SemiBold,
             color = if (selected) Purple else GrayText,
         )
+        if (badgeText != null) {
+            Spacer(modifier = Modifier.width(6.dp))
+            Surface(
+                shape = RoundedCornerShape(100.dp),
+                color = if (selected) Purple else Purple.copy(alpha = 0.15f),
+            ) {
+                Text(
+                    text = badgeText,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = if (selected) Color.White else Purple,
+                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                )
+            }
+        }
     }
 }
 
@@ -265,6 +297,7 @@ private fun PlanCard(
     billingPeriod: BillingPeriod,
     isSelected: Boolean,
     isCurrent: Boolean,
+    isRecommended: Boolean,
     onClick: () -> Unit,
 ) {
     val rcPackage = if (billingPeriod == BillingPeriod.Monthly) plan.monthlyPackage else plan.yearlyPackage
@@ -272,68 +305,94 @@ private fun PlanCard(
     val priceFormatted = rcPackage.storeProduct.price.formatted
     val periodSuffix = if (billingPeriod == BillingPeriod.Monthly) "/month" else "/year"
 
+    // Selection is always the strongest signal on the card — a recommended-but-unselected plan
+    // gets a subtle accent border only, never the selected fill, so "Recommended" is never
+    // mistaken for "currently selected".
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
         shape = CardShape,
-        colors = CardDefaults.cardColors(containerColor = if (isSelected) LightLavender else Color.White),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isSelected) LightLavender else Color.White,
+        ),
         border = BorderStroke(
-            width = if (isSelected) 2.dp else 1.dp,
-            color = if (isSelected) Purple else BorderColor,
+            width = when {
+                isSelected -> 2.dp
+                isRecommended -> 1.5.dp
+                else -> 1.dp
+            },
+            color = when {
+                isSelected -> Purple
+                isRecommended -> Purple.copy(alpha = 0.5f)
+                else -> BorderColor
+            },
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = if (isSelected) 0.dp else 1.dp),
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp, vertical = 18.dp),
-            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
+            if (isRecommended) {
+                Surface(shape = RoundedCornerShape(100.dp), color = LightLavender) {
                     Text(
-                        text = plan.plan.displayName(),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = DarkText,
+                        text = "Recommended",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = Purple,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
                     )
-                    if (isCurrent) {
-                        Surface(shape = RoundedCornerShape(100.dp), color = Purple) {
-                            Text(
-                                text = "Current",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = Color.White,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-                            )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Text(
+                            text = plan.plan.displayName(),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = DarkText,
+                        )
+                        if (isCurrent) {
+                            Surface(shape = RoundedCornerShape(100.dp), color = Purple) {
+                                Text(
+                                    text = "Current",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color.White,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                )
+                            }
                         }
                     }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = plan.plan.wardrobeLimitDescription(),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = GrayText,
+                    )
                 }
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = plan.plan.wardrobeLimitDescription(),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = GrayText,
-                )
-            }
 
-            Spacer(modifier = Modifier.width(12.dp))
+                Spacer(modifier = Modifier.width(12.dp))
 
-            Column(horizontalAlignment = Alignment.End) {
-                Text(
-                    text = priceFormatted,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = if (isSelected) Purple else DarkText,
-                )
-                Text(
-                    text = periodSuffix,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = GrayText,
-                )
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        text = priceFormatted,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = if (isSelected) Purple else DarkText,
+                    )
+                    Text(
+                        text = periodSuffix,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = GrayText,
+                    )
+                }
             }
         }
     }
