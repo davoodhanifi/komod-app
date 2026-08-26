@@ -14,7 +14,11 @@ interface BillingRepository {
     val isBillingAvailable: Boolean
 
     // The four purchasable tiers with live, localized RevenueCat pricing. Never hard-coded —
-    // sourced from the current RevenueCat offering every time this is called.
+    // sourced from the current RevenueCat offering every time this is called. Waits for
+    // RevenueCat's identity to be confirmed ready first, same as purchase()/restorePurchases()
+    // below — fetching offerings while a logIn()/logOut() call is still in flight (e.g. right
+    // after a Google sign-in, which backgrounds the app for the OAuth redirect, unlike Apple's
+    // in-app native flow) is a real source of a transient StoreKit product-fetch failure.
     suspend fun getPaywallPlans(): List<PaywallPlan>
 
     // Purchases [rcPackage]. Waits for RevenueCat's identity to be confirmed ready for the
@@ -44,6 +48,7 @@ class BillingRepositoryImpl(
 
     override suspend fun getPaywallPlans(): List<PaywallPlan> {
         if (!isBillingAvailable) throw BillingUnavailableException()
+        revenueCatIdentitySync.awaitReadyForCurrentUser()
         val availablePackages = purchasesService.getOfferings().current?.availablePackages.orEmpty()
         return RevenueCatCatalog.plans.mapNotNull { (plan, ids) ->
             val monthly = availablePackages.find { it.identifier == ids.monthlyPackageId }

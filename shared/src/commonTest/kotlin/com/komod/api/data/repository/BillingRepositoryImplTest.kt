@@ -94,6 +94,8 @@ private class FakePurchasesService : PurchasesService {
         private set
     var restoreCallCount = 0
         private set
+    var getOfferingsCallCount = 0
+        private set
 
     override suspend fun logIn(supabaseUserId: String): SuccessfulLogin {
         callOrder.add("logIn:$supabaseUserId")
@@ -121,7 +123,11 @@ private class FakePurchasesService : PurchasesService {
         return fakeCustomerInfo()
     }
 
-    override suspend fun getOfferings(): Offerings = throw NotImplementedError()
+    override suspend fun getOfferings(): Offerings {
+        getOfferingsCallCount++
+        callOrder.add("getOfferings")
+        return Offerings(all = emptyMap(), current = null)
+    }
     override suspend fun getCustomerInfo(): CustomerInfo = fakeCustomerInfo()
 }
 
@@ -140,6 +146,40 @@ private fun TestScope.newIdentitySync(
 )
 
 class BillingRepositoryImplTest {
+
+    // 1. getPaywallPlans() must not fetch offerings until identity is confirmed Ready for the
+    // current Supabase user — same reasoning as purchase()/restorePurchases() below. This closes
+    // the race where opening the Paywall right after sign-in (e.g. following Google's
+    // browser-based OAuth hop, which backgrounds the app, unlike Apple's in-app native flow)
+    // could fetch offerings while RevenueCat's own logIn() call is still in flight.
+    @Test
+    fun `getPaywallPlans does not fetch offerings until identity is Ready`() = runTest {
+        val authRepository = FakeAuthRepository()
+        val purchasesService = FakePurchasesService()
+        val loginGate = CompletableDeferred<Unit>()
+        purchasesService.logInGate = loginGate
+        val identitySync = newIdentitySync(authRepository, purchasesService)
+        val billingRepository = BillingRepositoryImpl(purchasesService, identitySync)
+        authRepository.setUser(testUser(id = "user-1"))
+
+        var plansLoaded = false
+        val job = launch {
+            billingRepository.getPaywallPlans()
+            plansLoaded = true
+        }
+        runCurrent()
+
+        assertEquals(0, purchasesService.getOfferingsCallCount)
+        assertFalse(plansLoaded)
+
+        loginGate.complete(Unit)
+        runCurrent()
+
+        assertEquals(1, purchasesService.getOfferingsCallCount)
+        assertTrue(plansLoaded)
+        assertEquals(listOf("logOut", "logIn:user-1", "getOfferings"), purchasesService.callOrder)
+        job.cancel()
+    }
 
     // 2. Purchase must not call RevenueCat's purchase API until identity is confirmed Ready
     // for the current Supabase user.
