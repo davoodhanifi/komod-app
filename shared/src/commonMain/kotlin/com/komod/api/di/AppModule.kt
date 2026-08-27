@@ -121,7 +121,7 @@ fun appModule() = module {
     single<SubscriptionRepository> { SubscriptionRepositoryImpl(subscriptionApiService = get()) }
     viewModel { LoginViewModel(get()) }
     viewModel { AddItemViewModel(get(), get()) }
-    viewModel { OutfitViewModel(get(), get(), get(), get(), get(), get()) }
+    viewModel { OutfitViewModel(get(), get(), get(), get(), get(), get(), get()) }
     viewModel { WardrobeViewModel(get(), get()) }
     viewModel { HomeViewModel(get(), get(), get()) }
     viewModel { ProfileViewModel(get()) }

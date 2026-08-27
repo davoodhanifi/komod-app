@@ -3,6 +3,7 @@ package com.komod.api.presentation.outfits
 import com.komod.api.domain.model.Outfit
 import com.komod.api.domain.model.OutfitOccasion
 import com.komod.api.domain.model.OutfitStyle
+import com.komod.api.domain.model.WardrobeItem
 
 data class OutfitUiState(
     val selectedOccasion: OutfitOccasion = OutfitOccasion.Outdoor,
@@ -19,4 +20,20 @@ data class OutfitUiState(
     val unsavingOutfitIds: Set<String> = emptySet(),
     // outfit.id -> server-assigned saved outfit id, used to target DELETE /v1/outfits/{id}
     val savedOutfitIds: Map<String, String> = emptyMap(),
+    // User-picked starting items for the "Pick what you want to wear" step — optional
+    // constraints sent to the backend as bare ids, never persisted beyond this session.
+    val selectedTopItem: WardrobeItem? = null,
+    val selectedBottomItem: WardrobeItem? = null,
+    val selectedShoesItem: WardrobeItem? = null,
+    // Backing list for the item-picker sheet, lazily loaded on first use (see
+    // OutfitViewModel.ensureWardrobeItemsLoaded()) rather than on every Outfit screen visit.
+    val wardrobeItems: List<WardrobeItem> = emptyList(),
+    val isLoadingWardrobeItems: Boolean = false,
+    val wardrobeItemsError: String? = null,
 )
+
+// Extracted so "does clearing a slot actually drop its id" is unit-testable on its own,
+// without constructing OutfitViewModel (see OutfitViewModelPlanLimitTest for why that's
+// not possible in a JVM test target).
+internal fun OutfitUiState.selectedItemIds(): Triple<String?, String?, String?> =
+    Triple(selectedTopItem?.id, selectedBottomItem?.id, selectedShoesItem?.id)

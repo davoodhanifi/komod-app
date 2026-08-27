@@ -10,6 +10,11 @@ interface OutfitRepository {
         occasion: String,
         style: String? = null,
         weather: WeatherCurrent? = null,
+        // Wardrobe item ids the user picked as starting points, or null for "generate
+        // from scratch" — passed through to the backend untouched, one per optional slot.
+        selectedTopId: String? = null,
+        selectedBottomId: String? = null,
+        selectedShoesId: String? = null,
     ): List<Outfit>
 
     // Backend-driven weather-aware Outfit of the Day: the backend regenerates this on its

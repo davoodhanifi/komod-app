@@ -8,4 +8,5 @@ data class OutfitGenerateRequest(
     val style: String? = null,
     val weather: WeatherContextDto? = null,
     val timeZoneId: String? = null,
+    val selectedItems: SelectedOutfitItemsDto? = null,
 )

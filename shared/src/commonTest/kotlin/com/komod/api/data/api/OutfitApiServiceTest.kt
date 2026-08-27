@@ -3,6 +3,7 @@ package com.komod.api.data.api
 import com.komod.api.core.error.PlanLimitCategory
 import com.komod.api.core.error.PlanLimitExceededException
 import com.komod.api.data.api.model.OutfitGenerateRequest
+import com.komod.api.data.api.model.SelectedOutfitItemsDto
 import com.komod.api.platform.getDeviceTimeZoneId
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
@@ -23,6 +24,7 @@ import kotlinx.serialization.json.Json
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
 
 private val testJson = Json { ignoreUnknownKeys = true; isLenient = true; encodeDefaults = true }
 
@@ -79,6 +81,130 @@ class OutfitApiServiceTest {
             capturedRequest!!.body.toByteArray().decodeToString(),
         )
         assertEquals(getDeviceTimeZoneId(), sentBody.timeZoneId)
+    }
+
+    private suspend fun captureSelectedItems(
+        selectedTopId: String? = null,
+        selectedBottomId: String? = null,
+        selectedShoesId: String? = null,
+    ): SelectedOutfitItemsDto? {
+        var capturedRequest: HttpRequestData? = null
+        val apiService = buildApiService { request ->
+            capturedRequest = request
+            respond(
+                content = """{"data":{"outfits":[]}}""",
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            )
+        }
+
+        apiService.generateOutfits(
+            occasion = "casual",
+            selectedTopId = selectedTopId,
+            selectedBottomId = selectedBottomId,
+            selectedShoesId = selectedShoesId,
+        )
+
+        return testJson.decodeFromString<OutfitGenerateRequest>(
+            capturedRequest!!.body.toByteArray().decodeToString(),
+        ).selectedItems
+    }
+
+    // Existing generation without selected items must keep behaving exactly as before —
+    // the backend treats a fully-absent selectedItems as "no constraints", not an object
+    // of three nulls, so it must be omitted entirely rather than sent as {}.
+    @Test
+    fun `generateOutfits with no selected items omits selectedItems entirely`() = runBlocking {
+        assertEquals(null, captureSelectedItems())
+    }
+
+    @Test
+    fun `generateOutfits with only a top selected sends just the top id`() = runBlocking {
+        assertEquals(
+            SelectedOutfitItemsDto(top = "TOP_UUID", bottom = null, shoes = null),
+            captureSelectedItems(selectedTopId = "TOP_UUID"),
+        )
+    }
+
+    @Test
+    fun `generateOutfits with only a bottom selected sends just the bottom id`() = runBlocking {
+        assertEquals(
+            SelectedOutfitItemsDto(top = null, bottom = "BOTTOM_UUID", shoes = null),
+            captureSelectedItems(selectedBottomId = "BOTTOM_UUID"),
+        )
+    }
+
+    @Test
+    fun `generateOutfits with only shoes selected sends just the shoes id`() = runBlocking {
+        assertEquals(
+            SelectedOutfitItemsDto(top = null, bottom = null, shoes = "SHOES_UUID"),
+            captureSelectedItems(selectedShoesId = "SHOES_UUID"),
+        )
+    }
+
+    @Test
+    fun `generateOutfits with top and bottom selected sends both ids`() = runBlocking {
+        assertEquals(
+            SelectedOutfitItemsDto(top = "TOP_UUID", bottom = "BOTTOM_UUID", shoes = null),
+            captureSelectedItems(selectedTopId = "TOP_UUID", selectedBottomId = "BOTTOM_UUID"),
+        )
+    }
+
+    @Test
+    fun `generateOutfits with top and shoes selected sends both ids`() = runBlocking {
+        assertEquals(
+            SelectedOutfitItemsDto(top = "TOP_UUID", bottom = null, shoes = "SHOES_UUID"),
+            captureSelectedItems(selectedTopId = "TOP_UUID", selectedShoesId = "SHOES_UUID"),
+        )
+    }
+
+    @Test
+    fun `generateOutfits with bottom and shoes selected sends both ids`() = runBlocking {
+        assertEquals(
+            SelectedOutfitItemsDto(top = null, bottom = "BOTTOM_UUID", shoes = "SHOES_UUID"),
+            captureSelectedItems(selectedBottomId = "BOTTOM_UUID", selectedShoesId = "SHOES_UUID"),
+        )
+    }
+
+    @Test
+    fun `generateOutfits with top, bottom, and shoes selected sends all three ids`() = runBlocking {
+        assertEquals(
+            SelectedOutfitItemsDto(top = "TOP_UUID", bottom = "BOTTOM_UUID", shoes = "SHOES_UUID"),
+            captureSelectedItems(
+                selectedTopId = "TOP_UUID",
+                selectedBottomId = "BOTTOM_UUID",
+                selectedShoesId = "SHOES_UUID",
+            ),
+        )
+    }
+
+    // Confirms the wire format matches the backend contract literally — not just that
+    // decoding round-trips, but that the actual field names on the wire are
+    // "selectedItems"/"top"/"bottom"/"shoes", not renamed by serialization config.
+    @Test
+    fun `generateOutfits serializes selectedItems using the exact backend field names`() = runBlocking {
+        var capturedRequest: HttpRequestData? = null
+        val apiService = buildApiService { request ->
+            capturedRequest = request
+            respond(
+                content = """{"data":{"outfits":[]}}""",
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            )
+        }
+
+        apiService.generateOutfits(
+            occasion = "casual",
+            selectedTopId = "TOP_UUID",
+            selectedBottomId = "BOTTOM_UUID",
+            selectedShoesId = "SHOES_UUID",
+        )
+
+        val rawJson = capturedRequest!!.body.toByteArray().decodeToString()
+        assertTrue(rawJson.contains("\"selectedItems\""))
+        assertTrue(rawJson.contains("\"top\":\"TOP_UUID\""))
+        assertTrue(rawJson.contains("\"bottom\":\"BOTTOM_UUID\""))
+        assertTrue(rawJson.contains("\"shoes\":\"SHOES_UUID\""))
     }
 
     // 5. A normal server error on this same endpoint must still behave as before.

@@ -7,6 +7,7 @@ import com.komod.api.core.error.ErrorMapper
 import com.komod.api.core.error.PlanLimitExceededException
 import com.komod.api.core.navigation.PlanLimitNavigator
 import com.komod.api.data.repository.OutfitRepository
+import com.komod.api.data.repository.WardrobeRepository
 import com.komod.api.data.repository.WeatherRepository
 import com.komod.api.data.location.WeatherLocationResult
 import com.komod.api.data.location.WeatherLocationService
@@ -14,6 +15,7 @@ import com.komod.api.data.preferences.WeatherPreferences
 import com.komod.api.domain.model.OutfitOccasion
 import com.komod.api.domain.model.OutfitStyle
 import com.komod.api.domain.model.Outfit
+import com.komod.api.domain.model.WardrobeItem
 import com.komod.api.platform.AppSettingsOpener
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,6 +33,7 @@ class OutfitViewModel(
     private val weatherLocationService: WeatherLocationService,
     private val appSettingsOpener: AppSettingsOpener,
     private val planLimitNavigator: PlanLimitNavigator,
+    private val wardrobeRepository: WardrobeRepository,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(OutfitUiState())
     val uiState: StateFlow<OutfitUiState> = _uiState.asStateFlow()
@@ -59,6 +62,55 @@ class OutfitViewModel(
         )
     }
 
+    fun selectTopItem(item: WardrobeItem) {
+        _uiState.value = _uiState.value.copy(selectedTopItem = item)
+    }
+
+    fun selectBottomItem(item: WardrobeItem) {
+        _uiState.value = _uiState.value.copy(selectedBottomItem = item)
+    }
+
+    fun selectShoesItem(item: WardrobeItem) {
+        _uiState.value = _uiState.value.copy(selectedShoesItem = item)
+    }
+
+    fun clearTopItem() {
+        _uiState.value = _uiState.value.copy(selectedTopItem = null)
+    }
+
+    fun clearBottomItem() {
+        _uiState.value = _uiState.value.copy(selectedBottomItem = null)
+    }
+
+    fun clearShoesItem() {
+        _uiState.value = _uiState.value.copy(selectedShoesItem = null)
+    }
+
+    // Lazily fetches the user's wardrobe for the item-picker sheet the first time a
+    // Top/Bottom/Shoes slot is tapped, rather than on every Outfit screen visit — most
+    // generations never open the picker at all.
+    fun ensureWardrobeItemsLoaded() {
+        val state = _uiState.value
+        if (state.wardrobeItems.isNotEmpty() || state.isLoadingWardrobeItems) return
+
+        _uiState.value = state.copy(isLoadingWardrobeItems = true, wardrobeItemsError = null)
+        viewModelScope.launch {
+            runCatching { wardrobeRepository.getWardrobeItems() }
+                .onSuccess { items ->
+                    _uiState.value = _uiState.value.copy(
+                        wardrobeItems = items,
+                        isLoadingWardrobeItems = false,
+                    )
+                }
+                .onFailure { throwable ->
+                    _uiState.value = _uiState.value.copy(
+                        isLoadingWardrobeItems = false,
+                        wardrobeItemsError = ErrorMapper.toUserMessage(throwable, tag = "OutfitViewModel"),
+                    )
+                }
+        }
+    }
+
     fun generateOutfits() {
         viewModelScope.launch {
             if (_uiState.value.isGenerating) return@launch
@@ -66,10 +118,14 @@ class OutfitViewModel(
             _uiState.value = _uiState.value.copy(isGenerating = true, errorMessage = null, isPlanLimitError = false)
             runCatching {
                 val state = _uiState.value
+                val (topId, bottomId, shoesId) = state.selectedItemIds()
                 outfitRepository.generateOutfits(
                     occasion = state.selectedOccasion.apiValue,
                     style = state.selectedStyle?.apiValue,
                     weather = (state.weatherUiState as? WeatherUiState.Loaded)?.weather,
+                    selectedTopId = topId,
+                    selectedBottomId = bottomId,
+                    selectedShoesId = shoesId,
                 )
             }.onSuccess { outfits ->
                 _uiState.value = _uiState.value.copy(

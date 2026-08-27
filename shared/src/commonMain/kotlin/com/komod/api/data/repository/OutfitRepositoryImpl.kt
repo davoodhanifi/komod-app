@@ -29,11 +29,17 @@ class OutfitRepositoryImpl(
         occasion: String,
         style: String?,
         weather: com.komod.api.domain.model.WeatherCurrent?,
+        selectedTopId: String?,
+        selectedBottomId: String?,
+        selectedShoesId: String?,
     ): List<Outfit> {
         val response = outfitApiService.generateOutfits(
             occasion = occasion,
             style = style,
             weather = weather,
+            selectedTopId = selectedTopId,
+            selectedBottomId = selectedBottomId,
+            selectedShoesId = selectedShoesId,
         )
 
         return response.outfits.map { it.toOutfit() }

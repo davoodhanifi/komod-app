@@ -18,21 +18,29 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.outlined.Checkroom
@@ -66,6 +74,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -80,6 +90,8 @@ import com.komod.api.domain.model.Outfit
 import com.komod.api.domain.model.OutfitItem
 import com.komod.api.domain.model.OutfitOccasion
 import com.komod.api.domain.model.OutfitStyle
+import com.komod.api.domain.model.WardrobeItem
+import com.komod.api.presentation.wardrobe.WardrobeCard
 import komod.shared.generated.resources.Res
 import komod.shared.generated.resources.business
 import komod.shared.generated.resources.date
@@ -87,7 +99,9 @@ import komod.shared.generated.resources.hanger
 import komod.shared.generated.resources.holiday
 import komod.shared.generated.resources.office
 import komod.shared.generated.resources.party
+import komod.shared.generated.resources.pants
 import komod.shared.generated.resources.shirt
+import komod.shared.generated.resources.shoes
 import komod.shared.generated.resources.sport
 import komod.shared.generated.resources.travel
 import komod.shared.generated.resources.wedding
@@ -107,6 +121,11 @@ private val FilterTileSelectedBackground = Color(0xFFEDE7FF)
 private val FilterTileBorderDefault = Color(0xFFE6E8EE)
 private val FilterTileLabelDefault = Color(0xFF1F2937)
 
+// Header, StyleSelector, and GenerateButton are always exactly one LazyColumn item each
+// (see the `item { ... }` calls in OutfitScreen below), so the results section — whichever
+// branch of the isGenerating/error/empty/outfits `when` is showing — always starts here.
+private const val ResultsSectionItemIndex = 3
+
 private data class OccasionFilterOption(
     val occasion: OutfitOccasion,
     val icon: DrawableResource,
@@ -123,6 +142,26 @@ fun OutfitScreen(
     val uiState by viewModel.uiState.collectAsState()
     var showStyleSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    var itemPickerSlot by remember { mutableStateOf<OutfitItemSlot?>(null) }
+    val itemPickerSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val listState = rememberLazyListState()
+
+    LaunchedEffect(itemPickerSlot) {
+        if (itemPickerSlot != null) {
+            viewModel.ensureWardrobeItemsLoaded()
+        }
+    }
+
+    // Carries the user from the starting-items/occasion/style controls straight to the
+    // results the moment a generation kicks off, instead of leaving them staring at the
+    // same picker/filters they just finished configuring. Keyed on isGenerating (not a
+    // one-shot effect) so this fires identically whether Generate was tapped here or
+    // generation was triggered by autoGenerateOutfits() on screen entry.
+    LaunchedEffect(uiState.isGenerating) {
+        if (uiState.isGenerating) {
+            listState.animateScrollToItem(ResultsSectionItemIndex)
+        }
+    }
 
     LaunchedEffect(viewModel) {
         viewModel.effects.collect { effect ->
@@ -173,7 +212,38 @@ fun OutfitScreen(
         }
     }
 
+    val activePickerSlot = itemPickerSlot
+    if (activePickerSlot != null) {
+        ModalBottomSheet(
+            onDismissRequest = { itemPickerSlot = null },
+            sheetState = itemPickerSheetState,
+            containerColor = Color.White,
+        ) {
+            ItemPickerSheetContent(
+                slot = activePickerSlot,
+                items = uiState.wardrobeItems,
+                isLoading = uiState.isLoadingWardrobeItems,
+                errorMessage = uiState.wardrobeItemsError,
+                selectedItemId = when (activePickerSlot) {
+                    OutfitItemSlot.Top -> uiState.selectedTopItem?.id
+                    OutfitItemSlot.Bottom -> uiState.selectedBottomItem?.id
+                    OutfitItemSlot.Shoes -> uiState.selectedShoesItem?.id
+                },
+                onItemSelected = { item ->
+                    when (activePickerSlot) {
+                        OutfitItemSlot.Top -> viewModel.selectTopItem(item)
+                        OutfitItemSlot.Bottom -> viewModel.selectBottomItem(item)
+                        OutfitItemSlot.Shoes -> viewModel.selectShoesItem(item)
+                    }
+                    itemPickerSlot = null
+                },
+                onDismiss = { itemPickerSlot = null },
+            )
+        }
+    }
+
     LazyColumn(
+        state = listState,
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = 104.dp),
     ) {
@@ -186,6 +256,17 @@ fun OutfitScreen(
                 onWeatherRetry = viewModel::retryWeather,
                 onOpenWeatherSettings = viewModel::openWeatherSettings,
                 onWeatherPermissionDenied = viewModel::markWeatherPermissionRequired,
+                selectedTopItem = uiState.selectedTopItem,
+                selectedBottomItem = uiState.selectedBottomItem,
+                selectedShoesItem = uiState.selectedShoesItem,
+                onSlotClick = { slot -> itemPickerSlot = slot },
+                onClearSlot = { slot ->
+                    when (slot) {
+                        OutfitItemSlot.Top -> viewModel.clearTopItem()
+                        OutfitItemSlot.Bottom -> viewModel.clearBottomItem()
+                        OutfitItemSlot.Shoes -> viewModel.clearShoesItem()
+                    }
+                },
             )
         }
 
@@ -244,6 +325,11 @@ private fun OutfitHeader(
     onWeatherRetry: () -> Unit,
     onOpenWeatherSettings: () -> Unit,
     onWeatherPermissionDenied: () -> Unit,
+    selectedTopItem: WardrobeItem?,
+    selectedBottomItem: WardrobeItem?,
+    selectedShoesItem: WardrobeItem?,
+    onSlotClick: (OutfitItemSlot) -> Unit,
+    onClearSlot: (OutfitItemSlot) -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -262,6 +348,15 @@ private fun OutfitHeader(
             text = "Your personal stylist, Komoda",
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(modifier = Modifier.height(24.dp))
+
+        StartingItemsSection(
+            selectedTopItem = selectedTopItem,
+            selectedBottomItem = selectedBottomItem,
+            selectedShoesItem = selectedShoesItem,
+            onSlotClick = onSlotClick,
+            onClearSlot = onClearSlot,
         )
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -776,8 +871,10 @@ private fun EmptyCollagePlaceholder() {
     }
 }
 
-private fun OutfitItem.isAccessoryLike(): Boolean {
-    val value = listOfNotNull(category, subcategory).joinToString(" ").lowercase()
+private fun OutfitItem.isAccessoryLike(): Boolean =
+    isAccessoryLikeValue(listOfNotNull(category, subcategory).joinToString(" ").lowercase())
+
+private fun isAccessoryLikeValue(value: String): Boolean {
     if (value.isBlank()) return false
     return value.contains("accessor") ||
         value.contains("jewel") ||
@@ -791,7 +888,7 @@ private fun OutfitItem.isAccessoryLike(): Boolean {
         value.contains("sunglass")
 }
 
-private enum class OutfitPieceType {
+internal enum class OutfitPieceType {
     Top,
     Bottom,
     Footwear,
@@ -811,13 +908,23 @@ private fun arrangeItemsForComposition(items: List<OutfitItem>): List<OutfitItem
     }
 }
 
-private fun OutfitItem.pieceType(): OutfitPieceType {
+private fun OutfitItem.pieceType(): OutfitPieceType = classifyPieceType(category, subcategory)
+
+// Shared by OutfitItem.pieceType() above (outfit-card collage layout) and
+// WardrobeItem.pieceType() below (starting-item slot filtering in the picker sheet) so
+// the category/subcategory keyword rules live in exactly one place.
+internal fun classifyPieceType(category: String?, subcategory: String?): OutfitPieceType {
     val value = listOfNotNull(category, subcategory).joinToString(" ").lowercase()
+    // "short" alone also appears in sleeve-length subcategories like "Short Sleeve" /
+    // "Short-Sleeve" on tops (see the long-sleeve keys in getCategoryIcon) — excluding
+    // "sleeve" keeps those out of the Bottom bucket while still catching "shorts" the
+    // garment ("cargo shorts", "denim short", etc).
+    val isShortsGarment = value.contains("short") && !value.contains("sleeve")
     return when {
         value.contains("shoe") || value.contains("sneaker") || value.contains("boot") || value.contains("footwear") -> OutfitPieceType.Footwear
-        value.contains("pant") || value.contains("jean") || value.contains("trouser") || value.contains("short") || value.contains("skirt") -> OutfitPieceType.Bottom
+        value.contains("pant") || value.contains("jean") || value.contains("trouser") || isShortsGarment || value.contains("skirt") -> OutfitPieceType.Bottom
         value.contains("shirt") || value.contains("t-shirt") || value.contains("tee") || value.contains("top") || value.contains("jacket") || value.contains("coat") || value.contains("hoodie") || value.contains("sweater") || value.contains("blazer") -> OutfitPieceType.Top
-        isAccessoryLike() -> OutfitPieceType.Accessory
+        isAccessoryLikeValue(value) -> OutfitPieceType.Accessory
         else -> OutfitPieceType.Other
     }
 }
@@ -987,5 +1094,364 @@ private fun StyleRow(
             fontSize = 15.sp,
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
         )
+    }
+}
+
+// The three optional starting-item slots on the generation screen — "Pick what you want
+// to wear". Purely a presentation concept: OutfitViewModel exposes one select/clear
+// function per slot rather than taking this enum as a parameter.
+internal enum class OutfitItemSlot(val label: String) {
+    Top("Top"),
+    Bottom("Bottom"),
+    Shoes("Shoes"),
+}
+
+private fun OutfitItemSlot.emptyStateLabel(): String = when (this) {
+    OutfitItemSlot.Top -> "tops"
+    OutfitItemSlot.Bottom -> "bottoms"
+    OutfitItemSlot.Shoes -> "shoes"
+}
+
+private fun OutfitItemSlot.icon(): DrawableResource = when (this) {
+    OutfitItemSlot.Top -> Res.drawable.shirt
+    OutfitItemSlot.Bottom -> Res.drawable.pants
+    OutfitItemSlot.Shoes -> Res.drawable.shoes
+}
+
+private fun WardrobeItem.matchesSlot(slot: OutfitItemSlot): Boolean {
+    val pieceType = classifyPieceType(category, subcategory)
+    return when (slot) {
+        OutfitItemSlot.Top -> pieceType == OutfitPieceType.Top
+        OutfitItemSlot.Bottom -> pieceType == OutfitPieceType.Bottom
+        OutfitItemSlot.Shoes -> pieceType == OutfitPieceType.Footwear
+    }
+}
+
+@Composable
+private fun StartingItemsSection(
+    selectedTopItem: WardrobeItem?,
+    selectedBottomItem: WardrobeItem?,
+    selectedShoesItem: WardrobeItem?,
+    onSlotClick: (OutfitItemSlot) -> Unit,
+    onClearSlot: (OutfitItemSlot) -> Unit,
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = "Pick what you want to wear",
+                color = OutfitText,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            OptionalBadge()
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = "Choose one or more items, or leave it empty — Komoda will build the whole look for you.",
+            color = OutfitMuted,
+            fontSize = 13.sp,
+            lineHeight = 18.sp,
+        )
+        Spacer(modifier = Modifier.height(14.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            ItemSlotCard(
+                slot = OutfitItemSlot.Top,
+                selectedItem = selectedTopItem,
+                onClick = { onSlotClick(OutfitItemSlot.Top) },
+                onClear = { onClearSlot(OutfitItemSlot.Top) },
+                modifier = Modifier.weight(1f),
+            )
+            ItemSlotCard(
+                slot = OutfitItemSlot.Bottom,
+                selectedItem = selectedBottomItem,
+                onClick = { onSlotClick(OutfitItemSlot.Bottom) },
+                onClear = { onClearSlot(OutfitItemSlot.Bottom) },
+                modifier = Modifier.weight(1f),
+            )
+            ItemSlotCard(
+                slot = OutfitItemSlot.Shoes,
+                selectedItem = selectedShoesItem,
+                onClick = { onSlotClick(OutfitItemSlot.Shoes) },
+                onClear = { onClearSlot(OutfitItemSlot.Shoes) },
+                modifier = Modifier.weight(1f),
+            )
+        }
+    }
+}
+
+@Composable
+private fun OptionalBadge() {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(100.dp))
+            .background(OutfitChipSurface)
+            .padding(horizontal = 8.dp, vertical = 3.dp),
+    ) {
+        Text(
+            text = "Optional",
+            color = OutfitMuted,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.SemiBold,
+        )
+    }
+}
+
+// Not a generated recommendation: shows the user's own wardrobe photo, name, and an
+// explicit remove control, so it reads as "locked in" rather than an AI suggestion.
+@Composable
+private fun ItemSlotCard(
+    slot: OutfitItemSlot,
+    selectedItem: WardrobeItem?,
+    onClick: () -> Unit,
+    onClear: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val shape = RoundedCornerShape(18.dp)
+    val cardDescription = if (selectedItem != null) {
+        "${slot.label}: ${selectedItem.itemName ?: selectedItem.category} selected. Double tap to change."
+    } else {
+        "${slot.label}: not selected. Double tap to choose."
+    }
+
+    Column(
+        modifier = modifier
+            .clip(shape)
+            .background(Color.White)
+            .border(1.dp, OutfitBorder, shape)
+            .clickable(onClick = onClick)
+            .semantics { contentDescription = cardDescription }
+            .padding(10.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .size(22.dp)
+                    .clip(CircleShape)
+                    .background(OutfitPurpleSoft),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    painter = painterResource(slot.icon()),
+                    contentDescription = null,
+                    tint = OutfitPurple,
+                    modifier = Modifier.size(12.dp),
+                )
+            }
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+                text = slot.label,
+                color = OutfitText,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+
+        if (selectedItem != null) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(1f)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(OutfitChipSurface),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (!selectedItem.imageUrl.isNullOrBlank()) {
+                    AsyncImage(
+                        model = selectedItem.imageUrl,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Outlined.Checkroom,
+                        contentDescription = null,
+                        tint = Color(0xFFD1D5DB),
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(6.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = selectedItem.itemName ?: selectedItem.category,
+                    color = OutfitText,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
+                Box(
+                    modifier = Modifier
+                        .size(26.dp)
+                        .clip(CircleShape)
+                        .clickable(onClick = onClear)
+                        .semantics {
+                            contentDescription =
+                                "Remove ${selectedItem.itemName ?: selectedItem.category} from ${slot.label}"
+                        },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Close,
+                        contentDescription = null,
+                        tint = OutfitMuted,
+                        modifier = Modifier.size(14.dp),
+                    )
+                }
+            }
+        } else {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(1f)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(OutfitChipSurface),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    painter = painterResource(Res.drawable.hanger),
+                    contentDescription = null,
+                    tint = Color(0xFFD1D5DB),
+                    modifier = Modifier.size(22.dp),
+                )
+            }
+            Spacer(modifier = Modifier.height(6.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "Choose ${slot.label.lowercase()}",
+                    color = OutfitPurple,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = OutfitPurple,
+                    modifier = Modifier.size(16.dp),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ItemPickerSheetContent(
+    slot: OutfitItemSlot,
+    items: List<WardrobeItem>,
+    isLoading: Boolean,
+    errorMessage: String?,
+    selectedItemId: String?,
+    onItemSelected: (WardrobeItem) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val filteredItems = remember(items, slot) { items.filter { it.matchesSlot(slot) } }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp)
+            .padding(bottom = 24.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "Choose ${slot.label.lowercase()}",
+                color = OutfitText,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .clip(CircleShape)
+                    .clickable(onClick = onDismiss)
+                    .semantics { contentDescription = "Close without changing selection" },
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Close,
+                    contentDescription = null,
+                    tint = OutfitMuted,
+                    modifier = Modifier.size(18.dp),
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+
+        when {
+            isLoading -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CircularProgressIndicator(color = OutfitPurple)
+                }
+            }
+            errorMessage != null -> {
+                Text(
+                    text = errorMessage,
+                    color = OutfitMuted,
+                    fontSize = 14.sp,
+                    modifier = Modifier.padding(vertical = 32.dp),
+                )
+            }
+            filteredItems.isEmpty() -> {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 32.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Checkroom,
+                        contentDescription = null,
+                        tint = Color(0xFFD1D5DB),
+                        modifier = Modifier.size(48.dp),
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = "No ${slot.emptyStateLabel()} in your wardrobe yet",
+                        color = OutfitMuted,
+                        fontSize = 14.sp,
+                        textAlign = TextAlign.Center,
+                    )
+                }
+            }
+            else -> {
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(3),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 420.dp),
+                ) {
+                    items(items = filteredItems, key = { item -> item.id }) { item ->
+                        WardrobeCard(
+                            item = item,
+                            onClick = { onItemSelected(item) },
+                            selectionMode = true,
+                            isSelected = item.id == selectedItemId,
+                        )
+                    }
+                }
+            }
+        }
     }
 }

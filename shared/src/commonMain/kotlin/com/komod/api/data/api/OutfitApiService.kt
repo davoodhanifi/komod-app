@@ -9,6 +9,7 @@ import com.komod.api.data.api.model.OutfitOfTheDayResponseDto
 import com.komod.api.data.api.model.ResponseData
 import com.komod.api.data.api.model.SaveOutfitRequest
 import com.komod.api.data.api.model.SaveOutfitResponse
+import com.komod.api.data.api.model.SelectedOutfitItemsDto
 import com.komod.api.data.api.model.WeatherContextDto
 import com.komod.api.domain.model.WeatherCurrent
 import com.komod.api.platform.getDeviceTimeZoneId
@@ -33,6 +34,9 @@ class OutfitApiService(
         occasion: String,
         style: String? = null,
         weather: WeatherCurrent? = null,
+        selectedTopId: String? = null,
+        selectedBottomId: String? = null,
+        selectedShoesId: String? = null,
     ): OutfitGenerateResponse {
         // On success this is wrapped in ResponseData like the GET endpoints. On failure
         // it's a bare ProblemDetails payload with no "data" field, so the status is
@@ -48,6 +52,9 @@ class OutfitApiService(
                     // Null (same as `style` above) when the device timezone can't be
                     // determined, so the backend falls back to UTC per its own default.
                     timeZoneId = getDeviceTimeZoneId(),
+                    // Omitted entirely (not just all-null fields) when nothing was picked,
+                    // matching the backend's "no constraints" contract.
+                    selectedItems = selectedItemsDtoOrNull(selectedTopId, selectedBottomId, selectedShoesId),
                 ),
             )
         }
@@ -114,6 +121,18 @@ class OutfitApiService(
         return httpClient.get("outfits")
             .body<ResponseData<List<OutfitDto>>>().data
     }
+}
+
+// Extracted so the "when do we send an object vs. omit it entirely" rule is unit-testable
+// on its own (see OutfitApiServiceTest) — the backend contract treats a fully-absent
+// selectedItems as "no constraints", not as an object of three nulls.
+internal fun selectedItemsDtoOrNull(
+    topId: String?,
+    bottomId: String?,
+    shoesId: String?,
+): SelectedOutfitItemsDto? {
+    if (topId == null && bottomId == null && shoesId == null) return null
+    return SelectedOutfitItemsDto(top = topId, bottom = bottomId, shoes = shoesId)
 }
 
 private fun WeatherCurrent.toWeatherContext(): WeatherContextDto {
