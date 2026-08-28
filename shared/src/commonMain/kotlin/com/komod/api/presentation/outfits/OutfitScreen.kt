@@ -1148,7 +1148,7 @@ private fun StartingItemsSection(
         }
         Spacer(modifier = Modifier.height(4.dp))
         Text(
-            text = "Choose one or more items, or leave it empty — Komoda will build the whole look for you.",
+            text = "Choose items, or leave it empty — Komoda will build the look.",
             color = OutfitMuted,
             fontSize = 13.sp,
             lineHeight = 18.sp,
