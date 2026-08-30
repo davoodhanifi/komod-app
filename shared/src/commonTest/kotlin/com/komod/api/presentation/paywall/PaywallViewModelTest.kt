@@ -85,11 +85,14 @@ private class FakeBillingRepository : BillingRepository {
     var paywallPlansResult: Result<List<PaywallPlan>> = Result.success(listOf(testPlan(SubscriptionPlan.ThreeDoors)))
     var purchaseResult: Result<Unit> = Result.success(Unit)
     var restoreResult: Result<Unit> = Result.success(Unit)
+    var activeProductIdentifiersResult: Result<Set<String>> = Result.success(emptySet())
 
     val purchaseCalls = mutableListOf<Package>()
     var restoreCallCount = 0
         private set
     var refreshCustomerInfoCallCount = 0
+        private set
+    var getActiveProductIdentifiersCallCount = 0
         private set
 
     override suspend fun getPaywallPlans(): List<PaywallPlan> = paywallPlansResult.getOrThrow()
@@ -106,6 +109,11 @@ private class FakeBillingRepository : BillingRepository {
 
     override suspend fun refreshCustomerInfo() {
         refreshCustomerInfoCallCount++
+    }
+
+    override suspend fun getActiveProductIdentifiers(): Set<String> {
+        getActiveProductIdentifiersCallCount++
+        return activeProductIdentifiersResult.getOrThrow()
     }
 }
 
@@ -193,7 +201,8 @@ class PaywallViewModelTest {
     }
 
     // Foreground -> backend sync: refreshSubscriptionState() (driven by PaywallScreen's
-    // ON_RESUME observer) refreshes RevenueCat's cache, syncs, and adopts the response.
+    // ON_RESUME observer) refreshes RevenueCat's CustomerInfo (via activeProductIdentifiers,
+    // the same call also feeding the auto-select match), syncs, and adopts the response.
     @Test
     fun `refreshSubscriptionState refreshes RevenueCat's cache then syncs and adopts the response`() = runTest(testDispatcher) {
         val billingRepository = FakeBillingRepository()
@@ -202,12 +211,13 @@ class PaywallViewModelTest {
         val viewModel = PaywallViewModel(billingRepository, syncRepository)
         advanceUntilIdle()
         val syncCallsBeforeExplicitRefresh = syncRepository.syncCallCount
+        val activeIdCallsBeforeExplicitRefresh = billingRepository.getActiveProductIdentifiersCallCount
 
         viewModel.refreshSubscriptionState()
         advanceUntilIdle()
 
         assertEquals(syncCallsBeforeExplicitRefresh + 1, syncRepository.syncCallCount)
-        assertTrue(billingRepository.refreshCustomerInfoCallCount >= 1)
+        assertTrue(billingRepository.getActiveProductIdentifiersCallCount > activeIdCallsBeforeExplicitRefresh)
         assertEquals(SubscriptionPlan.TwoDoors, viewModel.uiState.value.subscriptionState?.plan)
     }
 
@@ -289,6 +299,88 @@ class PaywallViewModelTest {
 
         viewModel.selectBillingPeriod(BillingPeriod.Yearly)
         assertEquals(BillingPeriod.Yearly, viewModel.uiState.value.billingPeriod)
+    }
+
+    // Opening the paywall should land on the plan the user is already subscribed to, not the
+    // first one in the offering — matched via RevenueCat's own CustomerInfo.activeSubscriptions
+    // product IDs against the loaded packages, never the backend's KomodSubscriptionState.
+    @Test
+    fun `opening the paywall auto-selects the plan matching the current active subscription`() = runTest(testDispatcher) {
+        val billingRepository = FakeBillingRepository()
+        billingRepository.paywallPlansResult = Result.success(
+            listOf(testPlan(SubscriptionPlan.OneDoor), testPlan(SubscriptionPlan.TwoDoors), testPlan(SubscriptionPlan.ThreeDoors)),
+        )
+        // Matches TwoDoors' yearly package's product ID (see testPlan/fakePackage).
+        billingRepository.activeProductIdentifiersResult = Result.success(setOf("TwoDoors_yearly"))
+        val viewModel = PaywallViewModel(billingRepository, FakeSubscriptionSyncRepository())
+        advanceUntilIdle()
+
+        assertEquals(SubscriptionPlan.TwoDoors, viewModel.uiState.value.selectedPlan)
+    }
+
+    // No active subscription at all — the pre-existing "first plan" default applies instead.
+    @Test
+    fun `no active subscription keeps the existing default selection`() = runTest(testDispatcher) {
+        val billingRepository = FakeBillingRepository()
+        billingRepository.paywallPlansResult = Result.success(
+            listOf(testPlan(SubscriptionPlan.OneDoor), testPlan(SubscriptionPlan.TwoDoors)),
+        )
+        billingRepository.activeProductIdentifiersResult = Result.success(emptySet())
+        val viewModel = PaywallViewModel(billingRepository, FakeSubscriptionSyncRepository())
+        advanceUntilIdle()
+
+        assertEquals(SubscriptionPlan.OneDoor, viewModel.uiState.value.selectedPlan)
+    }
+
+    // A current subscription for a plan that dropped out of the current offering (e.g. a
+    // discontinued tier) must not crash or leave nothing selected — same "first plan" fallback.
+    @Test
+    fun `a current subscription not present in the offering keeps the existing default selection`() = runTest(testDispatcher) {
+        val billingRepository = FakeBillingRepository()
+        billingRepository.paywallPlansResult = Result.success(
+            listOf(testPlan(SubscriptionPlan.OneDoor), testPlan(SubscriptionPlan.TwoDoors)),
+        )
+        // A product ID for a plan that isn't part of the loaded offering at all.
+        billingRepository.activeProductIdentifiersResult = Result.success(setOf("WalkIn_monthly"))
+        val viewModel = PaywallViewModel(billingRepository, FakeSubscriptionSyncRepository())
+        advanceUntilIdle()
+
+        assertEquals(SubscriptionPlan.OneDoor, viewModel.uiState.value.selectedPlan)
+    }
+
+    // A failure fetching RevenueCat's active product IDs must not block selection forever —
+    // it degrades to the pre-existing "first plan" default, same as "no active subscription".
+    @Test
+    fun `a failure reading RevenueCat's active subscriptions keeps the existing default selection`() = runTest(testDispatcher) {
+        val billingRepository = FakeBillingRepository()
+        billingRepository.paywallPlansResult = Result.success(
+            listOf(testPlan(SubscriptionPlan.OneDoor), testPlan(SubscriptionPlan.TwoDoors)),
+        )
+        billingRepository.activeProductIdentifiersResult = Result.failure(RuntimeException("network error"))
+        val viewModel = PaywallViewModel(billingRepository, FakeSubscriptionSyncRepository())
+        advanceUntilIdle()
+
+        assertEquals(SubscriptionPlan.OneDoor, viewModel.uiState.value.selectedPlan)
+    }
+
+    // Once the user taps a plan themselves, a later subscription re-sync (e.g. ON_RESUME) must
+    // never yank the selection back to their current plan.
+    @Test
+    fun `a manual plan selection is never overridden by a later subscription sync`() = runTest(testDispatcher) {
+        val billingRepository = FakeBillingRepository()
+        billingRepository.paywallPlansResult = Result.success(
+            listOf(testPlan(SubscriptionPlan.OneDoor), testPlan(SubscriptionPlan.TwoDoors)),
+        )
+        billingRepository.activeProductIdentifiersResult = Result.success(setOf("OneDoor_monthly"))
+        val viewModel = PaywallViewModel(billingRepository, FakeSubscriptionSyncRepository())
+        advanceUntilIdle()
+        assertEquals(SubscriptionPlan.OneDoor, viewModel.uiState.value.selectedPlan)
+
+        viewModel.selectPlan(SubscriptionPlan.TwoDoors)
+        viewModel.refreshSubscriptionState()
+        advanceUntilIdle()
+
+        assertEquals(SubscriptionPlan.TwoDoors, viewModel.uiState.value.selectedPlan)
     }
 
     // 8/9. Backend sync failure after a successful purchase/restore is intentionally not

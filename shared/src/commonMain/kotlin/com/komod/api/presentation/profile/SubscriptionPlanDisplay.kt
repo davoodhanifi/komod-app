@@ -12,14 +12,3 @@ fun SubscriptionPlan.displayName(): String = when (this) {
     SubscriptionPlan.WalkIn -> "Komod Walk-in"
     SubscriptionPlan.Unknown -> "Your Komod Plan"
 }
-
-// Marketing copy for the Paywall's plan cards — the four purchasable tiers' wardrobe limits.
-// These are fixed at build time, not sourced from the backend (unlike CurrentSubscription's
-// wardrobeItemLimit, which reflects the signed-in user's actual current plan).
-fun SubscriptionPlan.wardrobeLimitDescription(): String = when (this) {
-    SubscriptionPlan.OneDoor -> "Up to 100 wardrobe items"
-    SubscriptionPlan.TwoDoors -> "Up to 200 wardrobe items"
-    SubscriptionPlan.ThreeDoors -> "Up to 300 wardrobe items"
-    SubscriptionPlan.WalkIn -> "Unlimited wardrobe items"
-    SubscriptionPlan.Rack, SubscriptionPlan.Unknown -> ""
-}

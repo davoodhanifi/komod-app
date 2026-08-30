@@ -54,7 +54,6 @@ import com.komod.api.domain.model.PaywallPlan
 import com.komod.api.domain.model.SubscriptionPlan
 import com.komod.api.presentation.home.ShimmerBox
 import com.komod.api.presentation.profile.displayName
-import com.komod.api.presentation.profile.wardrobeLimitDescription
 import org.koin.compose.viewmodel.koinViewModel
 
 private val Purple = Color(0xFF7C5CFC)
@@ -304,6 +303,10 @@ private fun PlanCard(
     // Localized price straight from StoreKit via RevenueCat — never formatted/hard-coded here.
     val priceFormatted = rcPackage.storeProduct.price.formatted
     val periodSuffix = if (billingPeriod == BillingPeriod.Monthly) "/month" else "/year"
+    // App Store Connect's product description (e.g. "Up to 100 wardrobe items, 30 outfit
+    // generations per day") — never hard-coded here, so it always matches what's configured
+    // there and is already localized to the user's App Store language.
+    val description = rcPackage.storeProduct.localizedDescription.orEmpty()
 
     // Selection is always the strongest signal on the card — a recommended-but-unselected plan
     // gets a subtle accent border only, never the selected fill, so "Recommended" is never
@@ -372,7 +375,7 @@ private fun PlanCard(
                     }
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = plan.plan.wardrobeLimitDescription(),
+                        text = description,
                         style = MaterialTheme.typography.bodyMedium,
                         color = GrayText,
                     )

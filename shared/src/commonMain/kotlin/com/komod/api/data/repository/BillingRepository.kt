@@ -36,6 +36,14 @@ interface BillingRepository {
     // result is intentionally discarded — nothing in this app derives the displayed plan from
     // it directly; see SubscriptionSyncRepository.
     suspend fun refreshCustomerInfo()
+
+    // The customer's currently active App Store/Play product IDs, straight from RevenueCat's
+    // CustomerInfo.activeSubscriptions — RevenueCat's own recommended way to check "is this
+    // customer subscribed to product X". Used only to auto-select the matching plan when the
+    // Paywall opens; KomodSubscriptionState remains the sole source of truth for what Komod
+    // plan/entitlements the user actually has (the "Current" badge, feature gating, etc.).
+    // Empty (never throws) when billing is unavailable.
+    suspend fun getActiveProductIdentifiers(): Set<String>
 }
 
 class BillingRepositoryImpl(
@@ -78,5 +86,10 @@ class BillingRepositoryImpl(
     override suspend fun refreshCustomerInfo() {
         if (!isBillingAvailable) return
         purchasesService.getCustomerInfo()
+    }
+
+    override suspend fun getActiveProductIdentifiers(): Set<String> {
+        if (!isBillingAvailable) return emptySet()
+        return purchasesService.getCustomerInfo().activeSubscriptions
     }
 }

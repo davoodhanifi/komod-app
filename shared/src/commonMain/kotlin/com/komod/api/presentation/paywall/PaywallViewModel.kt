@@ -29,6 +29,18 @@ class PaywallViewModel(
     private val _effects = MutableSharedFlow<PaywallEffect>()
     val effects: SharedFlow<PaywallEffect> = _effects.asSharedFlow()
 
+    // Sticky once the user taps a plan card — after that, neither a fresh offering fetch nor a
+    // subscription re-sync (e.g. on ON_RESUME) is allowed to move their selection out from under
+    // them via applyDefaultSelection().
+    private var hasUserSelectedPlan = false
+
+    // RevenueCat's activeSubscriptions (App Store/Play product IDs), refreshed alongside the
+    // backend sync in refreshSubscriptionState() — the source of truth for
+    // applyDefaultSelection()'s auto-select match. Null until that first refresh completes
+    // (whether it succeeds or fails); never derived from KomodSubscriptionState, which stays
+    // the sole source of truth for the "Current" badge/entitlements elsewhere on this screen.
+    private var activeProductIdentifiers: Set<String>? = null
+
     init {
         // Adopt whatever the shared repository already knows (e.g. synced moments ago from
         // another screen) immediately, rather than starting blank until this screen's own
@@ -50,12 +62,8 @@ class PaywallViewModel(
             }
             runCatching { billingRepository.getPaywallPlans() }
                 .onSuccess { plans ->
-                    _uiState.update {
-                        it.copy(
-                            plansState = PaywallPlansState.Success(plans),
-                            selectedPlan = it.selectedPlan ?: plans.firstOrNull()?.plan,
-                        )
-                    }
+                    _uiState.update { it.copy(plansState = PaywallPlansState.Success(plans)) }
+                    applyDefaultSelection()
                 }
                 .onFailure { error ->
                     _uiState.update {
@@ -80,7 +88,9 @@ class PaywallViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(isSyncing = true) }
             runCatching {
-                billingRepository.refreshCustomerInfo()
+                // Captured as a side effect regardless of what happens to sync() below — this is
+                // RevenueCat's own state, no reason to let a backend hiccup throw it away.
+                activeProductIdentifiers = billingRepository.getActiveProductIdentifiers()
                 subscriptionSyncRepository.sync()
             }
                 .onSuccess { state ->
@@ -88,11 +98,40 @@ class PaywallViewModel(
                 }
                 .onFailure {
                     _uiState.update { it.copy(isSyncing = false) }
+                    // getActiveProductIdentifiers() itself may be what threw, in which case
+                    // activeProductIdentifiers was never assigned above — fall back to "none
+                    // known" so applyDefaultSelection() below can still resolve to the
+                    // pre-existing default instead of waiting forever.
+                    if (activeProductIdentifiers == null) activeProductIdentifiers = emptySet()
                 }
+            applyDefaultSelection()
+        }
+    }
+
+    // Auto-selects the plan the user is actively subscribed to per RevenueCat's own CustomerInfo
+    // (never KomodSubscriptionState — that stays the sole source of truth for the "Current"
+    // badge/entitlements elsewhere on this screen) by matching activeProductIdentifiers'
+    // App Store/Play product IDs against each loaded plan's monthly/yearly StoreProduct ID —
+    // RevenueCat's own recommended way to check "is the customer subscribed to product X".
+    // Waits for both the offering and CustomerInfo to be known (called from both completions,
+    // since either can finish last) rather than guessing early, so there's no wrong-then-correct
+    // flicker — nothing is auto-selected until both are in. Falls back to the first plan (the
+    // pre-existing default) when there's no active subscription or the active one isn't part of
+    // the currently loaded offering. A no-op once the user has picked a plan themselves.
+    private fun applyDefaultSelection() {
+        if (hasUserSelectedPlan) return
+        val activeIds = activeProductIdentifiers ?: return
+        _uiState.update { state ->
+            val plans = (state.plansState as? PaywallPlansState.Success)?.plans ?: return@update state
+            val activePlan = plans.firstOrNull { plan ->
+                plan.monthlyPackage.storeProduct.id in activeIds || plan.yearlyPackage.storeProduct.id in activeIds
+            }
+            state.copy(selectedPlan = (activePlan ?: plans.firstOrNull())?.plan)
         }
     }
 
     fun selectPlan(plan: SubscriptionPlan) {
+        hasUserSelectedPlan = true
         _uiState.update { it.copy(selectedPlan = plan) }
     }
 
