@@ -31,7 +31,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.outlined.Checkroom
 import androidx.compose.material.icons.outlined.CloudOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -74,6 +73,7 @@ import com.komod.api.presentation.wardrobe.toWardrobeLabel
 import komod.shared.generated.resources.Res
 import komod.shared.generated.resources.arrow_left
 import komod.shared.generated.resources.hanger
+import komod.shared.generated.resources.hanger_filled
 import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
@@ -605,7 +605,7 @@ private fun EmptyItemsContent(modifier: Modifier = Modifier) {
             contentAlignment = Alignment.Center,
         ) {
             Icon(
-                imageVector = Icons.Outlined.Checkroom,
+                painter = painterResource(Res.drawable.hanger_filled),
                 contentDescription = null,
                 tint = Purple,
                 modifier = Modifier.size(44.dp),

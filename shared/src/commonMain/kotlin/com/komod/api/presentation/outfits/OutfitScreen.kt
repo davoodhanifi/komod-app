@@ -43,7 +43,6 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material.icons.outlined.Checkroom
 import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -96,6 +95,7 @@ import komod.shared.generated.resources.Res
 import komod.shared.generated.resources.business
 import komod.shared.generated.resources.date
 import komod.shared.generated.resources.hanger
+import komod.shared.generated.resources.hanger_filled
 import komod.shared.generated.resources.holiday
 import komod.shared.generated.resources.office
 import komod.shared.generated.resources.party
@@ -775,7 +775,7 @@ private fun CollageItem(
         } else {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Icon(
-                    imageVector = Icons.Outlined.Checkroom,
+                    painter = painterResource(Res.drawable.hanger_filled),
                     contentDescription = null,
                     tint = Color(0xFFD1D5DB),
                 )
@@ -863,7 +863,7 @@ private fun EmptyCollagePlaceholder() {
             contentAlignment = Alignment.Center,
         ) {
             Icon(
-                imageVector = Icons.Outlined.Checkroom,
+                painter = painterResource(Res.drawable.hanger_filled),
                 contentDescription = null,
                 tint = Color(0xFFD1D5DB),
             )
@@ -1271,7 +1271,7 @@ private fun ItemSlotCard(
                     )
                 } else {
                     Icon(
-                        imageVector = Icons.Outlined.Checkroom,
+                        painter = painterResource(Res.drawable.hanger_filled),
                         contentDescription = null,
                         tint = Color(0xFFD1D5DB),
                     )
@@ -1419,7 +1419,7 @@ private fun ItemPickerSheetContent(
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Icon(
-                        imageVector = Icons.Outlined.Checkroom,
+                        painter = painterResource(Res.drawable.hanger_filled),
                         contentDescription = null,
                         tint = Color(0xFFD1D5DB),
                         modifier = Modifier.size(48.dp),

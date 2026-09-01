@@ -39,7 +39,6 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Edit
-import androidx.compose.material.icons.outlined.Checkroom
 import androidx.compose.material.icons.outlined.CloudOff
 import androidx.compose.material.icons.outlined.Crop
 import androidx.compose.material.icons.outlined.FavoriteBorder
@@ -91,6 +90,7 @@ import komod.shared.generated.resources.Res
 import komod.shared.generated.resources.arrow_left
 import komod.shared.generated.resources.delete
 import komod.shared.generated.resources.hanger
+import komod.shared.generated.resources.hanger_filled
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
@@ -355,7 +355,7 @@ private fun HeroImage(
         contentAlignment = Alignment.Center,
     ) {
         Icon(
-            imageVector = Icons.Outlined.Checkroom,
+            painter = painterResource(Res.drawable.hanger_filled),
             contentDescription = null,
             tint = Color(0xFFD0D7E3),
             modifier = Modifier.size(84.dp),
