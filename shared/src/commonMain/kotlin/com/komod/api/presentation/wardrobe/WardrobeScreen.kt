@@ -50,8 +50,10 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.outlined.Checkroom
 import androidx.compose.material.icons.outlined.CloudOff
+import org.jetbrains.compose.resources.painterResource
+import komod.shared.generated.resources.Res
+import komod.shared.generated.resources.hanger_filled
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -92,10 +94,8 @@ import com.komod.api.domain.model.WardrobeItem
 import com.komod.api.presentation.home.getCategoryIcon
 import com.komod.api.presentation.home.getCategoryIconColor
 import com.komod.api.presentation.main.LocalBottomNavBarHeight
-import komod.shared.generated.resources.Res
 import komod.shared.generated.resources.delete
 import komod.shared.generated.resources.hanger
-import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.viewmodel.koinViewModel
 
 private val Purple = Color(0xFF7C5CFC)
@@ -1073,7 +1073,7 @@ fun EmptyState(
             contentAlignment = Alignment.Center,
         ) {
             Icon(
-                imageVector = Icons.Outlined.Checkroom,
+                painter = painterResource(Res.drawable.hanger_filled),
                 contentDescription = null,
                 tint = Purple,
                 modifier = Modifier.size(48.dp),
@@ -1094,19 +1094,6 @@ fun EmptyState(
             color = GrayText,
             textAlign = TextAlign.Center,
         )
-        Spacer(modifier = Modifier.height(32.dp))
-        Button(
-            onClick = onAddItem,
-            colors = ButtonDefaults.buttonColors(containerColor = Purple),
-            shape = RoundedCornerShape(12.dp),
-            contentPadding = PaddingValues(horizontal = 32.dp, vertical = 14.dp),
-        ) {
-            Text(
-                text = "Add Item",
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 16.sp,
-            )
-        }
     }
 }
 
