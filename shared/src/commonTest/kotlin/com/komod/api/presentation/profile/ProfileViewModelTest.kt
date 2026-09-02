@@ -90,7 +90,7 @@ class ProfileViewModelTest {
         val viewModel = ProfileViewModel(repository)
         val subscription = testSubscription(
             plan = SubscriptionPlan.Rack,
-            wardrobeItemLimit = 10,
+            wardrobeItemLimit = 15,
             dailyOutfitGenerationLimit = 5,
             currentWardrobeItemCount = 3,
             todayOutfitGenerationCount = 1,
