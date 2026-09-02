@@ -39,6 +39,7 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
@@ -71,6 +72,7 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -237,6 +239,18 @@ fun WardrobeScreen(
                                     modifier = Modifier.fillMaxSize(),
                                 )
                             } else {
+                                val shouldLoadMore by remember {
+                                    derivedStateOf {
+                                        val layoutInfo = lazyGridState.layoutInfo
+                                        val totalItems = layoutInfo.totalItemsCount
+                                        val lastVisibleIndex = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+                                        totalItems > 0 && lastVisibleIndex >= totalItems - 6
+                                    }
+                                }
+                                LaunchedEffect(shouldLoadMore, filteredItems) {
+                                    if (shouldLoadMore) viewModel.loadMoreItems()
+                                }
+
                                 LazyVerticalGrid(
                                     columns = GridCells.Fixed(3),
                                     state = lazyGridState,
@@ -267,6 +281,12 @@ fun WardrobeScreen(
                                             isSelected = item.id in selectedItemIds,
                                             modifier = Modifier.animateItem(),
                                         )
+                                    }
+
+                                    if (state.isLoadingMore) {
+                                        item(span = { GridItemSpan(maxLineSpan) }) {
+                                            LoadMoreIndicator()
+                                        }
                                     }
                                 }
                             }
@@ -982,6 +1002,22 @@ private fun SelectionIndicator(isSelected: Boolean, modifier: Modifier = Modifie
                 modifier = Modifier.size(14.dp),
             )
         }
+    }
+}
+
+@Composable
+private fun LoadMoreIndicator() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 20.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        CircularProgressIndicator(
+            modifier = Modifier.size(24.dp),
+            strokeWidth = 2.dp,
+            color = Purple,
+        )
     }
 }
 

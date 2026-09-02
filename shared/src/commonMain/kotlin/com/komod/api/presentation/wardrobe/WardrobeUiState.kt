@@ -8,6 +8,7 @@ sealed interface WardrobeUiState {
 
     data class Success(
         val items: List<WardrobeItem>,
+        val isLoadingMore: Boolean = false,
     ) : WardrobeUiState
 
     data class Error(

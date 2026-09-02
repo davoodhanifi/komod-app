@@ -7,6 +7,7 @@ import com.komod.api.data.api.model.AnalyzeWardrobeRequest
 import com.komod.api.data.api.model.CreateImageResponse
 import com.komod.api.data.api.model.DeleteWardrobeItemsRequest
 import com.komod.api.data.api.model.ImageDto
+import com.komod.api.data.api.model.PaginatedResponseData
 import com.komod.api.data.api.model.RecentItemDto
 import com.komod.api.data.api.model.ResponseData
 import com.komod.api.data.api.model.ReviewWardrobeItemsRequest
@@ -23,6 +24,7 @@ import io.ktor.client.request.delete
 import io.ktor.client.request.forms.MultiPartFormDataContent
 import io.ktor.client.request.forms.formData
 import io.ktor.client.request.get
+import io.ktor.client.request.parameter
 import io.ktor.client.request.patch
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
@@ -90,9 +92,16 @@ class WardrobeApiService(
         return response.body<ResponseData<AnalyzeWardrobeImageResultDto>>().data
     }
 
-    suspend fun getWardrobeItems(): List<WardrobeItemDto> {
-        return httpClient.get("wardrobe-items")
-            .body<ResponseData<List<WardrobeItemDto>>>().data
+    // pageNumber/pageSize are opt-in and must be passed together — omitting both keeps
+    // the pre-pagination behavior of returning the full wardrobe in one response.
+    suspend fun getWardrobeItems(
+        pageNumber: Int? = null,
+        pageSize: Int? = null,
+    ): PaginatedResponseData<List<WardrobeItemDto>> {
+        return httpClient.get("wardrobe-items") {
+            pageNumber?.let { parameter("pageNumber", it) }
+            pageSize?.let { parameter("pageSize", it) }
+        }.body<PaginatedResponseData<List<WardrobeItemDto>>>()
     }
 
     // Same reasoning as analyzeWardrobeItems: the backend returns 404 once an item's

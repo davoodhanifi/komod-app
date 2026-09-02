@@ -7,6 +7,7 @@ import com.komod.api.core.error.ErrorMapper
 import com.komod.api.data.api.model.ImageStatus
 import com.komod.api.data.repository.AddItemRepository
 import com.komod.api.data.repository.WardrobeRepository
+import com.komod.api.domain.model.WardrobeItem
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,6 +25,7 @@ sealed interface WardrobeEffect {
 }
 
 private const val UploadPollIntervalMs = 5_000L
+private const val WardrobePageSize = 20
 
 internal const val AllCategoriesLabel = "All"
 
@@ -70,6 +72,13 @@ class WardrobeViewModel(
     // is picked up as a cache miss and re-resolved into a fresh signed URL.
     private val thumbnailUrlCache = mutableMapOf<String, String?>()
 
+    // Number of pages already fetched into the current Success.items list, and whether
+    // the backend reported more pages beyond that. Reset to 0/false on every full reload
+    // (loadItems/refresh) and advanced by one on each successful loadMoreItems().
+    private var loadedPageCount = 0
+    private var hasNextPage = false
+    private var isLoadingNextPage = false
+
     init {
         loadItems()
         observeUploadedImages()
@@ -110,16 +119,49 @@ class WardrobeViewModel(
     fun loadItems() {
         viewModelScope.launch {
             _uiState.value = WardrobeUiState.Loading
-            fetchItems()
+            fetchFirstPage()
         }
     }
 
     fun refresh() {
         viewModelScope.launch {
             _isRefreshing.value = true
-            fetchItems()
+            fetchFirstPage()
             refreshUploadedImages()
             _isRefreshing.value = false
+        }
+    }
+
+    // Called by the screen as the grid scrolls near the end. No-op while a page is
+    // already loading or the backend reported no further pages.
+    fun loadMoreItems() {
+        if (isLoadingNextPage || !hasNextPage) return
+        val current = _uiState.value
+        if (current !is WardrobeUiState.Success) return
+
+        isLoadingNextPage = true
+        _uiState.value = current.copy(isLoadingMore = true)
+        viewModelScope.launch {
+            runCatching {
+                wardrobeRepository.getWardrobeItems(pageNumber = loadedPageCount + 1, pageSize = WardrobePageSize)
+            }
+                .onSuccess { page ->
+                    loadedPageCount += 1
+                    hasNextPage = page.hasNextPage
+                    val existing = (_uiState.value as? WardrobeUiState.Success)?.items.orEmpty()
+                    _uiState.value = WardrobeUiState.Success(items = existing + page.items, isLoadingMore = false)
+                }
+                .onFailure { error ->
+                    (_uiState.value as? WardrobeUiState.Success)?.let {
+                        _uiState.value = it.copy(isLoadingMore = false)
+                    }
+                    _effects.emit(
+                        WardrobeEffect.ShowMessage(
+                            ErrorMapper.toUserMessage(error, tag = "WardrobeViewModel"),
+                        ),
+                    )
+                }
+            isLoadingNextPage = false
         }
     }
 
@@ -216,10 +258,10 @@ class WardrobeViewModel(
                     _bulkDeleteConfirmVisible.value = false
                     _selectionMode.value = false
                     _selectedItemIds.value = emptySet()
-                    // Quiet reconciliation with the backend — fetchItems() doesn't touch
-                    // Loading/isRefreshing, so this can't flash the skeleton or disrupt
-                    // the grid the user is already looking at.
-                    fetchItems()
+                    // Quiet reconciliation with the backend — reloadLoadedPages() doesn't
+                    // touch Loading/isRefreshing, so this can't flash the skeleton or
+                    // disrupt the grid the user is already looking at.
+                    reloadLoadedPages()
                 }
                 .onFailure { error ->
                     // Selection and selected items are left untouched so the user can
@@ -236,14 +278,42 @@ class WardrobeViewModel(
         }
     }
 
-    private suspend fun fetchItems() {
-        runCatching { wardrobeRepository.getWardrobeItems() }
-            .onSuccess { items -> _uiState.value = WardrobeUiState.Success(items) }
+    private suspend fun fetchFirstPage() {
+        runCatching { wardrobeRepository.getWardrobeItems(pageNumber = 1, pageSize = WardrobePageSize) }
+            .onSuccess { page ->
+                loadedPageCount = 1
+                hasNextPage = page.hasNextPage
+                _uiState.value = WardrobeUiState.Success(items = page.items)
+            }
             .onFailure { error ->
+                loadedPageCount = 0
+                hasNextPage = false
                 _uiState.value = WardrobeUiState.Error(
                     message = ErrorMapper.toUserMessage(error, tag = "WardrobeViewModel"),
                 )
             }
+    }
+
+    // Re-fetches exactly the pages already loaded (1..loadedPageCount) so a mutation
+    // like bulk delete reconciles with the backend without collapsing the user's scroll
+    // position back down to a single page. Best-effort: the optimistic local filter in
+    // confirmBulkDelete already reflects the mutation, so a failure here is silently
+    // ignored rather than surfaced as an error state.
+    private suspend fun reloadLoadedPages() {
+        val pagesToReload = maxOf(loadedPageCount, 1)
+        val aggregated = mutableListOf<WardrobeItem>()
+        var latestHasNextPage = false
+        for (page in 1..pagesToReload) {
+            val result = runCatching {
+                wardrobeRepository.getWardrobeItems(pageNumber = page, pageSize = WardrobePageSize)
+            }.getOrNull() ?: return
+            aggregated += result.items
+            latestHasNextPage = result.hasNextPage
+            if (!result.hasNextPage) break
+        }
+        loadedPageCount = pagesToReload
+        hasNextPage = latestHasNextPage
+        _uiState.value = WardrobeUiState.Success(items = aggregated)
     }
 
     // Best-effort: the wardrobe grid's own loading/error state must not depend on this,

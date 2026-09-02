@@ -96,7 +96,8 @@ class OutfitViewModel(
         _uiState.value = state.copy(isLoadingWardrobeItems = true, wardrobeItemsError = null)
         viewModelScope.launch {
             runCatching { wardrobeRepository.getWardrobeItems() }
-                .onSuccess { items ->
+                .onSuccess { page ->
+                    val items = page.items
                     _uiState.value = _uiState.value.copy(
                         wardrobeItems = items,
                         isLoadingWardrobeItems = false,

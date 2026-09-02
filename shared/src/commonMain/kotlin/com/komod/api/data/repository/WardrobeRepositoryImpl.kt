@@ -3,6 +3,7 @@ package com.komod.api.data.repository
 import com.komod.api.data.api.WardrobeApiService
 import com.komod.api.data.api.model.DeleteWardrobeItemsRequest
 import com.komod.api.domain.model.WardrobeItem
+import com.komod.api.domain.model.WardrobeItemsPage
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.storage.storage
 import io.ktor.client.plugins.ResponseException
@@ -16,8 +17,9 @@ class WardrobeRepositoryImpl(
     private val supabaseClient: SupabaseClient,
     private val wardrobeItemCache: WardrobeItemCache,
 ) : WardrobeRepository {
-    override suspend fun getWardrobeItems(): List<WardrobeItem> {
-        val items = wardrobeApiService.getWardrobeItems().map { dto ->
+    override suspend fun getWardrobeItems(pageNumber: Int?, pageSize: Int?): WardrobeItemsPage {
+        val response = wardrobeApiService.getWardrobeItems(pageNumber = pageNumber, pageSize = pageSize)
+        val items = response.data.map { dto ->
             val imageUrl = dto.croppedImageStoragePath
                 ?.takeIf { it.isNotBlank() }
                 ?.let { path ->
@@ -46,7 +48,11 @@ class WardrobeRepositoryImpl(
         }
 
         wardrobeItemCache.putAll(items)
-        return items
+        return WardrobeItemsPage(
+            items = items,
+            hasNextPage = response.hasNextPage ?: false,
+            totalCount = response.totalCount,
+        )
     }
 
     override suspend fun deleteWardrobeItems(ids: List<String>) {

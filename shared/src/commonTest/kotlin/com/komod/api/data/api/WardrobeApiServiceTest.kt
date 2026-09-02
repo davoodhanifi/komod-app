@@ -157,4 +157,50 @@ class WardrobeApiServiceTest {
         }
         assertEquals(PlanLimitCategory.PendingCapacity, exception.category)
     }
+
+    @Test
+    fun `getWardrobeItems with no page params omits pagination query and parses a null pagination envelope`() = runBlocking {
+        var capturedUrl: String? = null
+        val apiService = buildApiService { request ->
+            capturedUrl = request.url.toString()
+            respond(
+                content = """{"data":[{"id":"item-1","imageId":"img-1","status":1,"category":"shirt","confidence":0.9,"metadataJson":"{}","createdAt":"2026-01-01T00:00:00Z"}]}""",
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            )
+        }
+
+        val result = apiService.getWardrobeItems()
+
+        assertEquals(1, result.data.size)
+        assertEquals("item-1", result.data.single().id)
+        assertEquals(null, result.pageNumber)
+        assertEquals(null, result.pageSize)
+        assertEquals(null, result.hasNextPage)
+        assertEquals(false, capturedUrl.orEmpty().contains("pageNumber"))
+        assertEquals(false, capturedUrl.orEmpty().contains("pageSize"))
+    }
+
+    @Test
+    fun `getWardrobeItems with page params sends both as query params and parses pagination metadata`() = runBlocking {
+        var capturedUrl: String? = null
+        val apiService = buildApiService { request ->
+            capturedUrl = request.url.toString()
+            respond(
+                content = """{"data":[],"pageNumber":2,"pageSize":20,"totalCount":57,"totalPages":3,"hasNextPage":true}""",
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            )
+        }
+
+        val result = apiService.getWardrobeItems(pageNumber = 2, pageSize = 20)
+
+        assertEquals(true, capturedUrl.orEmpty().contains("pageNumber=2"))
+        assertEquals(true, capturedUrl.orEmpty().contains("pageSize=20"))
+        assertEquals(2, result.pageNumber)
+        assertEquals(20, result.pageSize)
+        assertEquals(57, result.totalCount)
+        assertEquals(3, result.totalPages)
+        assertEquals(true, result.hasNextPage)
+    }
 }

@@ -6,6 +6,7 @@ import com.komod.api.data.repository.AddItemRepository
 import com.komod.api.data.repository.WardrobeRepository
 import com.komod.api.domain.model.UploadedImage
 import com.komod.api.domain.model.WardrobeItem
+import com.komod.api.domain.model.WardrobeItemsPage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -47,9 +48,9 @@ private class FakeBulkDeleteWardrobeRepository(initialItems: List<WardrobeItem>)
     var getWardrobeItemsCallCount = 0
         private set
 
-    override suspend fun getWardrobeItems(): List<WardrobeItem> {
+    override suspend fun getWardrobeItems(pageNumber: Int?, pageSize: Int?): WardrobeItemsPage {
         getWardrobeItemsCallCount++
-        return items
+        return WardrobeItemsPage(items = items, hasNextPage = false, totalCount = items.size)
     }
 
     override suspend fun deleteWardrobeItems(ids: List<String>) {
