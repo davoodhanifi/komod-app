@@ -7,6 +7,7 @@ import com.komod.api.data.repository.WardrobeRepository
 import com.komod.api.domain.model.UploadedImage
 import com.komod.api.domain.model.WardrobeItem
 import com.komod.api.domain.model.WardrobeItemsPage
+import com.komod.api.domain.model.WardrobeSummary
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -63,6 +64,9 @@ private class FakePaginatedWardrobeRepository(
         val hasNext = startIndex + pageSize < allItems.size
         return WardrobeItemsPage(items = page, hasNextPage = hasNext, totalCount = allItems.size)
     }
+
+    override suspend fun getWardrobeSummary(): WardrobeSummary =
+        WardrobeSummary(totalItems = allItems.size, categories = emptyList())
 
     override suspend fun deleteWardrobeItems(ids: List<String>) = error("not used by these tests")
 }

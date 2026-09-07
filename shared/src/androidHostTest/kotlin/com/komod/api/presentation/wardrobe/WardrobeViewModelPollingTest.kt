@@ -7,6 +7,7 @@ import com.komod.api.data.repository.AddItemRepository
 import com.komod.api.data.repository.WardrobeRepository
 import com.komod.api.domain.model.UploadedImage
 import com.komod.api.domain.model.WardrobeItemsPage
+import com.komod.api.domain.model.WardrobeSummary
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,6 +35,8 @@ private fun uploadedImage(id: String, status: ImageStatus) = UploadedImage(
 private class FakeWardrobeRepository : WardrobeRepository {
     override suspend fun getWardrobeItems(pageNumber: Int?, pageSize: Int?): WardrobeItemsPage =
         WardrobeItemsPage(items = emptyList(), hasNextPage = false, totalCount = 0)
+    override suspend fun getWardrobeSummary(): WardrobeSummary =
+        WardrobeSummary(totalItems = 0, categories = emptyList())
     override suspend fun deleteWardrobeItems(ids: List<String>) = error("not used by these tests")
 }
 

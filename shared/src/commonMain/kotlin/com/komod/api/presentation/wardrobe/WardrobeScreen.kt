@@ -123,6 +123,7 @@ fun WardrobeScreen(
     val isRefreshing by viewModel.isRefreshing.collectAsState()
     val recentUploads by viewModel.recentUploads.collectAsState()
     val selectedCategory by viewModel.selectedCategory.collectAsState()
+    val categories by viewModel.categories.collectAsState()
     val pendingDeleteUploadId by viewModel.pendingDeleteUploadId.collectAsState()
     val deletingUploadIds by viewModel.deletingUploadIds.collectAsState()
     val selectionMode by viewModel.selectionMode.collectAsState()
@@ -201,9 +202,6 @@ fun WardrobeScreen(
                 }
 
                 is WardrobeUiState.Success -> {
-                    val categories = remember(state.items) {
-                        listOf(AllCategoriesLabel) + state.items.map { it.category }.distinct()
-                    }
                     val filteredItems = remember(state.items, selectedCategory) {
                         if (selectedCategory == AllCategoriesLabel) {
                             state.items
@@ -233,6 +231,18 @@ fun WardrobeScreen(
                                     onAddItem = onAddItem,
                                     modifier = Modifier.fillMaxSize(),
                                 )
+                            } else if (filteredItems.isEmpty() && selectedCategory != AllCategoriesLabel && state.hasNextPage) {
+                                // The category chip came from the wardrobe summary, so this
+                                // category has items somewhere — just not yet paginated into
+                                // `state.items`. Keep loading pages instead of claiming there
+                                // are none, until either a match shows up or the backend runs
+                                // out of pages.
+                                LaunchedEffect(selectedCategory, state.items.size) {
+                                    viewModel.loadMoreItems()
+                                }
+                                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                    CircularProgressIndicator(color = Purple)
+                                }
                             } else if (filteredItems.isEmpty()) {
                                 NoCategoryItemsState(
                                     category = selectedCategory,

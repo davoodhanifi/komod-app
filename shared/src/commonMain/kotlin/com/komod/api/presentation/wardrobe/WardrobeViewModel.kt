@@ -45,6 +45,13 @@ class WardrobeViewModel(
     private val _selectedCategory = MutableStateFlow(AllCategoriesLabel)
     val selectedCategory: StateFlow<String> = _selectedCategory.asStateFlow()
 
+    // Populated from the wardrobe summary endpoint (the same one Home uses) rather than
+    // derived from the paginated items list, so every category the user owns items in
+    // shows a filter chip immediately instead of only appearing once its items happen to
+    // scroll into view.
+    private val _categories = MutableStateFlow(listOf(AllCategoriesLabel))
+    val categories: StateFlow<List<String>> = _categories.asStateFlow()
+
     // The upload pending a delete confirmation (long-pressed, dialog visible); null
     // means no dialog is showing.
     private val _pendingDeleteUploadId = MutableStateFlow<String?>(null)
@@ -81,6 +88,7 @@ class WardrobeViewModel(
 
     init {
         loadItems()
+        loadCategories()
         observeUploadedImages()
         viewModelScope.launch { refreshUploadedImages() }
         pollWhileUploadsActive()
@@ -127,6 +135,7 @@ class WardrobeViewModel(
         viewModelScope.launch {
             _isRefreshing.value = true
             fetchFirstPage()
+            fetchCategories()
             refreshUploadedImages()
             _isRefreshing.value = false
         }
@@ -149,7 +158,11 @@ class WardrobeViewModel(
                     loadedPageCount += 1
                     hasNextPage = page.hasNextPage
                     val existing = (_uiState.value as? WardrobeUiState.Success)?.items.orEmpty()
-                    _uiState.value = WardrobeUiState.Success(items = existing + page.items, isLoadingMore = false)
+                    _uiState.value = WardrobeUiState.Success(
+                        items = existing + page.items,
+                        isLoadingMore = false,
+                        hasNextPage = page.hasNextPage,
+                    )
                 }
                 .onFailure { error ->
                     (_uiState.value as? WardrobeUiState.Success)?.let {
@@ -278,12 +291,27 @@ class WardrobeViewModel(
         }
     }
 
+    private fun loadCategories() {
+        viewModelScope.launch { fetchCategories() }
+    }
+
+    // Best-effort: a failed summary fetch just leaves the previous chip list (or the
+    // "All"-only default) in place rather than surfacing an error, since the category
+    // filter is a secondary affordance on top of the items grid, which has its own
+    // error/retry state.
+    private suspend fun fetchCategories() {
+        runCatching { wardrobeRepository.getWardrobeSummary() }
+            .onSuccess { summary ->
+                _categories.value = listOf(AllCategoriesLabel) + summary.categories.map { it.category }
+            }
+    }
+
     private suspend fun fetchFirstPage() {
         runCatching { wardrobeRepository.getWardrobeItems(pageNumber = 1, pageSize = WardrobePageSize) }
             .onSuccess { page ->
                 loadedPageCount = 1
                 hasNextPage = page.hasNextPage
-                _uiState.value = WardrobeUiState.Success(items = page.items)
+                _uiState.value = WardrobeUiState.Success(items = page.items, hasNextPage = page.hasNextPage)
             }
             .onFailure { error ->
                 loadedPageCount = 0
@@ -313,7 +341,7 @@ class WardrobeViewModel(
         }
         loadedPageCount = pagesToReload
         hasNextPage = latestHasNextPage
-        _uiState.value = WardrobeUiState.Success(items = aggregated)
+        _uiState.value = WardrobeUiState.Success(items = aggregated, hasNextPage = latestHasNextPage)
     }
 
     // Best-effort: the wardrobe grid's own loading/error state must not depend on this,

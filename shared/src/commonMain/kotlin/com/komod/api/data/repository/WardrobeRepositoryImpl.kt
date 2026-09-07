@@ -2,8 +2,10 @@ package com.komod.api.data.repository
 
 import com.komod.api.data.api.WardrobeApiService
 import com.komod.api.data.api.model.DeleteWardrobeItemsRequest
+import com.komod.api.domain.model.CategoryCount
 import com.komod.api.domain.model.WardrobeItem
 import com.komod.api.domain.model.WardrobeItemsPage
+import com.komod.api.domain.model.WardrobeSummary
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.storage.storage
 import io.ktor.client.plugins.ResponseException
@@ -52,6 +54,14 @@ class WardrobeRepositoryImpl(
             items = items,
             hasNextPage = response.hasNextPage ?: false,
             totalCount = response.totalCount,
+        )
+    }
+
+    override suspend fun getWardrobeSummary(): WardrobeSummary {
+        val dto = wardrobeApiService.getWardrobeSummary()
+        return WardrobeSummary(
+            totalItems = dto.totalItems,
+            categories = dto.categories.map { CategoryCount(it.category, it.count) },
         )
     }
 

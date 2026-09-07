@@ -9,6 +9,11 @@ sealed interface WardrobeUiState {
     data class Success(
         val items: List<WardrobeItem>,
         val isLoadingMore: Boolean = false,
+        // Whether the backend has more pages beyond what's currently in `items` — used to
+        // tell "this category truly has no items" apart from "this category's items just
+        // haven't been paginated in yet" when a filter chip (populated upfront from the
+        // wardrobe summary) is selected before its items have loaded.
+        val hasNextPage: Boolean = false,
     ) : WardrobeUiState
 
     data class Error(
