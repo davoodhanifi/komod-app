@@ -17,6 +17,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+// Home only ever shows a short preview strip of saved outfits — the full list lives on
+// the dedicated Saved Outfits screen (SavedOutfitsViewModel), which pages at size 10.
+private const val HomeSavedOutfitsPreviewSize = 5
+
 class HomeViewModel(
     private val homeRepository: HomeRepository,
     private val weatherLocationService: WeatherLocationService,
@@ -201,10 +205,12 @@ class HomeViewModel(
     }
 
     private suspend fun fetchSavedOutfits() {
-        runCatching { homeRepository.getSavedOutfits() }
-            .onSuccess { outfits ->
+        runCatching {
+            homeRepository.getSavedOutfitsPage(pageNumber = 1, pageSize = HomeSavedOutfitsPreviewSize)
+        }
+            .onSuccess { page ->
                 _uiState.update {
-                    it.copy(savedOutfitsState = SavedOutfitsState.Success(outfits))
+                    it.copy(savedOutfitsState = SavedOutfitsState.Success(page.outfits))
                 }
             }
             .onFailure { error ->

@@ -2,11 +2,13 @@ package com.komod.api.data.repository
 
 import com.komod.api.data.api.OutfitApiService
 import com.komod.api.data.api.WardrobeApiService
+import com.komod.api.data.api.model.OutfitDto
 import com.komod.api.data.api.model.OutfitWardrobeItemDto
 import com.komod.api.domain.model.CategoryCount
 import com.komod.api.domain.model.OutfitItem
 import com.komod.api.domain.model.RecentItem
 import com.komod.api.domain.model.SavedOutfit
+import com.komod.api.domain.model.SavedOutfitsPage
 import com.komod.api.domain.model.WardrobeItem
 import com.komod.api.domain.model.WardrobeSummary
 import io.github.jan.supabase.SupabaseClient
@@ -49,10 +51,17 @@ class HomeRepositoryImpl(
         }
     }
 
-    override suspend fun getSavedOutfits(): List<SavedOutfit> {
-        val dtos = outfitApiService.getOutfits()
-        return dtos
-            .sortedByDescending { it.createdAt }
+    override suspend fun getSavedOutfitsPage(pageNumber: Int?, pageSize: Int?): SavedOutfitsPage {
+        val response = outfitApiService.getOutfits(pageNumber = pageNumber, pageSize = pageSize)
+        return SavedOutfitsPage(
+            outfits = response.data.toSavedOutfits(),
+            hasNextPage = response.hasNextPage ?: false,
+            totalCount = response.totalCount,
+        )
+    }
+
+    private suspend fun List<OutfitDto>.toSavedOutfits(): List<SavedOutfit> {
+        return sortedByDescending { it.createdAt }
             .map { dto ->
                 // The backend embeds full wardrobe item details (in display order) directly
                 // on the outfit, so items are resolved here without touching WardrobeItemCache

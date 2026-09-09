@@ -62,6 +62,7 @@ import com.komod.api.presentation.outfits.OutfitScreen
 import com.komod.api.presentation.outfits.OutfitViewModel
 import com.komod.api.presentation.paywall.PaywallScreen
 import com.komod.api.presentation.profile.ProfileScreen
+import com.komod.api.presentation.savedoutfits.SavedOutfitsScreen
 import com.komod.api.presentation.uploadreview.UploadReviewScreen
 import com.komod.api.presentation.wardrobe.WardrobeItemEditScreen
 import com.komod.api.presentation.wardrobe.WardrobeItemDetailScreen
@@ -103,6 +104,7 @@ private sealed class MainRoute(val route: String) {
     data object OutfitDetails : MainRoute("outfits/details/{$OutfitIdArg}") {
         fun createRoute(outfitId: String): String = "outfits/details/$outfitId"
     }
+    data object SavedOutfits : MainRoute("saved-outfits")
 }
 
 @Composable
@@ -176,6 +178,7 @@ fun MainScaffold(
         MainRoute.CropEditor.route,
         MainRoute.OutfitDetails.route,
         MainRoute.Paywall.route,
+        MainRoute.SavedOutfits.route,
     )
     val showBottomBar = currentRoute !in hideBottomBarRoutes
     
@@ -337,6 +340,9 @@ fun MainScaffold(
                                 launchSingleTop = true
                                 restoreState = true
                             }
+                        },
+                        onViewAllSavedOutfits = {
+                            navController.navigate(MainRoute.SavedOutfits.route)
                         },
                         refreshKey = homeRefreshKey,
                     )
@@ -602,6 +608,17 @@ fun MainScaffold(
                     } else {
                         LaunchedEffect(Unit) { navController.navigateUp() }
                     }
+                }
+
+                composable(MainRoute.SavedOutfits.route) {
+                    SavedOutfitsScreen(
+                        onNavigateBack = { navController.navigateUp() },
+                        onOutfitClick = { savedOutfit ->
+                            outfitViewModel.showSavedOutfitDetails(savedOutfit.toOutfit())
+                            navController.navigate(MainRoute.OutfitDetails.createRoute(savedOutfit.id))
+                        },
+                        onShowSnackbar = ::showSnackbar,
+                    )
                 }
             }
             }

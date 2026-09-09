@@ -47,6 +47,7 @@ import com.komod.api.presentation.home.HomeViewModel
 import com.komod.api.presentation.outfits.OutfitViewModel
 import com.komod.api.presentation.paywall.PaywallViewModel
 import com.komod.api.presentation.profile.ProfileViewModel
+import com.komod.api.presentation.savedoutfits.SavedOutfitsViewModel
 import com.komod.api.presentation.uploadreview.UploadReviewViewModel
 import com.komod.api.presentation.wardrobe.WardrobeItemEditViewModel
 import com.komod.api.presentation.wardrobe.WardrobeItemDetailViewModel
@@ -124,6 +125,7 @@ fun appModule() = module {
     viewModel { OutfitViewModel(get(), get(), get(), get(), get(), get(), get()) }
     viewModel { WardrobeViewModel(get(), get()) }
     viewModel { HomeViewModel(get(), get(), get()) }
+    viewModel { SavedOutfitsViewModel(get()) }
     viewModel { ProfileViewModel(get()) }
     viewModel { PaywallViewModel(get(), get()) }
     viewModel { params -> WardrobeItemDetailViewModel(params.get(), get()) }

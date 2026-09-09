@@ -25,7 +25,8 @@ sealed interface WardrobeEffect {
 }
 
 private const val UploadPollIntervalMs = 5_000L
-private const val WardrobePageSize = 20
+// Backend caps pageSize at 10 for this endpoint — requesting more returns a 400.
+private const val WardrobePageSize = 10
 
 internal const val AllCategoriesLabel = "All"
 

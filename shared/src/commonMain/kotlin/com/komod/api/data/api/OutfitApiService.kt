@@ -6,6 +6,7 @@ import com.komod.api.data.api.model.OutfitDto
 import com.komod.api.data.api.model.OutfitGenerateRequest
 import com.komod.api.data.api.model.OutfitGenerateResponse
 import com.komod.api.data.api.model.OutfitOfTheDayResponseDto
+import com.komod.api.data.api.model.PaginatedResponseData
 import com.komod.api.data.api.model.ResponseData
 import com.komod.api.data.api.model.SaveOutfitRequest
 import com.komod.api.data.api.model.SaveOutfitResponse
@@ -117,9 +118,17 @@ class OutfitApiService(
         httpClient.delete("outfits/$id")
     }
 
-    suspend fun getOutfits(): List<OutfitDto> {
-        return httpClient.get("outfits")
-            .body<ResponseData<List<OutfitDto>>>().data
+    // pageNumber/pageSize are opt-in and must be passed together — omitting both keeps
+    // the pre-pagination behavior of returning every saved outfit, newest first, in one
+    // response (pagination fields on the envelope come back null in that case).
+    suspend fun getOutfits(
+        pageNumber: Int? = null,
+        pageSize: Int? = null,
+    ): PaginatedResponseData<List<OutfitDto>> {
+        return httpClient.get("outfits") {
+            pageNumber?.let { parameter("pageNumber", it) }
+            pageSize?.let { parameter("pageSize", it) }
+        }.body<PaginatedResponseData<List<OutfitDto>>>()
     }
 }
 

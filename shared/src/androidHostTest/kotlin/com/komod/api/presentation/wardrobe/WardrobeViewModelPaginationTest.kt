@@ -71,7 +71,7 @@ private class FakePaginatedWardrobeRepository(
     override suspend fun deleteWardrobeItems(ids: List<String>) = error("not used by these tests")
 }
 
-// A page(1, 20) helper so expected-call assertions line up with FakePaginatedWardrobeRepository's
+// A page(1, 10) helper so expected-call assertions line up with FakePaginatedWardrobeRepository's
 // Pair<Int?, Int?> calls list without needing an explicit type argument on every listOf(...).
 private fun page(pageNumber: Int, pageSize: Int): Pair<Int?, Int?> = pageNumber to pageSize
 
@@ -128,19 +128,19 @@ class WardrobeViewModelPaginationTest {
     }
 
     @Test
-    fun `loadItems fetches only the first page of 20 on init`() = runTest(testDispatcher) {
+    fun `loadItems fetches only the first page of 10 on init`() = runTest(testDispatcher) {
         val repository = FakePaginatedWardrobeRepository((1..45).map { wardrobeItem("item-$it") })
         val viewModel = createViewModel(repository)
         runCurrent()
 
         val state = viewModel.uiState.value
         assertTrue(state is WardrobeUiState.Success)
-        assertEquals(20, state.items.size)
-        assertEquals(listOf(page(1, 20)), repository.calls)
+        assertEquals(10, state.items.size)
+        assertEquals(listOf(page(1, 10)), repository.calls)
     }
 
     @Test
-    fun `loadMoreItems appends the next page and keeps requesting pageSize 20`() = runTest(testDispatcher) {
+    fun `loadMoreItems appends the next page and keeps requesting pageSize 10`() = runTest(testDispatcher) {
         val repository = FakePaginatedWardrobeRepository((1..45).map { wardrobeItem("item-$it") })
         val viewModel = createViewModel(repository)
         runCurrent()
@@ -150,9 +150,9 @@ class WardrobeViewModelPaginationTest {
 
         val state = viewModel.uiState.value
         assertTrue(state is WardrobeUiState.Success)
-        assertEquals(40, state.items.size)
+        assertEquals(20, state.items.size)
         assertEquals(false, state.isLoadingMore)
-        assertEquals(listOf(page(1, 20), page(2, 20)), repository.calls)
+        assertEquals(listOf(page(1, 10), page(2, 10)), repository.calls)
     }
 
     @Test
@@ -167,7 +167,7 @@ class WardrobeViewModelPaginationTest {
         val state = viewModel.uiState.value
         assertTrue(state is WardrobeUiState.Success)
         assertEquals(true, state.isLoadingMore)
-        assertEquals(20, state.items.size) // page 2 hasn't landed yet
+        assertEquals(10, state.items.size) // page 2 hasn't landed yet
 
         runCurrent()
     }
@@ -186,7 +186,7 @@ class WardrobeViewModelPaginationTest {
         assertEquals(10, state.items.size)
         // Only the init page-1 fetch happened — loadMoreItems bailed out before calling
         // the repository again.
-        assertEquals(listOf(page(1, 20)), repository.calls)
+        assertEquals(listOf(page(1, 10)), repository.calls)
     }
 
     @Test
@@ -199,7 +199,7 @@ class WardrobeViewModelPaginationTest {
         viewModel.loadMoreItems() // still in flight — must be dropped
         runCurrent()
 
-        assertEquals(listOf(page(1, 20), page(2, 20)), repository.calls)
+        assertEquals(listOf(page(1, 10), page(2, 10)), repository.calls)
     }
 
     // A failure-path test for loadMoreItems (preserving existing items and clearing
@@ -216,19 +216,19 @@ class WardrobeViewModelPaginationTest {
 
         viewModel.loadMoreItems()
         runCurrent()
-        assertEquals(40, (viewModel.uiState.value as WardrobeUiState.Success).items.size)
+        assertEquals(20, (viewModel.uiState.value as WardrobeUiState.Success).items.size)
 
         viewModel.refresh()
         runCurrent()
 
         val state = viewModel.uiState.value
         assertTrue(state is WardrobeUiState.Success)
-        assertEquals(20, state.items.size)
+        assertEquals(10, state.items.size)
 
         // A subsequent loadMoreItems should fetch page 2 again, not page 3 — confirming
         // loadedPageCount was reset by refresh(), not left at 2.
         viewModel.loadMoreItems()
         runCurrent()
-        assertEquals(page(2, 20), repository.calls.last())
+        assertEquals(page(2, 10), repository.calls.last())
     }
 }

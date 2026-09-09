@@ -143,6 +143,7 @@ fun HomeScreen(
     onItemClick: (String) -> Unit,
     onOutfitClick: (SavedOutfit) -> Unit = {},
     onViewOutfits: () -> Unit = {},
+    onViewAllSavedOutfits: () -> Unit = {},
     onViewOutfitOfTheDay: (Outfit) -> Unit = {},
     refreshKey: Int = 0,
     scrollState: androidx.compose.foundation.ScrollState = rememberScrollState(),
@@ -229,7 +230,7 @@ fun HomeScreen(
                         SavedOutfitsSection(
                             outfits = state.outfits,
                             onOutfitClick = onOutfitClick,
-                            onViewAll = onViewOutfits,
+                            onViewAll = onViewAllSavedOutfits,
                         )
                     }
                 }

@@ -289,4 +289,50 @@ class OutfitApiServiceTest {
 
         assertEquals(null, capturedRequest?.url?.parameters?.get("timeZoneId"))
     }
+
+    @Test
+    fun `getOutfits with no page params omits pagination query and parses a null pagination envelope`() = runBlocking {
+        var capturedUrl: String? = null
+        val apiService = buildApiService { request ->
+            capturedUrl = request.url.toString()
+            respond(
+                content = """{"data":[{"id":"outfit-1","name":"Casual Friday","reason":"warm weather","createdAt":"2026-01-01T00:00:00Z"}]}""",
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            )
+        }
+
+        val result = apiService.getOutfits()
+
+        assertEquals(1, result.data.size)
+        assertEquals("outfit-1", result.data.single().id)
+        assertEquals(null, result.pageNumber)
+        assertEquals(null, result.pageSize)
+        assertEquals(null, result.hasNextPage)
+        assertEquals(false, capturedUrl.orEmpty().contains("pageNumber"))
+        assertEquals(false, capturedUrl.orEmpty().contains("pageSize"))
+    }
+
+    @Test
+    fun `getOutfits with page params sends both as query params and parses pagination metadata`() = runBlocking {
+        var capturedUrl: String? = null
+        val apiService = buildApiService { request ->
+            capturedUrl = request.url.toString()
+            respond(
+                content = """{"data":[],"pageNumber":2,"pageSize":10,"totalCount":23,"totalPages":3,"hasNextPage":true}""",
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            )
+        }
+
+        val result = apiService.getOutfits(pageNumber = 2, pageSize = 10)
+
+        assertEquals(true, capturedUrl.orEmpty().contains("pageNumber=2"))
+        assertEquals(true, capturedUrl.orEmpty().contains("pageSize=10"))
+        assertEquals(2, result.pageNumber)
+        assertEquals(10, result.pageSize)
+        assertEquals(23, result.totalCount)
+        assertEquals(3, result.totalPages)
+        assertEquals(true, result.hasNextPage)
+    }
 }
