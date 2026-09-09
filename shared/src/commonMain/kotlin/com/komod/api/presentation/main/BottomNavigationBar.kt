@@ -39,8 +39,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.only
-import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 
@@ -66,7 +66,10 @@ fun BottomNavigationBar(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom))
+            // navigationBars (not safeDrawing) deliberately excludes the keyboard inset — the
+            // bar must stay pinned to the physical bottom of the screen when the keyboard
+            // opens, not ride up with it and end up overlapping mid-screen content.
+            .windowInsetsPadding(WindowInsets.navigationBars.only(WindowInsetsSides.Bottom))
             .padding(horizontal = 20.dp, vertical = 0.dp)
             .padding(bottom = 0.dp),
     ) {

@@ -36,6 +36,7 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -45,12 +46,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -297,7 +303,7 @@ private fun WeatherBody(
     val displayTemperatureC = editedTemperatureC ?: weather.temperatureC
     var isEditingTemperature by remember { mutableStateOf(false) }
     var editUnit by remember { mutableStateOf(TemperatureUnit.CELSIUS) }
-    var editText by remember { mutableStateOf("") }
+    var editText by remember { mutableStateOf(TextFieldValue("")) }
 
     Column(modifier = Modifier.fillMaxWidth()) {
         // Main info row: icon | temp + condition
@@ -346,7 +352,8 @@ private fun WeatherBody(
                         IconButton(
                             onClick = {
                                 editUnit = TemperatureUnit.CELSIUS
-                                editText = displayTemperatureC.roundToInt().toString()
+                                val initial = displayTemperatureC.roundToInt().toString()
+                                editText = TextFieldValue(text = initial, selection = TextRange(0, initial.length))
                                 isEditingTemperature = true
                             },
                             modifier = Modifier
@@ -375,17 +382,25 @@ private fun WeatherBody(
 
         AnimatedVisibility(visible = isEditingTemperature) {
             TemperatureEditor(
-                text = editText,
+                value = editText,
                 unit = editUnit,
-                onTextChange = { newText -> editText = newText.filter { it.isDigit() || it == '-' } },
+                onValueChange = { newValue ->
+                    val filtered = newValue.text.filter { it.isDigit() || it == '-' }
+                    editText = if (filtered == newValue.text) {
+                        newValue
+                    } else {
+                        newValue.copy(text = filtered, selection = TextRange(filtered.length))
+                    }
+                },
                 onUnitChange = { newUnit ->
-                    editText.toDoubleOrNull()?.let { current ->
-                        editText = convertTemperature(current, editUnit, newUnit).roundToInt().toString()
+                    editText.text.toDoubleOrNull()?.let { current ->
+                        val converted = convertTemperature(current, editUnit, newUnit).roundToInt().toString()
+                        editText = TextFieldValue(text = converted, selection = TextRange(0, converted.length))
                     }
                     editUnit = newUnit
                 },
                 onConfirm = {
-                    editText.toDoubleOrNull()?.let { value ->
+                    editText.text.toDoubleOrNull()?.let { value ->
                         onTemperatureChange(convertTemperature(value, editUnit, TemperatureUnit.CELSIUS))
                     }
                     isEditingTemperature = false
@@ -476,9 +491,9 @@ private fun convertTemperature(value: Double, from: TemperatureUnit, to: Tempera
 
 @Composable
 private fun TemperatureEditor(
-    text: String,
+    value: TextFieldValue,
     unit: TemperatureUnit,
-    onTextChange: (String) -> Unit,
+    onValueChange: (TextFieldValue) -> Unit,
     onUnitChange: (TemperatureUnit) -> Unit,
     onConfirm: () -> Unit,
     onCancel: () -> Unit,
@@ -486,52 +501,64 @@ private fun TemperatureEditor(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 8.dp, bottom = 4.dp),
+            .padding(top = 10.dp, bottom = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        TemperatureInputPill(value = text, onValueChange = onTextChange)
+        TemperatureInputPill(value = value, onValueChange = onValueChange)
         UnitToggle(selected = unit, onSelect = onUnitChange)
         Spacer(modifier = Modifier.weight(1f))
-        IconButton(onClick = onCancel, modifier = Modifier.size(28.dp)) {
+        IconButton(onClick = onCancel, modifier = Modifier.size(40.dp)) {
             Icon(
                 imageVector = Icons.Outlined.Close,
                 contentDescription = "Cancel",
                 tint = WeatherMuted,
-                modifier = Modifier.size(16.dp),
+                modifier = Modifier.size(20.dp),
             )
         }
-        IconButton(onClick = onConfirm, modifier = Modifier.size(28.dp)) {
+        IconButton(onClick = onConfirm, modifier = Modifier.size(40.dp)) {
             Icon(
                 imageVector = Icons.Outlined.Check,
                 contentDescription = "Save temperature",
                 tint = WeatherPurple,
-                modifier = Modifier.size(16.dp),
+                modifier = Modifier.size(20.dp),
             )
         }
     }
 }
 
 // Matches the app's compact "pill" chip language (see UnitChip/OccasionFilterTile) rather
-// than Material3's OutlinedTextField, whose ~56dp min height reads as oversized next to the
-// 28dp icon buttons and chips around it in this card.
+// than Material3's OutlinedTextField, but sized to Apple's ~44pt minimum tap target — the
+// original 52x28dp pill was reported too small to tap accurately on a real iPhone.
+// Auto-focuses and selects the whole value as soon as it appears (and again on any refocus)
+// so the first keystroke replaces it outright, instead of appending to the old digits.
 @Composable
 private fun TemperatureInputPill(
-    value: String,
-    onValueChange: (String) -> Unit,
+    value: TextFieldValue,
+    onValueChange: (TextFieldValue) -> Unit,
 ) {
+    val focusRequester = remember { FocusRequester() }
+    LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
+    }
     BasicTextField(
         value = value,
         onValueChange = onValueChange,
         modifier = Modifier
-            .width(52.dp)
-            .clip(RoundedCornerShape(10.dp))
+            .width(72.dp)
+            .clip(RoundedCornerShape(12.dp))
             .background(Color.White)
-            .border(1.dp, WeatherPurple, RoundedCornerShape(10.dp))
-            .padding(horizontal = 10.dp, vertical = 6.dp),
+            .border(1.5.dp, WeatherPurple, RoundedCornerShape(12.dp))
+            .padding(horizontal = 14.dp, vertical = 12.dp)
+            .focusRequester(focusRequester)
+            .onFocusChanged { focusState ->
+                if (focusState.isFocused) {
+                    onValueChange(value.copy(selection = TextRange(0, value.text.length)))
+                }
+            },
         singleLine = true,
         textStyle = TextStyle(
-            fontSize = 13.sp,
+            fontSize = 18.sp,
             fontWeight = FontWeight.SemiBold,
             color = WeatherText,
             textAlign = TextAlign.Center,
