@@ -256,6 +256,9 @@ fun OutfitScreen(
                 onWeatherRetry = viewModel::retryWeather,
                 onOpenWeatherSettings = viewModel::openWeatherSettings,
                 onWeatherPermissionDenied = viewModel::markWeatherPermissionRequired,
+                editedTemperatureC = uiState.editedTemperatureC,
+                onTemperatureChange = viewModel::setEditedTemperature,
+                onResetTemperature = viewModel::resetEditedTemperature,
                 selectedTopItem = uiState.selectedTopItem,
                 selectedBottomItem = uiState.selectedBottomItem,
                 selectedShoesItem = uiState.selectedShoesItem,
@@ -325,6 +328,9 @@ private fun OutfitHeader(
     onWeatherRetry: () -> Unit,
     onOpenWeatherSettings: () -> Unit,
     onWeatherPermissionDenied: () -> Unit,
+    editedTemperatureC: Double?,
+    onTemperatureChange: (Double) -> Unit,
+    onResetTemperature: () -> Unit,
     selectedTopItem: WardrobeItem?,
     selectedBottomItem: WardrobeItem?,
     selectedShoesItem: WardrobeItem?,
@@ -371,6 +377,9 @@ private fun OutfitHeader(
             onRetry = onWeatherRetry,
             onOpenSettings = onOpenWeatherSettings,
             onPermissionDenied = onWeatherPermissionDenied,
+            editedTemperatureC = editedTemperatureC,
+            onTemperatureChange = onTemperatureChange,
+            onResetTemperature = onResetTemperature,
         )
 
     }

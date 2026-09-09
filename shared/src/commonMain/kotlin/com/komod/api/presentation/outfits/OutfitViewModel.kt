@@ -120,10 +120,14 @@ class OutfitViewModel(
             runCatching {
                 val state = _uiState.value
                 val (topId, bottomId, shoesId) = state.selectedItemIds()
+                val weather = (state.weatherUiState as? WeatherUiState.Loaded)?.weather
+                val effectiveWeather = state.editedTemperatureC?.let { editedC ->
+                    weather?.copy(temperatureC = editedC)
+                } ?: weather
                 outfitRepository.generateOutfits(
                     occasion = state.selectedOccasion.apiValue,
                     style = state.selectedStyle?.apiValue,
-                    weather = (state.weatherUiState as? WeatherUiState.Loaded)?.weather,
+                    weather = effectiveWeather,
                     selectedTopId = topId,
                     selectedBottomId = bottomId,
                     selectedShoesId = shoesId,
@@ -253,8 +257,19 @@ class OutfitViewModel(
             _uiState.value = _uiState.value.copy(weatherUiState = WeatherUiState.WeatherDisabled)
             return
         }
-        _uiState.value = _uiState.value.copy(weatherUiState = WeatherUiState.Loading)
+        _uiState.value = _uiState.value.copy(weatherUiState = WeatherUiState.Loading, editedTemperatureC = null)
         refreshWeather()
+    }
+
+    // Called from the weather card's edit icon — lets the user override the fetched
+    // temperature (e.g. they know it's warmer/colder outside than the API reports) before
+    // generating, without touching the underlying WeatherCurrent from the API.
+    fun setEditedTemperature(celsius: Double) {
+        _uiState.value = _uiState.value.copy(editedTemperatureC = celsius)
+    }
+
+    fun resetEditedTemperature() {
+        _uiState.value = _uiState.value.copy(editedTemperatureC = null)
     }
 
     fun markWeatherPermissionRequired() {
@@ -264,7 +279,7 @@ class OutfitViewModel(
 
     fun retryWeather() {
         if (weatherPreferences.isEnabled()) {
-            _uiState.value = _uiState.value.copy(weatherUiState = WeatherUiState.Loading)
+            _uiState.value = _uiState.value.copy(weatherUiState = WeatherUiState.Loading, editedTemperatureC = null)
             refreshWeather()
         }
     }

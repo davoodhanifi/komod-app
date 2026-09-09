@@ -6,6 +6,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -19,13 +20,21 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -37,8 +46,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -74,6 +87,9 @@ fun WeatherSection(
     onRetry: () -> Unit,
     onOpenSettings: () -> Unit,
     onPermissionDenied: () -> Unit,
+    editedTemperatureC: Double? = null,
+    onTemperatureChange: (Double) -> Unit = {},
+    onResetTemperature: () -> Unit = {},
 ) {
     val permissionController = rememberWeatherPermissionController(
         onGranted = { onToggleWeather(true) },
@@ -151,6 +167,9 @@ fun WeatherSection(
                 WeatherBody(
                     weather = uiState.weather,
                     isEnabled = true,
+                    editedTemperatureC = editedTemperatureC,
+                    onTemperatureChange = onTemperatureChange,
+                    onResetTemperature = onResetTemperature,
                 )
             },
         )
@@ -266,11 +285,19 @@ private fun WeatherLocationLabel(
 private fun WeatherBody(
     weather: WeatherCurrent,
     isEnabled: Boolean,
+    editedTemperatureC: Double? = null,
+    onTemperatureChange: (Double) -> Unit = {},
+    onResetTemperature: () -> Unit = {},
 ) {
     val textColor = if (isEnabled) WeatherText else WeatherDisabledText
     val mutedColor = if (isEnabled) WeatherMuted else WeatherDisabledText
     val iconTint = if (isEnabled) WeatherPurple else WeatherDisabledIcon
     val iconTintUnspecified = if (isEnabled) Color.Unspecified else WeatherDisabledIcon
+
+    val displayTemperatureC = editedTemperatureC ?: weather.temperatureC
+    var isEditingTemperature by remember { mutableStateOf(false) }
+    var editUnit by remember { mutableStateOf(TemperatureUnit.CELSIUS) }
+    var editText by remember { mutableStateOf("") }
 
     Column(modifier = Modifier.fillMaxWidth()) {
         // Main info row: icon | temp + condition
@@ -302,19 +329,38 @@ private fun WeatherBody(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
                     Text(
-                        text = "${weather.temperatureC.roundToInt()}°",
+                        text = "${displayTemperatureC.roundToInt()}°",
                         color = textColor,
                         fontSize = 42.sp,
                         fontWeight = FontWeight.SemiBold,
                         lineHeight = 46.sp,
                     )
                     Text(
-                        text = fahrenheitLabel(weather.temperatureC),
+                        text = fahrenheitLabel(displayTemperatureC),
                         color = mutedColor,
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Medium,
                         modifier = Modifier.padding(bottom = 6.dp),
                     )
+                    if (isEnabled) {
+                        IconButton(
+                            onClick = {
+                                editUnit = TemperatureUnit.CELSIUS
+                                editText = displayTemperatureC.roundToInt().toString()
+                                isEditingTemperature = true
+                            },
+                            modifier = Modifier
+                                .size(28.dp)
+                                .padding(bottom = 4.dp),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Edit,
+                                contentDescription = "Edit temperature",
+                                tint = iconTint,
+                                modifier = Modifier.size(16.dp),
+                            )
+                        }
+                    }
                 }
                 Text(
                     text = weather.condition,
@@ -323,6 +369,42 @@ private fun WeatherBody(
                     fontWeight = FontWeight.Medium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+
+        AnimatedVisibility(visible = isEditingTemperature) {
+            TemperatureEditor(
+                text = editText,
+                unit = editUnit,
+                onTextChange = { newText -> editText = newText.filter { it.isDigit() || it == '-' } },
+                onUnitChange = { newUnit ->
+                    editText.toDoubleOrNull()?.let { current ->
+                        editText = convertTemperature(current, editUnit, newUnit).roundToInt().toString()
+                    }
+                    editUnit = newUnit
+                },
+                onConfirm = {
+                    editText.toDoubleOrNull()?.let { value ->
+                        onTemperatureChange(convertTemperature(value, editUnit, TemperatureUnit.CELSIUS))
+                    }
+                    isEditingTemperature = false
+                },
+                onCancel = { isEditingTemperature = false },
+            )
+        }
+
+        if (editedTemperatureC != null && !isEditingTemperature) {
+            TextButton(
+                onClick = onResetTemperature,
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp),
+                modifier = Modifier.padding(top = 2.dp),
+            ) {
+                Text(
+                    text = "Reset to current weather",
+                    color = WeatherPurple,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
                 )
             }
         }
@@ -382,6 +464,122 @@ private fun WeatherBody(
                 )
             }
         }
+    }
+}
+
+private enum class TemperatureUnit { CELSIUS, FAHRENHEIT }
+
+private fun convertTemperature(value: Double, from: TemperatureUnit, to: TemperatureUnit): Double {
+    if (from == to) return value
+    return if (to == TemperatureUnit.FAHRENHEIT) value * 9.0 / 5.0 + 32.0 else (value - 32.0) * 5.0 / 9.0
+}
+
+@Composable
+private fun TemperatureEditor(
+    text: String,
+    unit: TemperatureUnit,
+    onTextChange: (String) -> Unit,
+    onUnitChange: (TemperatureUnit) -> Unit,
+    onConfirm: () -> Unit,
+    onCancel: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 8.dp, bottom = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        TemperatureInputPill(value = text, onValueChange = onTextChange)
+        UnitToggle(selected = unit, onSelect = onUnitChange)
+        Spacer(modifier = Modifier.weight(1f))
+        IconButton(onClick = onCancel, modifier = Modifier.size(28.dp)) {
+            Icon(
+                imageVector = Icons.Outlined.Close,
+                contentDescription = "Cancel",
+                tint = WeatherMuted,
+                modifier = Modifier.size(16.dp),
+            )
+        }
+        IconButton(onClick = onConfirm, modifier = Modifier.size(28.dp)) {
+            Icon(
+                imageVector = Icons.Outlined.Check,
+                contentDescription = "Save temperature",
+                tint = WeatherPurple,
+                modifier = Modifier.size(16.dp),
+            )
+        }
+    }
+}
+
+// Matches the app's compact "pill" chip language (see UnitChip/OccasionFilterTile) rather
+// than Material3's OutlinedTextField, whose ~56dp min height reads as oversized next to the
+// 28dp icon buttons and chips around it in this card.
+@Composable
+private fun TemperatureInputPill(
+    value: String,
+    onValueChange: (String) -> Unit,
+) {
+    BasicTextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = Modifier
+            .width(52.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .background(Color.White)
+            .border(1.dp, WeatherPurple, RoundedCornerShape(10.dp))
+            .padding(horizontal = 10.dp, vertical = 6.dp),
+        singleLine = true,
+        textStyle = TextStyle(
+            fontSize = 13.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = WeatherText,
+            textAlign = TextAlign.Center,
+        ),
+        cursorBrush = SolidColor(WeatherPurple),
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+    )
+}
+
+@Composable
+private fun UnitToggle(
+    selected: TemperatureUnit,
+    onSelect: (TemperatureUnit) -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(10.dp))
+            .background(WeatherPurpleSoft),
+    ) {
+        UnitChip(label = "°C", selected = selected == TemperatureUnit.CELSIUS) {
+            onSelect(TemperatureUnit.CELSIUS)
+        }
+        UnitChip(label = "°F", selected = selected == TemperatureUnit.FAHRENHEIT) {
+            onSelect(TemperatureUnit.FAHRENHEIT)
+        }
+    }
+}
+
+@Composable
+private fun UnitChip(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(if (selected) WeatherPurple else Color.Transparent)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = label,
+            color = if (selected) Color.White else WeatherPurple,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Medium,
+        )
     }
 }
 
@@ -537,7 +735,7 @@ internal fun weatherIcon(
 }
 
 private fun fahrenheitLabel(celsius: Double): String {
-    val fahrenheit = (celsius * 9.0 / 5.0 + 32.0).roundToInt()
+    val fahrenheit = convertTemperature(celsius, TemperatureUnit.CELSIUS, TemperatureUnit.FAHRENHEIT).roundToInt()
     return "($fahrenheit°F)"
 }
 
