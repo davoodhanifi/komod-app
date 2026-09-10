@@ -121,10 +121,14 @@ private val FilterTileSelectedBackground = Color(0xFFEDE7FF)
 private val FilterTileBorderDefault = Color(0xFFE6E8EE)
 private val FilterTileLabelDefault = Color(0xFF1F2937)
 
-// Header, StyleSelector, and GenerateButton are always exactly one LazyColumn item each
-// (see the `item { ... }` calls in OutfitScreen below), so the results section — whichever
-// branch of the isGenerating/error/empty/outfits `when` is showing — always starts here.
-private const val ResultsSectionItemIndex = 3
+// HeaderTop, the weather card, StyleSelector, and GenerateButton are always exactly one
+// LazyColumn item each (see the `item { ... }` calls in OutfitScreen below), so the results
+// section — whichever branch of the isGenerating/error/empty/outfits `when` is showing —
+// always starts here. The weather card is split out from the rest of the header into its
+// own item (rather than folded into HeaderTop) specifically so it can be scrolled to the
+// very top of the viewport on its own — see WeatherCardItemIndex below.
+private const val WeatherCardItemIndex = 1
+private const val ResultsSectionItemIndex = 4
 
 private data class OccasionFilterOption(
     val occasion: OutfitOccasion,
@@ -145,10 +149,26 @@ fun OutfitScreen(
     var itemPickerSlot by remember { mutableStateOf<OutfitItemSlot?>(null) }
     val itemPickerSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val listState = rememberLazyListState()
+    var isEditingTemperature by remember { mutableStateOf(false) }
 
     LaunchedEffect(itemPickerSlot) {
         if (itemPickerSlot != null) {
             viewModel.ensureWardrobeItemsLoaded()
+        }
+    }
+
+    // The system's default focus-into-view scroll (triggered by the temperature field's
+    // BasicTextField) only brings the field's own bounds into view, which can still leave it
+    // partially covered by the iOS software keyboard — the ime inset isn't always reflected
+    // in the viewport height at the moment that scroll is calculated. Pinning the weather
+    // card's own LazyColumn item to the very top of the viewport instead guarantees the
+    // editor clears the keyboard regardless of keyboard height; scrolling back to the true
+    // top when editing ends restores the original view.
+    LaunchedEffect(isEditingTemperature) {
+        if (isEditingTemperature) {
+            listState.animateScrollToItem(WeatherCardItemIndex, scrollOffset = 0)
+        } else {
+            listState.animateScrollToItem(0)
         }
     }
 
@@ -248,17 +268,9 @@ fun OutfitScreen(
         contentPadding = PaddingValues(bottom = 104.dp),
     ) {
         item {
-            OutfitHeader(
+            OutfitHeaderTop(
                 selectedOccasion = uiState.selectedOccasion,
                 onOccasionSelected = viewModel::selectOccasion,
-                weatherUiState = uiState.weatherUiState,
-                onWeatherToggle = viewModel::setWeatherEnabled,
-                onWeatherRetry = viewModel::retryWeather,
-                onOpenWeatherSettings = viewModel::openWeatherSettings,
-                onWeatherPermissionDenied = viewModel::markWeatherPermissionRequired,
-                editedTemperatureC = uiState.editedTemperatureC,
-                onTemperatureChange = viewModel::setEditedTemperature,
-                onResetTemperature = viewModel::resetEditedTemperature,
                 selectedTopItem = uiState.selectedTopItem,
                 selectedBottomItem = uiState.selectedBottomItem,
                 selectedShoesItem = uiState.selectedShoesItem,
@@ -270,6 +282,22 @@ fun OutfitScreen(
                         OutfitItemSlot.Shoes -> viewModel.clearShoesItem()
                     }
                 },
+            )
+        }
+
+        // Its own item (not folded into OutfitHeaderTop above) so editing the temperature can
+        // scroll it to the very top of the viewport — see WeatherCardItemIndex.
+        item {
+            OutfitWeatherCard(
+                weatherUiState = uiState.weatherUiState,
+                onWeatherToggle = viewModel::setWeatherEnabled,
+                onWeatherRetry = viewModel::retryWeather,
+                onOpenWeatherSettings = viewModel::openWeatherSettings,
+                onWeatherPermissionDenied = viewModel::markWeatherPermissionRequired,
+                editedTemperatureC = uiState.editedTemperatureC,
+                onTemperatureChange = viewModel::setEditedTemperature,
+                onResetTemperature = viewModel::resetEditedTemperature,
+                onTemperatureEditingChanged = { isEditingTemperature = it },
             )
         }
 
@@ -320,17 +348,9 @@ fun OutfitScreen(
 }
 
 @Composable
-private fun OutfitHeader(
+private fun OutfitHeaderTop(
     selectedOccasion: OutfitOccasion,
     onOccasionSelected: (OutfitOccasion) -> Unit,
-    weatherUiState: WeatherUiState,
-    onWeatherToggle: (Boolean) -> Unit,
-    onWeatherRetry: () -> Unit,
-    onOpenWeatherSettings: () -> Unit,
-    onWeatherPermissionDenied: () -> Unit,
-    editedTemperatureC: Double?,
-    onTemperatureChange: (Double) -> Unit,
-    onResetTemperature: () -> Unit,
     selectedTopItem: WardrobeItem?,
     selectedBottomItem: WardrobeItem?,
     selectedShoesItem: WardrobeItem?,
@@ -370,6 +390,26 @@ private fun OutfitHeader(
             selectedOccasion = selectedOccasion,
             onOccasionSelected = onOccasionSelected,
         )
+    }
+}
+
+@Composable
+private fun OutfitWeatherCard(
+    weatherUiState: WeatherUiState,
+    onWeatherToggle: (Boolean) -> Unit,
+    onWeatherRetry: () -> Unit,
+    onOpenWeatherSettings: () -> Unit,
+    onWeatherPermissionDenied: () -> Unit,
+    editedTemperatureC: Double?,
+    onTemperatureChange: (Double) -> Unit,
+    onResetTemperature: () -> Unit,
+    onTemperatureEditingChanged: (Boolean) -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp),
+    ) {
         Spacer(modifier = Modifier.height(12.dp))
         WeatherSection(
             uiState = weatherUiState,
@@ -380,8 +420,8 @@ private fun OutfitHeader(
             editedTemperatureC = editedTemperatureC,
             onTemperatureChange = onTemperatureChange,
             onResetTemperature = onResetTemperature,
+            onTemperatureEditingChanged = onTemperatureEditingChanged,
         )
-
     }
 }
 

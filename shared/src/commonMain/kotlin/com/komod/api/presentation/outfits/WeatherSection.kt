@@ -96,6 +96,7 @@ fun WeatherSection(
     editedTemperatureC: Double? = null,
     onTemperatureChange: (Double) -> Unit = {},
     onResetTemperature: () -> Unit = {},
+    onTemperatureEditingChanged: (Boolean) -> Unit = {},
 ) {
     val permissionController = rememberWeatherPermissionController(
         onGranted = { onToggleWeather(true) },
@@ -176,6 +177,7 @@ fun WeatherSection(
                     editedTemperatureC = editedTemperatureC,
                     onTemperatureChange = onTemperatureChange,
                     onResetTemperature = onResetTemperature,
+                    onTemperatureEditingChanged = onTemperatureEditingChanged,
                 )
             },
         )
@@ -294,6 +296,7 @@ private fun WeatherBody(
     editedTemperatureC: Double? = null,
     onTemperatureChange: (Double) -> Unit = {},
     onResetTemperature: () -> Unit = {},
+    onTemperatureEditingChanged: (Boolean) -> Unit = {},
 ) {
     val textColor = if (isEnabled) WeatherText else WeatherDisabledText
     val mutedColor = if (isEnabled) WeatherMuted else WeatherDisabledText
@@ -303,6 +306,9 @@ private fun WeatherBody(
     val displayTemperatureC = editedTemperatureC ?: weather.temperatureC
     var isEditingTemperature by remember { mutableStateOf(false) }
     var editUnit by remember { mutableStateOf(TemperatureUnit.CELSIUS) }
+    LaunchedEffect(isEditingTemperature) {
+        onTemperatureEditingChanged(isEditingTemperature)
+    }
     var editText by remember { mutableStateOf(TextFieldValue("")) }
 
     Column(modifier = Modifier.fillMaxWidth()) {
