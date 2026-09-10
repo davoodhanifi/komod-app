@@ -63,6 +63,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -105,6 +106,7 @@ import komod.shared.generated.resources.shoes
 import komod.shared.generated.resources.sport
 import komod.shared.generated.resources.travel
 import komod.shared.generated.resources.wedding
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.viewmodel.koinViewModel
@@ -149,6 +151,7 @@ fun OutfitScreen(
     var itemPickerSlot by remember { mutableStateOf<OutfitItemSlot?>(null) }
     val itemPickerSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val listState = rememberLazyListState()
+    val coroutineScope = rememberCoroutineScope()
     var isEditingTemperature by remember { mutableStateOf(false) }
 
     LaunchedEffect(itemPickerSlot) {
@@ -308,7 +311,21 @@ fun OutfitScreen(
             )
         }
 
-        item { GenerateButton(isGenerating = uiState.isGenerating, onGenerate = viewModel::generateOutfits) }
+        item {
+            GenerateButton(
+                isGenerating = uiState.isGenerating,
+                onGenerate = {
+                    // Scrolled here directly on tap, rather than solely relying on the
+                    // isGenerating LaunchedEffect below, so the results section is brought
+                    // into view even when generateOutfits() fails before ever suspending
+                    // (e.g. a synchronous error) — a case where isGenerating flips
+                    // true-then-false within the same frame and the state flow's
+                    // conflation means the UI never observes the transient true.
+                    coroutineScope.launch { listState.animateScrollToItem(ResultsSectionItemIndex) }
+                    viewModel.generateOutfits()
+                },
+            )
+        }
 
         when {
             uiState.isGenerating -> {
@@ -320,7 +337,7 @@ fun OutfitScreen(
                     ErrorState(
                         message = uiState.errorMessage ?: "Something went wrong. Please try again.",
                         onRetry = viewModel::generateOutfits,
-                        showRetry = !uiState.isPlanLimitError,
+                        showRetry = false,
                     )
                 }
             }

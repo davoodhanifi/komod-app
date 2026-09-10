@@ -4,6 +4,7 @@ import com.komod.api.core.error.PlanLimitCategory
 import com.komod.api.core.error.PlanLimitExceededException
 import com.komod.api.data.api.model.OutfitGenerateRequest
 import com.komod.api.data.api.model.SelectedOutfitItemsDto
+import com.komod.api.data.repository.OutfitGenerationNotFoundException
 import com.komod.api.platform.getDeviceTimeZoneId
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
@@ -219,6 +220,25 @@ class OutfitApiServiceTest {
         }
 
         assertFailsWith<ServerResponseException> {
+            apiService.generateOutfits(occasion = "casual")
+        }
+        Unit
+    }
+
+    // A 404 covers both "no active wardrobe items" and "a selected item is no longer in
+    // the active wardrobe" on the backend; either way the app surfaces the same type so
+    // the Outfit screen can show a dedicated inline message instead of a generic failure.
+    @Test
+    fun `generateOutfits on a 404 throws OutfitGenerationNotFoundException`() = runBlocking {
+        val apiService = buildApiService {
+            respond(
+                content = """{"type":"about:blank","title":"Not Found","status":404,"detail":"No active wardrobe items found."}""",
+                status = HttpStatusCode.NotFound,
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            )
+        }
+
+        assertFailsWith<OutfitGenerationNotFoundException> {
             apiService.generateOutfits(occasion = "casual")
         }
         Unit

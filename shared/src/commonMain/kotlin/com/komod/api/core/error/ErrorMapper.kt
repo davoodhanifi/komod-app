@@ -5,6 +5,7 @@ import com.komod.api.data.repository.BillingUnavailableException
 import com.komod.api.data.repository.OutfitDeleteBadRequestException
 import com.komod.api.data.repository.OutfitDeleteNetworkException
 import com.komod.api.data.repository.OutfitDeleteNotFoundException
+import com.komod.api.data.repository.OutfitGenerationNotFoundException
 import com.komod.api.data.repository.UploadReviewConflictException
 import com.komod.api.data.repository.UploadReviewForbiddenException
 import com.komod.api.data.repository.UploadReviewNetworkException
@@ -85,6 +86,8 @@ object ErrorMapper {
         is OutfitDeleteNotFoundException -> "This outfit no longer exists."
         is OutfitDeleteBadRequestException -> "Couldn't update this outfit. Please try again."
         is OutfitDeleteNetworkException -> mapCauseOrFallback(throwable, context)
+
+        is OutfitGenerationNotFoundException -> "No wardrobe items found."
 
         is UploadedImageDeleteNotFoundException -> "This upload could not be found."
         is UploadedImageDeleteForbiddenException -> "You don't have permission to do this."

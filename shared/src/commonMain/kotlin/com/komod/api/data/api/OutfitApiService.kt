@@ -3,6 +3,7 @@ package com.komod.api.data.api
 import com.komod.api.core.error.PlanLimitCategory
 import com.komod.api.core.error.PlanLimitExceededException
 import com.komod.api.data.api.model.OutfitDto
+import com.komod.api.data.repository.OutfitGenerationNotFoundException
 import com.komod.api.data.api.model.OutfitGenerateRequest
 import com.komod.api.data.api.model.OutfitGenerateResponse
 import com.komod.api.data.api.model.OutfitOfTheDayResponseDto
@@ -25,6 +26,7 @@ import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
+import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
 
@@ -63,6 +65,12 @@ class OutfitApiService(
             val text = response.bodyAsText()
             if (isPlanLimitExceeded(text)) {
                 throw PlanLimitExceededException(PlanLimitCategory.DailyGenerationLimit)
+            }
+            // The backend returns 404 both when the wardrobe has no active items to build
+            // an outfit from and when a selected item is no longer in the active wardrobe —
+            // neither carries a stable error code, so both surface as this one type.
+            if (response.status == HttpStatusCode.NotFound) {
+                throw OutfitGenerationNotFoundException()
             }
             throw if (response.status.value in 400..499) {
                 ClientRequestException(response, text)
