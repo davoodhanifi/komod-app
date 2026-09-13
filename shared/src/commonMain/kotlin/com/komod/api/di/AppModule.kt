@@ -3,6 +3,8 @@ package com.komod.api.di
 import com.komod.api.BuildKonfig
 import com.komod.api.core.navigation.PlanLimitNavigator
 import com.komod.api.core.navigation.PlanLimitNavigatorImpl
+import com.komod.api.core.review.ReviewPromptManager
+import com.komod.api.core.review.ReviewPromptManagerImpl
 import com.komod.api.data.billing.PurchasesService
 import com.komod.api.data.billing.RevenueCatIdentitySync
 import com.komod.api.data.billing.RevenueCatPurchasesService
@@ -38,8 +40,10 @@ import com.komod.api.data.repository.WardrobeItemRepositoryImpl
 import com.komod.api.data.repository.WardrobeRepository
 import com.komod.api.data.repository.WardrobeRepositoryImpl
 import com.komod.api.data.location.WeatherLocationService
+import com.komod.api.data.preferences.ReviewPromptPreferences
 import com.komod.api.data.preferences.WeatherPreferences
 import com.komod.api.data.storage.StorageService
+import com.komod.api.platform.AppReviewRequester
 import com.komod.api.presentation.additem.AddItemViewModel
 import com.komod.api.presentation.auth.LoginViewModel
 import com.komod.api.presentation.cropeditor.CropEditorViewModel
@@ -88,6 +92,9 @@ fun appModule() = module {
     single { WeatherLocationService() }
     single { com.komod.api.platform.AppSettingsOpener() }
     single<PlanLimitNavigator> { PlanLimitNavigatorImpl() }
+    single { AppReviewRequester() }
+    single { ReviewPromptPreferences() }
+    single<ReviewPromptManager> { ReviewPromptManagerImpl(preferences = get(), appReviewRequester = get()) }
     single { StorageService(supabaseClient = get()) }
     single<PurchasesService> { RevenueCatPurchasesService() }
     // Also resolved explicitly and eagerly from iOS's initKoin() right after
@@ -122,7 +129,7 @@ fun appModule() = module {
     single<SubscriptionRepository> { SubscriptionRepositoryImpl(subscriptionApiService = get()) }
     viewModel { LoginViewModel(get()) }
     viewModel { AddItemViewModel(get(), get()) }
-    viewModel { OutfitViewModel(get(), get(), get(), get(), get(), get(), get()) }
+    viewModel { OutfitViewModel(get(), get(), get(), get(), get(), get(), get(), get()) }
     viewModel { WardrobeViewModel(get(), get()) }
     viewModel { HomeViewModel(get(), get(), get()) }
     viewModel { SavedOutfitsViewModel(get()) }

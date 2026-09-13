@@ -21,6 +21,7 @@ kotlinx-coroutines = "1.10.2"
 kotlinx-serialization = "1.8.1"
 ktor = "3.4.3"
 material3 = "1.11.0-alpha07"
+playReview = "2.0.2"
 purchasesKmp = "3.0.5"
 supabase = "3.6.0"
 
@@ -63,6 +64,7 @@ supabase-storage = { module = "io.github.jan-tennert.supabase:storage-kt", versi
 coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
 coil-network-ktor3 = { module = "io.coil-kt.coil3:coil-network-ktor3", version.ref = "coil" }
 purchases-kmp-core = { module = "com.revenuecat.purchases:purchases-kmp-core", version.ref = "purchasesKmp" }
+play-review = { module = "com.google.android.play:review", version.ref = "playReview" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

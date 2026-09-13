@@ -6,6 +6,7 @@ import com.komod.api.core.error.ErrorContext
 import com.komod.api.core.error.ErrorMapper
 import com.komod.api.core.error.PlanLimitExceededException
 import com.komod.api.core.navigation.PlanLimitNavigator
+import com.komod.api.core.review.ReviewPromptManager
 import com.komod.api.data.repository.OutfitRepository
 import com.komod.api.data.repository.WardrobeRepository
 import com.komod.api.data.repository.WeatherRepository
@@ -34,6 +35,7 @@ class OutfitViewModel(
     private val appSettingsOpener: AppSettingsOpener,
     private val planLimitNavigator: PlanLimitNavigator,
     private val wardrobeRepository: WardrobeRepository,
+    private val reviewPromptManager: ReviewPromptManager,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(OutfitUiState())
     val uiState: StateFlow<OutfitUiState> = _uiState.asStateFlow()
@@ -138,6 +140,10 @@ class OutfitViewModel(
                     isGenerating = false,
                     errorMessage = null,
                 )
+                // A successful generation is the app's core "happy moment" — see
+                // ReviewPromptManager for the throttling that decides whether this actually
+                // surfaces the rate-us ask.
+                reviewPromptManager.recordPositiveEvent()
             }.onFailure { throwable ->
                 val message = ErrorMapper.toUserMessage(throwable, tag = "OutfitViewModel")
                 val planLimitError = detectPlanLimitError(throwable)

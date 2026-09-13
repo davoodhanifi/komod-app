@@ -23,6 +23,7 @@ import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -68,6 +69,7 @@ fun ProfileScreen(
     user: User?,
     onHelpSupportClick: () -> Unit,
     onAboutClick: () -> Unit,
+    onRateClick: () -> Unit,
     onSignOutConfirmed: () -> Unit,
     onUpgradeClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -139,6 +141,25 @@ fun ProfileScreen(
                 )
             },
             onClick = onHelpSupportClick,
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        ActionCard(
+            title = "Rate Komod",
+            subtitle = "Enjoying the app? Leave us a rating",
+            titleColor = MaterialTheme.colorScheme.onSurface,
+            subtitleColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            iconTint = Orange,
+            iconContainerColor = LightPurple,
+            icon = { tint ->
+                Icon(
+                    imageVector = Icons.Outlined.StarOutline,
+                    contentDescription = null,
+                    tint = tint,
+                )
+            },
+            onClick = onRateClick,
         )
 
         Spacer(modifier = Modifier.height(16.dp))

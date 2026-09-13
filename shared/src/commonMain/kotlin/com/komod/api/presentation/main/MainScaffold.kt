@@ -52,9 +52,12 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.komod.api.core.navigation.PlanLimitNavigator
+import com.komod.api.core.review.ReviewPromptManager
 import com.komod.api.data.repository.AuthRepository
 import com.komod.api.domain.model.toOutfit
+import com.komod.api.platform.AppReviewRequester
 import com.komod.api.presentation.additem.AddItemScreen
+import com.komod.api.presentation.common.RateAppDialog
 import com.komod.api.presentation.cropeditor.CropEditorScreen
 import com.komod.api.presentation.home.HomeScreen
 import com.komod.api.presentation.outfits.OutfitDetailsScreen
@@ -139,6 +142,8 @@ private fun getMainTabs() = listOf(
 fun MainScaffold(
     authRepository: AuthRepository = koinInject(),
     planLimitNavigator: PlanLimitNavigator = koinInject(),
+    reviewPromptManager: ReviewPromptManager = koinInject(),
+    appReviewRequester: AppReviewRequester = koinInject(),
 ) {
     val uriHandler = LocalUriHandler.current
     val navController = rememberNavController()
@@ -237,6 +242,20 @@ fun MainScaffold(
             navController.navigate(MainRoute.Paywall.route) { launchSingleTop = true }
             planLimitNavigator.onPaywallShown()
         }
+    }
+
+    // Single place that renders the "Enjoying Komod?" ask on behalf of every ViewModel that
+    // hits a happy moment — see ReviewPromptManager.
+    val reviewPromptRequested by reviewPromptManager.pendingPromptRequest.collectAsState()
+    if (reviewPromptRequested) {
+        RateAppDialog(
+            onRateOnStore = reviewPromptManager::onUserRespondedEnjoying,
+            onSendFeedback = {
+                reviewPromptManager.onUserRespondedNotEnjoying()
+                uriHandler.openUri("https://komod.app/support")
+            },
+            onDismiss = reviewPromptManager::onPromptDismissed,
+        )
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -429,6 +448,13 @@ fun MainScaffold(
                         },
                         onAboutClick = {
                             uriHandler.openUri("https://komod.app/about")
+                        },
+                        onRateClick = {
+                            // Explicit, user-initiated tap — goes straight to the store
+                            // listing rather than the OS review sheet, since that sheet can
+                            // silently no-op once its own quota is used up and this button
+                            // must always do something visible.
+                            appReviewRequester.openStoreListing()
                         },
                         onSignOutConfirmed = {
                             snackbarScope.launch {
